@@ -73,7 +73,15 @@ function conectarEventos() {
   }
 
   if (refreshButton) {
-    refreshButton.addEventListener("click", () => {
+    refreshButton.addEventListener("click", async () => {
+      const datosSharePoint = await cargarDatosSharePoint();
+  
+      if (!datosSharePoint) {
+        return;
+      }
+  
+      state.datos.ingresos = datosSharePoint.ingresos;
+  
       renderDashboard();
     });
   }
