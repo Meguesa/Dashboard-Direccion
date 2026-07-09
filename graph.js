@@ -176,3 +176,45 @@ function convertirNumero(valor) {
 
   return Number.isFinite(numero) ? numero : 0;
 }
+
+
+async function cargarDatosSharePoint() {
+  try {
+    setAuthStatus("Actualizando datos desde SharePoint...");
+
+    await probarConexionSharePoint();
+
+    const listas = await obtenerListasSharePoint();
+
+    const ingresos = await obtenerIngresosSharePoint();
+
+    const datos = {
+      listas,
+      ingresos,
+      egresos: [],
+      ventas: [],
+      servicios: []
+    };
+
+    console.log("Datos cargados desde SharePoint:", datos);
+
+    setText(
+      "sharePointStatus",
+      `Datos actualizados. Ingresos: ${ingresos.length} registros.`
+    );
+
+    setAuthStatus("Datos actualizados correctamente.");
+
+    return datos;
+  } catch (error) {
+    console.error("Error cargando datos desde SharePoint:", error);
+
+    setText(
+      "sharePointStatus",
+      "Error al actualizar datos desde SharePoint. Revisa la consola."
+    );
+
+    setAuthStatus("Error al actualizar datos.");
+    return null;
+  }
+}
