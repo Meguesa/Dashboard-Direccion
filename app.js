@@ -63,6 +63,7 @@ function conectarEventos() {
   const refreshButton = document.getElementById("refreshButton");
   const testSharePointButton = document.getElementById("testSharePointButton");
   const getListsButton = document.getElementById("getListsButton");
+  const getIngresosButton = document.getElementById("getIngresosButton");
 
   if (selector) {
     selector.addEventListener("change", (event) => {
@@ -86,6 +87,12 @@ function conectarEventos() {
   if (getListsButton) {
     getListsButton.addEventListener("click", async () => {
       await obtenerListasSharePoint();
+    });
+  }
+
+  if (getIngresosButton) {
+    getIngresosButton.addEventListener("click", async () => {
+      await obtenerIngresosSharePoint();
     });
   }
 }
