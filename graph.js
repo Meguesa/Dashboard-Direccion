@@ -39,3 +39,47 @@ async function probarConexionSharePoint() {
     setAuthStatus("Error al conectar con SharePoint.");
   }
 }
+
+async function obtenerListasSharePoint() {
+  try {
+    setAuthStatus("Obteniendo listas de SharePoint...");
+
+    const hostname = CONFIG.sharepoint.siteHostname;
+    const sitePath = CONFIG.sharepoint.sitePath;
+
+    const site = await graphGet(`/sites/${hostname}:${sitePath}`);
+    const siteId = site.id;
+
+    const resultado = await graphGet(`/sites/${siteId}/lists`);
+
+    console.log("Listas de SharePoint:", resultado.value);
+
+    const listasBI = resultado.value
+      .filter((lista) => lista.name && lista.name.startsWith("BI_"))
+      .map((lista) => ({
+        nombre: lista.name,
+        id: lista.id,
+        displayName: lista.displayName
+      }));
+
+    console.table(listasBI);
+
+    setText(
+      "sharePointStatus",
+      `Listas BI encontradas: ${listasBI.map((l) => l.nombre).join(", ")}`
+    );
+
+    setAuthStatus("Listas de SharePoint obtenidas correctamente.");
+
+    return listasBI;
+  } catch (error) {
+    console.error("Error obteniendo listas:", error);
+
+    setText(
+      "sharePointStatus",
+      "Error al obtener listas de SharePoint. Revisa la consola del navegador."
+    );
+
+    setAuthStatus("Error al obtener listas de SharePoint.");
+  }
+}
