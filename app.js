@@ -348,6 +348,14 @@ function renderDetalleIngresos(mes, totalIngresos) {
     campo: "categoria",
     etiquetaVacia: "Sin categoría"
   });
+
+  renderTablaIngresosAgrupada({
+    tbodyId: "tablaIngresosSubcategoriaBody",
+    mes,
+    totalIngresos,
+    campo: "subcategoria",
+    etiquetaVacia: "Sin subcategoría"
+  });
 }
 
 function renderTablaIngresosAgrupada(configuracion) {
