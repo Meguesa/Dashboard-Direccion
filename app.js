@@ -62,6 +62,7 @@ function conectarEventos() {
   const selector = document.getElementById("monthSelector");
   const refreshButton = document.getElementById("refreshButton");
   const testSharePointButton = document.getElementById("testSharePointButton");
+  const getListsButton = document.getElementById("getListsButton");
 
   if (selector) {
     selector.addEventListener("change", (event) => {
@@ -81,8 +82,13 @@ function conectarEventos() {
       await probarConexionSharePoint();
     });
   }
-}
 
+  if (getListsButton) {
+    getListsButton.addEventListener("click", async () => {
+      await obtenerListasSharePoint();
+    });
+  }
+}
 function renderDashboard() {
   const mes = state.mesSeleccionado;
 
