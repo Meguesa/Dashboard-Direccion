@@ -80,7 +80,10 @@ function conectarEventos() {
         return;
       }
   
-      state.datos.ingresos = datosSharePoint.ingresos;
+      state.datos.ingresos = datosSharePoint.ingresos || [];
+      state.datos.egresos = datosSharePoint.egresos || [];
+      state.datos.ventas = datosSharePoint.ventas || [];
+      state.datos.servicios = datosSharePoint.servicios || [];
   
       renderDashboard();
     });
@@ -104,16 +107,17 @@ function conectarEventos() {
     });
   }
 }
+
 function renderDashboard() {
   const mes = state.mesSeleccionado;
 
-  const totalIngresos = sumarPorMes(state.datos.ingresos, mes, "importe");
-  const totalEgresos = sumarPorMes(state.datos.egresos, mes, "pagado");
-  const totalVentas = sumarPorMes(state.datos.ventas, mes, "monto");
-  const totalContratos = sumarPorMes(state.datos.contratos, mes, "total");
+  const totalIngresos = sumarIngresos(mes);
+  const totalEgresos = sumarEgresos(mes);
+  const totalVentas = sumarVentas(mes);
+  const totalContratos = contarContratos(mes);
 
-  const totalCapillas = sumarServicios(mes, "Capillas");
-  const totalParque = sumarServicios(mes, "Parque");
+  const totalCapillas = contarServiciosPorOrigen(mes, "CAPILLA");
+  const totalParque = contarServiciosPorOrigen(mes, "PARQUE");
   const totalServicios = totalCapillas + totalParque;
 
   const flujoNeto = totalIngresos - totalEgresos;
@@ -155,6 +159,68 @@ function sumarServicios(mes, origen) {
     .filter((item) => item.mes === mes && item.origen === origen)
     .reduce((total, item) => total + Number(item.total || 0), 0);
 }
+
+function sumarIngresos(mes) {
+  return state.datos.ingresos
+    .filter((item) => normalizarTexto(item.mes) === mes)
+    .reduce((total, item) => total + Number(item.importe || 0), 0);
+}
+
+function sumarEgresos(mes) {
+  return state.datos.egresos
+    .filter((item) => {
+      const mesEgreso = normalizarTexto(item.mesHoja || item.mes);
+      return mesEgreso === mes;
+    })
+    .reduce((total, item) => total + Number(item.pagado || 0), 0);
+}
+
+function sumarVentas(mes) {
+  return state.datos.ventas
+    .filter((item) => {
+      const itemMes = normalizarTexto(item.mes);
+      const fuente = normalizarTexto(item.fuente).toUpperCase();
+      const tipoRegistro = normalizarTexto(item.tipoRegistro).toUpperCase();
+
+      return itemMes === mes
+        && fuente === "VENTAS 2026"
+        && tipoRegistro === "MENSUAL";
+    })
+    .reduce((total, item) => total + Number(item.montoVenta || 0), 0);
+}
+
+function contarContratos(mes) {
+  return state.datos.ventas
+    .filter((item) => {
+      const itemMes = normalizarTexto(item.mes);
+      const hojaOrigen = normalizarTexto(item.hojaOrigen).toUpperCase();
+
+      return itemMes === mes
+        && hojaOrigen === "LOTES";
+    })
+    .length;
+}
+
+function contarServiciosPorOrigen(mes, origenBuscado) {
+  return state.datos.servicios
+    .filter((item) => {
+      const itemMes = normalizarTexto(item.mes);
+      const origen = normalizarTexto(item.origen).toUpperCase();
+
+      return itemMes === mes
+        && origen.includes(origenBuscado);
+    })
+    .length;
+}
+
+function normalizarTexto(valor) {
+  if (valor === null || valor === undefined) {
+    return "";
+  }
+
+  return String(valor).trim();
+}
+
 
 function renderTablaResumen(datos) {
   const tbody = document.getElementById("summaryTableBody");
