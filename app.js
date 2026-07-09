@@ -35,7 +35,9 @@ document.addEventListener("DOMContentLoaded", () => {
 function inicializarDashboard() {
   cargarSelectorMeses();
   conectarEventos();
+  conectarNavegacionInterna();
   renderDashboard();
+  mostrarPagina("resumen");
 }
 
 function cargarSelectorMeses() {
@@ -108,6 +110,69 @@ function conectarEventos() {
       await obtenerIngresosSharePoint();
     });
   }
+}
+
+function conectarNavegacionInterna() {
+  const tarjetasKpi = document.querySelectorAll(".kpi-card");
+  const botonesRegresar = document.querySelectorAll(".page-back-button");
+
+  tarjetasKpi.forEach((tarjeta) => {
+    tarjeta.addEventListener("click", () => {
+      const paginaDestino = tarjeta.dataset.page;
+      mostrarPagina(paginaDestino);
+    });
+
+    tarjeta.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+
+        const paginaDestino = tarjeta.dataset.page;
+        mostrarPagina(paginaDestino);
+      }
+    });
+  });
+
+  botonesRegresar.forEach((boton) => {
+    boton.addEventListener("click", () => {
+      const paginaDestino = boton.dataset.page || "resumen";
+      mostrarPagina(paginaDestino);
+    });
+  });
+}
+
+function mostrarPagina(nombrePagina) {
+  const paginas = {
+    resumen: "pageResumen",
+    ingresos: "pageIngresos",
+    egresos: "pageEgresos",
+    ventas: "pageVentas",
+    servicios: "pageServicios"
+  };
+
+  const paginaDestinoId = paginas[nombrePagina];
+
+  if (!paginaDestinoId) {
+    return;
+  }
+
+  Object.values(paginas).forEach((pageId) => {
+    const pagina = document.getElementById(pageId);
+
+    if (pagina) {
+      pagina.classList.add("hidden");
+    }
+  });
+
+  const paginaDestino = document.getElementById(paginaDestinoId);
+
+  if (paginaDestino) {
+    paginaDestino.classList.remove("hidden");
+  }
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
 }
 
 function renderDashboard() {
