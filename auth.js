@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   inicializarAuth();
 });
 
-function inicializarAuth() {
+async function inicializarAuth() {
   if (typeof msal === "undefined") {
     console.error("MSAL no está cargado.");
     actualizarEstadoLogin("Error: MSAL no está cargado.");
@@ -44,11 +44,17 @@ function inicializarAuth() {
 
   if (cuentas.length > 0) {
     currentAccount = cuentas[0];
-
+  
     mostrarDashboard();
     setAuthStatus(`Sesión activa: ${currentAccount.username}`);
     actualizarEstadoLogin(`Sesión activa: ${currentAccount.username}`);
     mostrarUsuario(currentAccount.username);
+  
+    if (typeof window.actualizarDatosDashboard === "function") {
+      setAuthStatus("Sesión activa. Cargando información de SharePoint...");
+      await window.actualizarDatosDashboard();
+      setAuthStatus(`Sesión activa: ${currentAccount.username}`);
+    }
   } else {
     currentAccount = null;
 
@@ -89,19 +95,10 @@ async function loginMicrosoft() {
 
     console.log("Login correcto:", currentAccount);
 
-    if (typeof cargarDatosSharePoint === "function") {
-      const datosSharePoint = await cargarDatosSharePoint();
-
-      if (datosSharePoint && window.state) {
-        window.state.datos.ingresos = datosSharePoint.ingresos || [];
-        window.state.datos.egresos = datosSharePoint.egresos || [];
-        window.state.datos.ventas = datosSharePoint.ventas || [];
-        window.state.datos.servicios = datosSharePoint.servicios || [];
-
-        if (typeof renderDashboard === "function") {
-          renderDashboard();
-        }
-      }
+    if (typeof window.actualizarDatosDashboard === "function") {
+      setAuthStatus("Sesión activa. Cargando información de SharePoint...");
+      await window.actualizarDatosDashboard();
+      setAuthStatus(`Sesión activa: ${currentAccount.username}`);
     }
   } catch (error) {
     console.error("Error en login:", error);
