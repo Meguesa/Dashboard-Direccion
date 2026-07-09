@@ -61,6 +61,7 @@ function cargarSelectorMeses() {
 function conectarEventos() {
   const selector = document.getElementById("monthSelector");
   const refreshButton = document.getElementById("refreshButton");
+  const testSharePointButton = document.getElementById("testSharePointButton");
 
   if (selector) {
     selector.addEventListener("change", (event) => {
@@ -72,6 +73,12 @@ function conectarEventos() {
   if (refreshButton) {
     refreshButton.addEventListener("click", () => {
       renderDashboard();
+    });
+  }
+
+  if (testSharePointButton) {
+    testSharePointButton.addEventListener("click", async () => {
+      await probarConexionSharePoint();
     });
   }
 }
