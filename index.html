@@ -10,7 +10,30 @@
 </head>
 
 <body>
-  <main class="app">
+  <!-- Pantalla inicial de login -->
+  <main id="loginPage" class="login-page">
+    <section class="login-card">
+      <h1>Centro de Control Dirección</h1>
+      <p>Dashboard ejecutivo de indicadores financieros, comerciales y operativos.</p>
+
+      <div class="login-divider"></div>
+
+      <p class="login-note">
+        Para visualizar la información, inicia sesión con tu cuenta autorizada de Microsoft 365.
+      </p>
+
+      <button id="loginButton" class="button login-main-button">
+        Iniciar sesión
+      </button>
+
+      <div id="loginStatus" class="login-status">
+        Sin sesión iniciada.
+      </div>
+    </section>
+  </main>
+
+  <!-- Dashboard principal -->
+  <main id="dashboardPage" class="app hidden">
     <header class="header">
       <div class="header-title">
         <h1>Centro de Control Dirección</h1>
@@ -18,14 +41,13 @@
       </div>
 
       <div class="header-actions">
+        <select id="monthSelector" class="select"></select>
+
         <div class="user-box">
           <span class="user-label">Usuario:</span>
           <span id="userName">No conectado</span>
         </div>
-      
-        <select id="monthSelector" class="select"></select>
-      
-        <button id="loginButton" class="button">Iniciar sesión</button>
+
         <button id="logoutButton" class="button button-secondary">Cerrar sesión</button>
         <button id="refreshButton" class="button">Actualizar</button>
       </div>
@@ -108,6 +130,7 @@
             </tr>
           </tbody>
         </table>
+
         <p class="footer-note">
           Última actualización visual:
           <span id="lastUpdate">—</span>
