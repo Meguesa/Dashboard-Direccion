@@ -18,10 +18,22 @@
       </div>
 
       <div class="header-actions">
+        <div class="user-box">
+          <span class="user-label">Usuario:</span>
+          <span id="userName">No conectado</span>
+        </div>
+      
         <select id="monthSelector" class="select"></select>
+      
+        <button id="loginButton" class="button">Iniciar sesión</button>
+        <button id="logoutButton" class="button button-secondary">Cerrar sesión</button>
         <button id="refreshButton" class="button">Actualizar</button>
       </div>
     </header>
+
+    <section class="auth-panel">
+      <span id="authStatus">Revisando sesión...</span>
+    </section>
 
     <section class="grid-kpis">
       <article class="card">
@@ -104,7 +116,9 @@
     </section>
   </main>
 
+  <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
   <script src="config.js"></script>
+  <script src="auth.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
