@@ -240,6 +240,8 @@ function renderDashboard() {
     totalParque,
     totalServicios
   });
+
+  renderDetalleIngresos(mes, totalIngresos);
 }
 
 function sumarPorMes(lista, mes, campo) {
@@ -330,6 +332,91 @@ function normalizarTexto(valor) {
   return String(valor).trim();
 }
 
+function renderDetalleIngresos(mes, totalIngresos) {
+  renderTablaIngresosAgrupada({
+    tbodyId: "tablaIngresosBancoBody",
+    mes,
+    totalIngresos,
+    campo: "banco",
+    etiquetaVacia: "Sin banco"
+  });
+
+  renderTablaIngresosAgrupada({
+    tbodyId: "tablaIngresosCategoriaBody",
+    mes,
+    totalIngresos,
+    campo: "categoria",
+    etiquetaVacia: "Sin categoría"
+  });
+}
+
+function renderTablaIngresosAgrupada(configuracion) {
+  const tbody = document.getElementById(configuracion.tbodyId);
+
+  if (!tbody) {
+    return;
+  }
+
+  const filas = agruparIngresosPorCampo(
+    configuracion.mes,
+    configuracion.campo,
+    configuracion.etiquetaVacia
+  );
+
+  if (filas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4">Sin información para el mes seleccionado.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filas
+    .map((fila) => {
+      const porcentaje = configuracion.totalIngresos > 0
+        ? fila.total / configuracion.totalIngresos
+        : 0;
+
+      return `
+        <tr>
+          <td>${escaparHtml(fila.nombre)}</td>
+          <td>${formatoNumero(fila.registros)}</td>
+          <td>${formatoMoneda(fila.total)}</td>
+          <td>${formatoPorcentaje(porcentaje)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function agruparIngresosPorCampo(mes, campo, etiquetaVacia) {
+  const grupos = new Map();
+
+  state.datos.ingresos
+    .filter((item) => normalizarTexto(item.mes) === mes)
+    .forEach((item) => {
+      const nombreGrupo = normalizarTexto(item[campo]) || etiquetaVacia;
+      const importe = Number(item.importe || 0);
+
+      if (!grupos.has(nombreGrupo)) {
+        grupos.set(nombreGrupo, {
+          nombre: nombreGrupo,
+          registros: 0,
+          total: 0
+        });
+      }
+
+      const grupo = grupos.get(nombreGrupo);
+
+      grupo.registros += 1;
+      grupo.total += importe;
+    });
+
+  return Array.from(grupos.values())
+    .sort((a, b) => b.total - a.total);
+}
+
 
 function renderTablaResumen(datos) {
   const tbody = document.getElementById("summaryTableBody");
@@ -397,6 +484,23 @@ function formatoNumero(valor) {
   return new Intl.NumberFormat("es-MX", {
     maximumFractionDigits: 0
   }).format(Number(valor || 0));
+}
+
+function formatoPorcentaje(valor) {
+  return new Intl.NumberFormat("es-MX", {
+    style: "percent",
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1
+  }).format(Number(valor || 0));
+}
+
+function escaparHtml(valor) {
+  return String(valor || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function obtenerFechaHoraActual() {
