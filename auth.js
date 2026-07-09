@@ -33,7 +33,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 function inicializarAuth() {
   if (typeof msal === "undefined") {
     console.error("MSAL no está cargado.");
-    setAuthStatus("Error: MSAL no está cargado.");
+    actualizarEstadoLogin("Error: MSAL no está cargado.");
+    mostrarLogin();
     return;
   }
 
@@ -43,15 +44,22 @@ function inicializarAuth() {
 
   if (cuentas.length > 0) {
     currentAccount = cuentas[0];
+
+    mostrarDashboard();
     setAuthStatus(`Sesión activa: ${currentAccount.username}`);
+    actualizarEstadoLogin(`Sesión activa: ${currentAccount.username}`);
     mostrarUsuario(currentAccount.username);
   } else {
-    setAuthStatus("Sin sesión iniciada.");
+    currentAccount = null;
+
+    mostrarLogin();
+    actualizarEstadoLogin("Sin sesión iniciada.");
     mostrarUsuario("No conectado");
   }
 
   configurarBotonesAuth();
 }
+
 
 function configurarBotonesAuth() {
   const loginButton = document.getElementById("loginButton");
@@ -68,16 +76,36 @@ function configurarBotonesAuth() {
 
 async function loginMicrosoft() {
   try {
+    actualizarEstadoLogin("Iniciando sesión con Microsoft...");
+
     const response = await msalInstance.loginPopup(loginRequest);
 
     currentAccount = response.account;
 
+    mostrarDashboard();
     setAuthStatus(`Sesión activa: ${currentAccount.username}`);
+    actualizarEstadoLogin(`Sesión activa: ${currentAccount.username}`);
     mostrarUsuario(currentAccount.username);
 
     console.log("Login correcto:", currentAccount);
+
+    if (typeof cargarDatosSharePoint === "function") {
+      const datosSharePoint = await cargarDatosSharePoint();
+
+      if (datosSharePoint && window.state) {
+        window.state.datos.ingresos = datosSharePoint.ingresos || [];
+        window.state.datos.egresos = datosSharePoint.egresos || [];
+        window.state.datos.ventas = datosSharePoint.ventas || [];
+        window.state.datos.servicios = datosSharePoint.servicios || [];
+
+        if (typeof renderDashboard === "function") {
+          renderDashboard();
+        }
+      }
+    }
   } catch (error) {
     console.error("Error en login:", error);
+    actualizarEstadoLogin("Error al iniciar sesión con Microsoft.");
     setAuthStatus("Error al iniciar sesión con Microsoft.");
   }
 }
@@ -85,6 +113,8 @@ async function loginMicrosoft() {
 async function logoutMicrosoft() {
   try {
     if (!currentAccount) {
+      mostrarLogin();
+      actualizarEstadoLogin("Sin sesión iniciada.");
       return;
     }
 
@@ -94,13 +124,17 @@ async function logoutMicrosoft() {
 
     currentAccount = null;
 
+    mostrarLogin();
     setAuthStatus("Sin sesión iniciada.");
+    actualizarEstadoLogin("Sin sesión iniciada.");
     mostrarUsuario("No conectado");
   } catch (error) {
     console.error("Error en logout:", error);
     setAuthStatus("Error al cerrar sesión.");
+    actualizarEstadoLogin("Error al cerrar sesión.");
   }
 }
+
 
 async function obtenerAccessToken() {
   if (!msalInstance) {
@@ -145,5 +179,39 @@ function mostrarUsuario(username) {
 
   if (element) {
     element.textContent = username;
+  }
+}
+
+function mostrarLogin() {
+  const loginPage = document.getElementById("loginPage");
+  const dashboardPage = document.getElementById("dashboardPage");
+
+  if (loginPage) {
+    loginPage.classList.remove("hidden");
+  }
+
+  if (dashboardPage) {
+    dashboardPage.classList.add("hidden");
+  }
+}
+
+function mostrarDashboard() {
+  const loginPage = document.getElementById("loginPage");
+  const dashboardPage = document.getElementById("dashboardPage");
+
+  if (loginPage) {
+    loginPage.classList.add("hidden");
+  }
+
+  if (dashboardPage) {
+    dashboardPage.classList.remove("hidden");
+  }
+}
+
+function actualizarEstadoLogin(message) {
+  const element = document.getElementById("loginStatus");
+
+  if (element) {
+    element.textContent = message;
   }
 }
