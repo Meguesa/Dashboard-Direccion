@@ -186,7 +186,14 @@ function renderDashboard() {
   const totalCapillas = contarServiciosPorOrigen(mes, "CAPILLA");
   const totalParque = contarServiciosPorOrigen(mes, "PARQUE");
   const totalServicios = totalCapillas + totalParque;
-
+  
+  const registrosIngresos = contarRegistrosIngresos(mes);
+  const registrosEgresos = contarRegistrosEgresos(mes);
+  
+  const promedioIngresos = registrosIngresos > 0 ? totalIngresos / registrosIngresos : 0;
+  const promedioEgresos = registrosEgresos > 0 ? totalEgresos / registrosEgresos : 0;
+  const promedioVentas = totalContratos > 0 ? totalVentas / totalContratos : 0;
+  
   const flujoNeto = totalIngresos - totalEgresos;
 
   setText("kpiIngresos", formatoMoneda(totalIngresos));
@@ -195,6 +202,22 @@ function renderDashboard() {
   setText("kpiVentas", formatoMoneda(totalVentas));
   setText("kpiServicios", formatoNumero(totalServicios));
 
+  setText("pageIngresosTotal", formatoMoneda(totalIngresos));
+  setText("pageIngresosRegistros", formatoNumero(registrosIngresos));
+  setText("pageIngresosPromedio", formatoMoneda(promedioIngresos));
+  
+  setText("pageEgresosTotal", formatoMoneda(totalEgresos));
+  setText("pageEgresosRegistros", formatoNumero(registrosEgresos));
+  setText("pageEgresosPromedio", formatoMoneda(promedioEgresos));
+  
+  setText("pageVentasTotal", formatoMoneda(totalVentas));
+  setText("pageVentasContratos", formatoNumero(totalContratos));
+  setText("pageVentasPromedio", formatoMoneda(promedioVentas));
+  
+  setText("pageServiciosTotal", formatoNumero(totalServicios));
+  setText("pageServiciosCapillas", formatoNumero(totalCapillas));
+  setText("pageServiciosParque", formatoNumero(totalParque));
+  
   aplicarClaseFlujo("kpiFlujo", flujoNeto);
 
   setText("capillasTotal", formatoNumero(totalCapillas));
@@ -254,6 +277,21 @@ function sumarVentas(mes) {
         && tipoRegistro === "MENSUAL";
     })
     .reduce((total, item) => total + Number(item.montoVenta || 0), 0);
+}
+
+function contarRegistrosIngresos(mes) {
+  return state.datos.ingresos
+    .filter((item) => normalizarTexto(item.mes) === mes)
+    .length;
+}
+
+function contarRegistrosEgresos(mes) {
+  return state.datos.egresos
+    .filter((item) => {
+      const mesEgreso = normalizarTexto(item.mesHoja || item.mes);
+      return mesEgreso === mes;
+    })
+    .length;
 }
 
 function contarContratos(mes) {
