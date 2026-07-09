@@ -83,3 +83,96 @@ async function obtenerListasSharePoint() {
     setAuthStatus("Error al obtener listas de SharePoint.");
   }
 }
+
+async function obtenerItemsLista(listId, top = 5000) {
+  const hostname = CONFIG.sharepoint.siteHostname;
+  const sitePath = CONFIG.sharepoint.sitePath;
+
+  const site = await graphGet(`/sites/${hostname}:${sitePath}`);
+  const siteId = site.id;
+
+  const endpoint =
+    `/sites/${siteId}/lists/${listId}/items?$expand=fields&$top=${top}`;
+
+  const resultado = await graphGet(endpoint);
+
+  return resultado.value || [];
+}
+
+async function obtenerIngresosSharePoint() {
+  try {
+    setAuthStatus("Leyendo BI_Ingresos desde SharePoint...");
+
+    const listId = CONFIG.sharepoint.lists.ingresos.listId;
+
+    if (!listId) {
+      throw new Error("No está configurado el listId de BI_Ingresos.");
+    }
+
+    const items = await obtenerItemsLista(listId);
+
+    const ingresos = items.map((item) => {
+      const f = item.fields || {};
+
+      return {
+        id: item.id,
+        mes: limpiarTexto(f.Mes),
+        banco: limpiarTexto(f.Banco),
+        categoria: limpiarTexto(f.Categor_x00ed_a || f.Categoria),
+        subcategoria: limpiarTexto(f.Subcategor_x00ed_a || f.Subcategoria),
+        referenciaContrato: limpiarTexto(f.Referencia_Contrato),
+        importe: convertirNumero(f.Importe),
+        fuente: limpiarTexto(f.Fuente),
+        hojaOrigen: limpiarTexto(f.Hoja_Origen)
+      };
+    });
+
+    console.log("BI_Ingresos leídos:", ingresos);
+    console.table(ingresos.slice(0, 20));
+
+    setText(
+      "sharePointStatus",
+      `BI_Ingresos leído correctamente: ${ingresos.length} registros`
+    );
+
+    setAuthStatus("BI_Ingresos leído correctamente.");
+
+    return ingresos;
+  } catch (error) {
+    console.error("Error leyendo BI_Ingresos:", error);
+
+    setText(
+      "sharePointStatus",
+      "Error al leer BI_Ingresos. Revisa la consola del navegador."
+    );
+
+    setAuthStatus("Error al leer BI_Ingresos.");
+    return [];
+  }
+}
+
+function limpiarTexto(valor) {
+  if (valor === null || valor === undefined) {
+    return "";
+  }
+
+  return String(valor).trim();
+}
+
+function convertirNumero(valor) {
+  if (valor === null || valor === undefined || valor === "") {
+    return 0;
+  }
+
+  if (typeof valor === "number") {
+    return valor;
+  }
+
+  const texto = String(valor)
+    .replace(/[$,]/g, "")
+    .trim();
+
+  const numero = Number(texto);
+
+  return Number.isFinite(numero) ? numero : 0;
+}
