@@ -58,83 +58,166 @@
       <div id="sharePointStatus" style="margin-top: 6px;">SharePoint: sin probar</div>
     </section>
 
-    <section class="grid-kpis">
-      <article class="card">
-        <div class="kpi-label">Monto total ingresos</div>
-        <div id="kpiIngresos" class="kpi-value">$0.00</div>
-      </article>
+    <!-- Página principal / Resumen -->
+    <section id="pageResumen" class="dashboard-page">
+      <section class="grid-kpis">
+        <article class="card kpi-card" data-page="ingresos" role="button" tabindex="0">
+          <div class="kpi-label">Monto total ingresos</div>
+          <div id="kpiIngresos" class="kpi-value">$0.00</div>
+        </article>
 
-      <article class="card">
-        <div class="kpi-label">Monto total egresos</div>
-        <div id="kpiEgresos" class="kpi-value">$0.00</div>
-      </article>
+        <article class="card kpi-card" data-page="egresos" role="button" tabindex="0">
+          <div class="kpi-label">Monto total egresos</div>
+          <div id="kpiEgresos" class="kpi-value">$0.00</div>
+        </article>
 
-      <article class="card">
-        <div class="kpi-label">Flujo neto</div>
-        <div id="kpiFlujo" class="kpi-value">$0.00</div>
-      </article>
+        <article class="card">
+          <div class="kpi-label">Flujo neto</div>
+          <div id="kpiFlujo" class="kpi-value">$0.00</div>
+        </article>
 
-      <article class="card">
-        <div class="kpi-label">Monto total ventas</div>
-        <div id="kpiVentas" class="kpi-value">$0.00</div>
-      </article>
+        <article class="card kpi-card" data-page="ventas" role="button" tabindex="0">
+          <div class="kpi-label">Monto total ventas</div>
+          <div id="kpiVentas" class="kpi-value">$0.00</div>
+        </article>
 
+        <article class="card kpi-card" data-page="servicios" role="button" tabindex="0">
+          <div class="kpi-label">Servicios</div>
+          <div id="kpiServicios" class="kpi-value">0</div>
+        </article>
+      </section>
+
+      <section class="grid-main">
+        <article class="card">
+          <h2 class="section-title">Resumen operativo</h2>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Concepto</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="summaryTableBody">
+              <tr>
+                <td>Cargando...</td>
+                <td>—</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="card">
+          <h2 class="section-title">Servicios</h2>
+
+          <div class="status-box">
+            Total servicios: <span id="serviciosTotal">0</span>
+          </div>
+
+          <table class="table" style="margin-top: 16px;">
+            <thead>
+              <tr>
+                <th>Origen</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Capillas</td>
+                <td id="capillasTotal">0</td>
+              </tr>
+              <tr>
+                <td>Parque</td>
+                <td id="parqueTotal">0</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p class="footer-note">
+            Última actualización visual:
+            <span id="lastUpdate">—</span>
+          </p>
+        </article>
+      </section>
+    </section>
+
+    <!-- Página de Ingresos -->
+    <section id="pageIngresos" class="dashboard-page hidden">
       <article class="card">
-        <div class="kpi-label">Servicios</div>
-        <div id="kpiServicios" class="kpi-value">0</div>
+        <div class="page-header">
+          <div>
+            <h2 class="section-title">Ingresos</h2>
+            <p class="footer-note">Detalle de ingresos del mes seleccionado.</p>
+          </div>
+
+          <button class="button button-secondary page-back-button" data-page="resumen">
+            Regresar
+          </button>
+        </div>
+
+        <div class="status-box">
+          Página de ingresos creada. Aquí se agregará el análisis por banco, categoría, subcategoría y contratos.
+        </div>
       </article>
     </section>
 
-    <section class="grid-main">
+    <!-- Página de Egresos -->
+    <section id="pageEgresos" class="dashboard-page hidden">
       <article class="card">
-        <h2 class="section-title">Resumen operativo</h2>
+        <div class="page-header">
+          <div>
+            <h2 class="section-title">Egresos</h2>
+            <p class="footer-note">Detalle de egresos del mes seleccionado.</p>
+          </div>
 
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Concepto</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody id="summaryTableBody">
-            <tr>
-              <td>Cargando...</td>
-              <td>—</td>
-            </tr>
-          </tbody>
-        </table>
-      </article>
-
-      <article class="card">
-        <h2 class="section-title">Servicios</h2>
-
-        <div class="status-box">
-          Total servicios: <span id="serviciosTotal">0</span>
+          <button class="button button-secondary page-back-button" data-page="resumen">
+            Regresar
+          </button>
         </div>
 
-        <table class="table" style="margin-top: 16px;">
-          <thead>
-            <tr>
-              <th>Origen</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Capillas</td>
-              <td id="capillasTotal">0</td>
-            </tr>
-            <tr>
-              <td>Parque</td>
-              <td id="parqueTotal">0</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="status-box">
+          Página de egresos creada. Aquí se agregará el análisis por rubro, tipo de gasto, beneficiario y pagos pendientes.
+        </div>
+      </article>
+    </section>
 
-        <p class="footer-note">
-          Última actualización visual:
-          <span id="lastUpdate">—</span>
-        </p>
+    <!-- Página de Ventas -->
+    <section id="pageVentas" class="dashboard-page hidden">
+      <article class="card">
+        <div class="page-header">
+          <div>
+            <h2 class="section-title">Ventas</h2>
+            <p class="footer-note">Detalle de ventas del mes seleccionado.</p>
+          </div>
+
+          <button class="button button-secondary page-back-button" data-page="resumen">
+            Regresar
+          </button>
+        </div>
+
+        <div class="status-box">
+          Página de ventas creada. Aquí se agregará el análisis por asesor, contratos, fuente y tipo de registro.
+        </div>
+      </article>
+    </section>
+
+    <!-- Página de Servicios -->
+    <section id="pageServicios" class="dashboard-page hidden">
+      <article class="card">
+        <div class="page-header">
+          <div>
+            <h2 class="section-title">Servicios</h2>
+            <p class="footer-note">Detalle de servicios del mes seleccionado.</p>
+          </div>
+
+          <button class="button button-secondary page-back-button" data-page="resumen">
+            Regresar
+          </button>
+        </div>
+
+        <div class="status-box">
+          Página de servicios creada. Aquí se agregará el análisis por Capillas, Parque, tipo de servicio, sucursal y ubicación.
+        </div>
       </article>
     </section>
   </main>
