@@ -441,3 +441,63 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ================================
+   Secciones de detalle
+================================ */
+
+.detail-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.detail-section-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.detail-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.detail-section-header h3 {
+  margin: 0 0 4px;
+  color: var(--text);
+  font-size: 17px;
+}
+
+.detail-section-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.detail-table th,
+.detail-table td {
+  white-space: nowrap;
+}
+
+.detail-table td:nth-child(2),
+.detail-table td:nth-child(3),
+.detail-table td:nth-child(4) {
+  text-align: right;
+}
+
+@media (max-width: 1000px) {
+  .detail-section-grid {
+    grid-template-columns: 1fr;
+  }
+}
