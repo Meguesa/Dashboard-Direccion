@@ -358,15 +358,6 @@ function renderDetalleIngresos(mes, totalIngresos) {
   });
 }
 
-  renderTablaIngresosAgrupada({
-    tbodyId: "tablaIngresosSubcategoriaBody",
-    mes,
-    totalIngresos,
-    campo: "subcategoria",
-    etiquetaVacia: "Sin subcategoría"
-  });
-}
-
 function renderTablaIngresosAgrupada(configuracion) {
   const tbody = document.getElementById(configuracion.tbodyId);
 
