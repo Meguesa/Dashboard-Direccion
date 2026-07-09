@@ -390,3 +390,54 @@ body {
     width: 100%;
   }
 }
+
+/* ================================
+   KPIs de páginas internas
+================================ */
+
+.detail-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 18px 0 20px;
+}
+
+.detail-kpi-card {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.detail-kpi-label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.detail-kpi-card strong {
+  display: block;
+  color: var(--text);
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.placeholder-box {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a5f;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .detail-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
