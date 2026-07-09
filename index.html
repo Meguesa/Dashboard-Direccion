@@ -3,64 +3,108 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>Centro de Control Dirección</title>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f4f6f8;
-      color: #222;
-    }
-
-    .page {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 40px;
-    }
-
-    .card {
-      background: white;
-      border-radius: 18px;
-      padding: 50px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-      max-width: 900px;
-      width: 100%;
-    }
-
-    h1 {
-      font-size: 48px;
-      margin-bottom: 10px;
-    }
-
-    p {
-      font-size: 22px;
-      color: #555;
-    }
-
-    .status {
-      margin-top: 30px;
-      display: inline-block;
-      padding: 14px 24px;
-      border-radius: 999px;
-      background: #e8f5e9;
-      color: #1b5e20;
-      font-weight: bold;
-      font-size: 18px;
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 
 <body>
-  <main class="page">
-    <section class="card">
-      <h1>Centro de Control Dirección</h1>
-      <p>Dashboard web conectado a SharePoint y Microsoft 365.</p>
-      <div class="status">GitHub Pages funcionando correctamente</div>
+  <main class="app">
+    <header class="header">
+      <div class="header-title">
+        <h1>Centro de Control Dirección</h1>
+        <p>Dashboard ejecutivo de indicadores financieros, comerciales y operativos</p>
+      </div>
+
+      <div class="header-actions">
+        <select id="monthSelector" class="select"></select>
+        <button id="refreshButton" class="button">Actualizar</button>
+      </div>
+    </header>
+
+    <section class="grid-kpis">
+      <article class="card">
+        <div class="kpi-label">Monto total ingresos</div>
+        <div id="kpiIngresos" class="kpi-value">$0.00</div>
+      </article>
+
+      <article class="card">
+        <div class="kpi-label">Monto total egresos</div>
+        <div id="kpiEgresos" class="kpi-value">$0.00</div>
+      </article>
+
+      <article class="card">
+        <div class="kpi-label">Flujo neto</div>
+        <div id="kpiFlujo" class="kpi-value">$0.00</div>
+      </article>
+
+      <article class="card">
+        <div class="kpi-label">Monto total ventas</div>
+        <div id="kpiVentas" class="kpi-value">$0.00</div>
+      </article>
+
+      <article class="card">
+        <div class="kpi-label">Contratos</div>
+        <div id="kpiContratos" class="kpi-value">0</div>
+      </article>
+    </section>
+
+    <section class="grid-main">
+      <article class="card">
+        <h2 class="section-title">Resumen operativo</h2>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Concepto</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="summaryTableBody">
+            <tr>
+              <td>Cargando...</td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2 class="section-title">Servicios</h2>
+
+        <div class="status-box">
+          Total servicios: <span id="serviciosTotal">0</span>
+        </div>
+
+        <table class="table" style="margin-top: 16px;">
+          <thead>
+            <tr>
+              <th>Origen</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Capillas</td>
+              <td id="capillasTotal">0</td>
+            </tr>
+            <tr>
+              <td>Parque</td>
+              <td id="parqueTotal">0</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p class="footer-note">
+          Última actualización visual:
+          <span id="lastUpdate">—</span>
+        </p>
+      </article>
     </section>
   </main>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
