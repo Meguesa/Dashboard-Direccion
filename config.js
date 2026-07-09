@@ -19,27 +19,27 @@ const CONFIG = {
     lists: {
       ingresos: {
         nombre: "BI_Ingresos",
-        listId: ""
+        listId: "77a15915-2984-41db-adb4-748100c36b0e"
       },
       egresos: {
         nombre: "BI_Egresos",
-        listId: ""
+        listId: "7f134828-312b-400f-a9f9-4604b2fcda68"
       },
       ventas: {
         nombre: "BI_Ventas",
-        listId: ""
+        listId: "fc0f8fbf-110a-418d-a7fb-542e633fab98"
       },
       servicios: {
         nombre: "BI_Servicios",
-        listId: ""
+        listId: "fb475b08-ff65-4320-b006-379bb2832c27"
       },
       fuentes: {
         nombre: "BI_Fuentes",
-        listId: ""
+        listId: "c76a60b1-4755-42a4-ad4a-03cc58643153"
       },
       logActualizaciones: {
         nombre: "BI_Log_Actualizaciones",
-        listId: ""
+        listId: "b5823c31-4f7c-4439-a222-1a7a0d0d84a1"
       }
     }
   },
