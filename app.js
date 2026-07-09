@@ -82,21 +82,6 @@ function conectarEventos() {
     });
   }
 
-  async function actualizarDatosDashboard() {
-  const datosSharePoint = await cargarDatosSharePoint();
-
-  if (!datosSharePoint) {
-    return;
-  }
-
-  state.datos.ingresos = datosSharePoint.ingresos || [];
-  state.datos.egresos = datosSharePoint.egresos || [];
-  state.datos.ventas = datosSharePoint.ventas || [];
-  state.datos.servicios = datosSharePoint.servicios || [];
-
-  renderDashboard();
-}
-
   if (testSharePointButton) {
     testSharePointButton.addEventListener("click", async () => {
       await probarConexionSharePoint();
@@ -114,6 +99,21 @@ function conectarEventos() {
       await obtenerIngresosSharePoint();
     });
   }
+}
+
+async function actualizarDatosDashboard() {
+  const datosSharePoint = await cargarDatosSharePoint();
+
+  if (!datosSharePoint) {
+    return;
+  }
+
+  state.datos.ingresos = datosSharePoint.ingresos || [];
+  state.datos.egresos = datosSharePoint.egresos || [];
+  state.datos.ventas = datosSharePoint.ventas || [];
+  state.datos.servicios = datosSharePoint.servicios || [];
+
+  renderDashboard();
 }
 
 function conectarNavegacionInterna() {
