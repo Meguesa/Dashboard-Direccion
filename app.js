@@ -128,7 +128,7 @@ function renderDashboard() {
   setText("kpiEgresos", formatoMoneda(totalEgresos));
   setText("kpiFlujo", formatoMoneda(flujoNeto));
   setText("kpiVentas", formatoMoneda(totalVentas));
-  setText("kpiContratos", formatoNumero(totalContratos));
+  setText("kpiServicios", formatoNumero(totalContratos));
 
   aplicarClaseFlujo("kpiFlujo", flujoNeto);
 
