@@ -1,4 +1,4 @@
-const state = {
+window.state = {
   mesSeleccionado: "2026-07",
   datos: {
     ingresos: [
@@ -25,6 +25,8 @@ const state = {
     ]
   }
 };
+
+const state = window.state;
 
 document.addEventListener("DOMContentLoaded", () => {
   inicializarDashboard();
@@ -296,3 +298,5 @@ function obtenerFechaHoraActual() {
     timeStyle: "short"
   }).format(new Date());
 }
+
+window.renderDashboard = renderDashboard;
