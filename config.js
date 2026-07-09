@@ -7,8 +7,8 @@ const CONFIG = {
   },
 
   microsoft: {
-    tenantId: "",
-    clientId: "",
+    tenantId: "888d54c0-f785-49d1-b967-54da8b0aed94",
+    clientId: "48963b90-d7b4-4447-af2f-ff186f1014f3",
     redirectUri: "https://meguesa.github.io/Dashboard-Direccion/"
   },
 
