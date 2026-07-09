@@ -191,3 +191,41 @@ body {
     width: 100%;
   }
 }
+
+.user-box {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 260px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.user-label {
+  font-weight: 700;
+  color: var(--text);
+  margin-right: 4px;
+}
+
+.button-secondary {
+  background: #6b7280;
+}
+
+.button-secondary:hover {
+  background: #4b5563;
+}
+
+.auth-panel {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #92400e;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  font-size: 14px;
+  font-weight: 700;
+}
