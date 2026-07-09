@@ -78,20 +78,24 @@ function conectarEventos() {
 
   if (refreshButton) {
     refreshButton.addEventListener("click", async () => {
-      const datosSharePoint = await cargarDatosSharePoint();
-  
-      if (!datosSharePoint) {
-        return;
-      }
-  
-      state.datos.ingresos = datosSharePoint.ingresos || [];
-      state.datos.egresos = datosSharePoint.egresos || [];
-      state.datos.ventas = datosSharePoint.ventas || [];
-      state.datos.servicios = datosSharePoint.servicios || [];
-  
-      renderDashboard();
+      await actualizarDatosDashboard();
     });
   }
+
+  async function actualizarDatosDashboard() {
+  const datosSharePoint = await cargarDatosSharePoint();
+
+  if (!datosSharePoint) {
+    return;
+  }
+
+  state.datos.ingresos = datosSharePoint.ingresos || [];
+  state.datos.egresos = datosSharePoint.egresos || [];
+  state.datos.ventas = datosSharePoint.ventas || [];
+  state.datos.servicios = datosSharePoint.servicios || [];
+
+  renderDashboard();
+}
 
   if (testSharePointButton) {
     testSharePointButton.addEventListener("click", async () => {
@@ -403,3 +407,4 @@ function obtenerFechaHoraActual() {
 }
 
 window.renderDashboard = renderDashboard;
+window.actualizarDatosDashboard = actualizarDatosDashboard;
