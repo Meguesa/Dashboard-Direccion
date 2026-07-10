@@ -447,6 +447,13 @@ function normalizarTexto(valor) {
   return String(valor).trim();
 }
 
+function normalizarClaveComparacion(valor) {
+  return normalizarTexto(valor)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+}
+
 function renderDetalleIngresos(mes, totalIngresos) {
   renderTablaIngresosAgrupada({
     tbodyId: "tablaIngresosBancoBody",
