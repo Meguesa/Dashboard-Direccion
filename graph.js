@@ -293,6 +293,7 @@ async function obtenerVentasSharePoint() {
         propiedades: convertirNumero(f.Propiedades),
         nichos: convertirNumero(f.Nichos),
         totalUnidades: convertirNumero(f.Total_Unidades),
+        metaMensual: convertirNumero(f.Meta_Mensual || f.Meta_x005f_Mensual || f.MetaMensual),
         tipoRegistro: limpiarTexto(f.Tipo_Registro),
         fuente: limpiarTexto(f.Fuente),
         hojaOrigen: limpiarTexto(f.Hoja_Origen),
