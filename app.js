@@ -452,6 +452,56 @@ function renderDetalleEgresos(mes, totalEgresos) {
     campo: "beneficiario",
     etiquetaVacia: "Sin beneficiario"
   });
+
+  renderTablaEgresosPendientes(mes);
+}
+
+function renderTablaEgresosPendientes(mes) {
+  const tbody = document.getElementById("tablaEgresosPendientesBody");
+
+  if (!tbody) {
+    return;
+  }
+
+  const pendientes = state.datos.egresos
+    .filter((item) => {
+      const mesEgreso = normalizarTexto(item.mesHoja || item.mes);
+      const porPagar = Number(item.porPagar || 0);
+
+      return mesEgreso === mes && porPagar > 0;
+    })
+    .sort((a, b) => Number(b.porPagar || 0) - Number(a.porPagar || 0));
+
+  if (pendientes.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6">Sin pagos pendientes para el mes seleccionado.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = pendientes
+    .map((item) => {
+      const beneficiario = normalizarTexto(item.beneficiario) || "Sin beneficiario";
+      const rubro = normalizarTexto(item.rubro) || "Sin rubro";
+      const tipoGasto = normalizarTexto(item.tipoGasto) || "Sin tipo de gasto";
+      const contexto = normalizarTexto(item.contexto) || "Sin contexto";
+      const porPagar = Number(item.porPagar || 0);
+      const estatus = normalizarTexto(item.estatus) || "Pendiente";
+
+      return `
+        <tr>
+          <td>${escaparHtml(beneficiario)}</td>
+          <td>${escaparHtml(rubro)}</td>
+          <td>${escaparHtml(tipoGasto)}</td>
+          <td>${escaparHtml(contexto)}</td>
+          <td>${formatoMoneda(porPagar)}</td>
+          <td>${escaparHtml(estatus)}</td>
+        </tr>
+      `;
+    })
+    .join("");
 }
 
 function renderTablaEgresosAgrupada(configuracion) {
