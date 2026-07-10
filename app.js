@@ -586,7 +586,7 @@ function renderDashboard() {
 
   setText("lastUpdate", obtenerFechaHoraActual());
 
-  renderTablaResumen({
+  renderTablaFlujoEfectivo(mes);({
     totalIngresos,
     totalEgresos,
     flujoNeto,
@@ -718,6 +718,413 @@ function normalizarClaveComparacion(valor) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toUpperCase();
+}
+
+function renderTablaFlujoEfectivo(mes) {
+  const tbody = document.getElementById("tablaFlujoEfectivoBody");
+
+  if (!tbody) {
+    return;
+  }
+
+  const flujo = calcularFlujoEfectivo(mes);
+  const filas = construirFilasFlujoEfectivo(flujo);
+
+  tbody.innerHTML = filas
+    .map((fila) => renderFilaFlujoEfectivo(fila, flujo.totalIngresos))
+    .join("");
+
+  conectarFilasExpandiblesFlujo();
+}
+
+function calcularFlujoEfectivo(mes) {
+  const ingresos = obtenerDetalleIngresosFlujo(mes);
+
+  const costosVariablesDirectos = obtenerDetalleEgresosFlujo(mes, "COSTOS_VARIABLES_DIRECTOS");
+  const costosVariablesOperativos = obtenerDetalleEgresosFlujo(mes, "COSTOS_VARIABLES_OPERATIVOS");
+  const costosFijos = obtenerDetalleEgresosFlujo(mes, "COSTOS_FIJOS");
+  const accionistas = obtenerDetalleEgresosFlujo(mes, "ACCIONISTAS");
+  const reinversion = obtenerDetalleEgresosFlujo(mes, "REINVERSION");
+
+  const totalIngresos = sumarTotalFlujo(ingresos);
+  const totalCostosVariablesDirectos = sumarTotalFlujo(costosVariablesDirectos);
+  const totalCostosVariablesOperativos = sumarTotalFlujo(costosVariablesOperativos);
+  const totalCostosFijos = sumarTotalFlujo(costosFijos);
+  const totalAccionistas = sumarTotalFlujo(accionistas);
+  const totalReinversion = sumarTotalFlujo(reinversion);
+
+  const flujoOperativo = totalIngresos
+    - totalCostosVariablesDirectos
+    - totalCostosVariablesOperativos
+    - totalCostosFijos;
+
+  const flujoLibre = flujoOperativo - totalAccionistas;
+  const flujoNeto = flujoLibre - totalReinversion;
+
+  return {
+    totalIngresos,
+    ingresos,
+    costosVariablesDirectos,
+    totalCostosVariablesDirectos,
+    costosVariablesOperativos,
+    totalCostosVariablesOperativos,
+    costosFijos,
+    totalCostosFijos,
+    flujoOperativo,
+    accionistas,
+    totalAccionistas,
+    flujoLibre,
+    reinversion,
+    totalReinversion,
+    flujoNeto
+  };
+}
+
+function construirFilasFlujoEfectivo(flujo) {
+  return [
+    {
+      tipo: "grupo",
+      id: "ingresos",
+      concepto: "INGRESO / COBRANZA",
+      total: flujo.totalIngresos,
+      detalles: flujo.ingresos,
+      signo: "positivo"
+    },
+    {
+      tipo: "grupo",
+      id: "costosVariablesDirectos",
+      concepto: "COSTOS VARIABLES DIRECTOS",
+      total: flujo.totalCostosVariablesDirectos,
+      detalles: flujo.costosVariablesDirectos,
+      signo: "negativo"
+    },
+    {
+      tipo: "grupo",
+      id: "costosVariablesOperativos",
+      concepto: "COSTOS VARIABLES OPERATIVOS",
+      total: flujo.totalCostosVariablesOperativos,
+      detalles: flujo.costosVariablesOperativos,
+      signo: "negativo"
+    },
+    {
+      tipo: "grupo",
+      id: "costosFijos",
+      concepto: "COSTOS FIJOS",
+      total: flujo.totalCostosFijos,
+      detalles: flujo.costosFijos,
+      signo: "negativo"
+    },
+    {
+      tipo: "resultado",
+      concepto: "FLUJO OPERATIVO",
+      total: flujo.flujoOperativo,
+      signo: flujo.flujoOperativo >= 0 ? "positivo" : "negativo"
+    },
+    {
+      tipo: "grupo",
+      id: "accionistas",
+      concepto: "ACCIONISTAS",
+      total: flujo.totalAccionistas,
+      detalles: flujo.accionistas,
+      signo: "negativo"
+    },
+    {
+      tipo: "resultado",
+      concepto: "FLUJO LIBRE",
+      total: flujo.flujoLibre,
+      signo: flujo.flujoLibre >= 0 ? "positivo" : "negativo"
+    },
+    {
+      tipo: "grupo",
+      id: "reinversion",
+      concepto: "REINVERSIÓN",
+      total: flujo.totalReinversion,
+      detalles: flujo.reinversion,
+      signo: "negativo"
+    },
+    {
+      tipo: "resultado-final",
+      concepto: "FLUJO NETO",
+      total: flujo.flujoNeto,
+      signo: flujo.flujoNeto >= 0 ? "positivo" : "negativo"
+    }
+  ];
+}
+
+function renderFilaFlujoEfectivo(fila, totalIngresos) {
+  const porcentaje = totalIngresos > 0 ? fila.total / totalIngresos : 0;
+  const porcentajeAbsoluto = Math.abs(porcentaje);
+  const porcentajeBarra = Math.min(porcentajeAbsoluto * 100, 100);
+
+  if (fila.tipo === "grupo") {
+    const tieneDetalles = Array.isArray(fila.detalles) && fila.detalles.length > 0;
+
+    const filaPrincipal = `
+      <tr class="flujo-row flujo-row-grupo" data-flujo-grupo="${fila.id}">
+        <td>
+          <button class="flujo-toggle" type="button" ${tieneDetalles ? "" : "disabled"}>
+            ${tieneDetalles ? "▸" : "•"}
+          </button>
+          <strong>${escaparHtml(fila.concepto)}</strong>
+        </td>
+        <td class="flujo-total ${fila.signo}">
+          ${formatoMoneda(fila.total)}
+        </td>
+        <td class="flujo-percent-cell">
+          ${renderBarraPorcentajeFlujo(porcentaje, porcentajeBarra, fila.signo)}
+        </td>
+      </tr>
+    `;
+
+    const filasDetalle = (fila.detalles || [])
+      .map((detalle) => {
+        const porcentajeDetalle = totalIngresos > 0 ? detalle.total / totalIngresos : 0;
+        const porcentajeBarraDetalle = Math.min(Math.abs(porcentajeDetalle) * 100, 100);
+
+        return `
+          <tr class="flujo-row flujo-row-detalle hidden" data-flujo-parent="${fila.id}">
+            <td>
+              <span class="flujo-detalle-label">${escaparHtml(detalle.nombre)}</span>
+            </td>
+            <td class="flujo-total detalle">
+              ${formatoMoneda(detalle.total)}
+            </td>
+            <td class="flujo-percent-cell">
+              ${renderBarraPorcentajeFlujo(porcentajeDetalle, porcentajeBarraDetalle, fila.signo)}
+            </td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    return filaPrincipal + filasDetalle;
+  }
+
+  return `
+    <tr class="flujo-row flujo-row-${fila.tipo}">
+      <td>
+        <strong>${escaparHtml(fila.concepto)}</strong>
+      </td>
+      <td class="flujo-total ${fila.signo}">
+        ${formatoMoneda(fila.total)}
+      </td>
+      <td class="flujo-percent-cell">
+        ${renderBarraPorcentajeFlujo(porcentaje, porcentajeBarra, fila.signo)}
+      </td>
+    </tr>
+  `;
+}
+
+function renderBarraPorcentajeFlujo(porcentaje, porcentajeBarra, signo) {
+  const claseSigno = signo === "negativo" ? "negativo" : "positivo";
+  const texto = formatoPorcentaje(porcentaje);
+
+  return `
+    <div class="flujo-percent-wrapper">
+      <span class="flujo-percent-text">${texto}</span>
+      <span class="flujo-percent-track">
+        <span class="flujo-percent-bar ${claseSigno}" style="width: ${porcentajeBarra}%;"></span>
+      </span>
+    </div>
+  `;
+}
+
+function conectarFilasExpandiblesFlujo() {
+  document.querySelectorAll(".flujo-row-grupo").forEach((fila) => {
+    fila.addEventListener("click", () => {
+      const grupo = fila.dataset.flujoGrupo;
+      const boton = fila.querySelector(".flujo-toggle");
+
+      if (!grupo || !boton || boton.disabled) {
+        return;
+      }
+
+      const estaAbierto = fila.classList.toggle("is-open");
+
+      boton.textContent = estaAbierto ? "▾" : "▸";
+
+      document.querySelectorAll(`[data-flujo-parent="${grupo}"]`).forEach((detalle) => {
+        detalle.classList.toggle("hidden", !estaAbierto);
+      });
+    });
+  });
+}
+
+function obtenerDetalleIngresosFlujo(mes) {
+  const grupos = new Map();
+
+  state.datos.ingresos
+    .filter((item) => normalizarTexto(item.mes) === mes)
+    .forEach((item) => {
+      const nombre = obtenerSubgrupoIngresoFlujo(item);
+      const importe = Number(item.importe || 0);
+
+      if (!grupos.has(nombre)) {
+        grupos.set(nombre, {
+          nombre,
+          total: 0
+        });
+      }
+
+      grupos.get(nombre).total += importe;
+    });
+
+  return ordenarDetalleFlujo(Array.from(grupos.values()));
+}
+
+function obtenerDetalleEgresosFlujo(mes, grupoBuscado) {
+  const grupos = new Map();
+
+  state.datos.egresos
+    .filter((item) => normalizarTexto(item.mes) === mes)
+    .filter((item) => obtenerGrupoEgresoFlujo(item) === grupoBuscado)
+    .forEach((item) => {
+      const nombre = obtenerSubgrupoEgresoFlujo(item);
+      const pagado = Number(item.pagado || 0);
+
+      if (pagado <= 0) {
+        return;
+      }
+
+      if (!grupos.has(nombre)) {
+        grupos.set(nombre, {
+          nombre,
+          total: 0
+        });
+      }
+
+      grupos.get(nombre).total += pagado;
+    });
+
+  return ordenarDetalleFlujo(Array.from(grupos.values()));
+}
+
+function sumarTotalFlujo(lista) {
+  return (lista || []).reduce((suma, item) => {
+    return suma + Number(item.total || 0);
+  }, 0);
+}
+
+function ordenarDetalleFlujo(lista) {
+  return (lista || [])
+    .filter((item) => Number(item.total || 0) !== 0)
+    .sort((a, b) => Number(b.total || 0) - Number(a.total || 0));
+}
+
+function obtenerSubgrupoIngresoFlujo(item) {
+  const categoria = normalizarClaveComparacion(item.categoria);
+  const subcategoria = normalizarClaveComparacion(item.subcategoria);
+  const texto = `${categoria} ${subcategoria}`;
+
+  if (texto.includes("DESTAPE")) {
+    return "DESTAPES";
+  }
+
+  if (texto.includes("ENGANCHE") || texto === "ENG") {
+    return "ENGANCHES";
+  }
+
+  if (texto.includes("USO INMEDIATO") || texto.includes("UI")) {
+    return "USO INMEDIATO";
+  }
+
+  if (
+    texto.includes("COBRANZA") ||
+    texto.includes("MENSUALIDAD") ||
+    texto.includes("MENSUALIDAD") ||
+    texto.includes("ANUALIDAD") ||
+    texto.includes("MEN")
+  ) {
+    return "COBRANZA";
+  }
+
+  return normalizarTexto(item.subcategoria || item.categoria || "OTROS INGRESOS").toUpperCase();
+}
+
+function obtenerGrupoEgresoFlujo(item) {
+  const tipoGasto = normalizarClaveComparacion(item.tipoGasto);
+  const rubro = normalizarClaveComparacion(item.rubro);
+  const texto = `${tipoGasto} ${rubro}`;
+
+  if (esRubroAccionistasFlujo(texto)) {
+    return "ACCIONISTAS";
+  }
+
+  if (esRubroReinversionFlujo(texto)) {
+    return "REINVERSION";
+  }
+
+  if (esRubroVariableOperativoFlujo(texto)) {
+    return "COSTOS_VARIABLES_OPERATIVOS";
+  }
+
+  if (esRubroVariableDirectoFlujo(texto)) {
+    return "COSTOS_VARIABLES_DIRECTOS";
+  }
+
+  if (tipoGasto === "GF") {
+    return "COSTOS_FIJOS";
+  }
+
+  if (tipoGasto === "GV") {
+    return "COSTOS_VARIABLES_DIRECTOS";
+  }
+
+  if (tipoGasto === "RE") {
+    return "REINVERSION";
+  }
+
+  if (tipoGasto === "SACC") {
+    return "ACCIONISTAS";
+  }
+
+  return "COSTOS_FIJOS";
+}
+
+function obtenerSubgrupoEgresoFlujo(item) {
+  const rubro = normalizarTexto(item.rubro);
+
+  if (!rubro) {
+    return "OTROS";
+  }
+
+  return rubro.toUpperCase();
+}
+
+function esRubroVariableDirectoFlujo(texto) {
+  return texto.includes("CREMATORIO") ||
+    texto.includes("ATAUD") ||
+    texto.includes("URNA") ||
+    texto.includes("INHUMACION") ||
+    texto.includes("EMBALSAMAMIENTO") ||
+    texto.includes("INSUMOS PARA SERVICIOS") ||
+    texto.includes("GASOLINA") ||
+    texto.includes("COVID");
+}
+
+function esRubroVariableOperativoFlujo(texto) {
+  return texto.includes("COMISION") ||
+    texto.includes("PUBLICIDAD") ||
+    texto.includes("MARKETING") ||
+    texto.includes("VENTAS");
+}
+
+function esRubroReinversionFlujo(texto) {
+  return texto.includes("REINVERSION") ||
+    texto.includes("PANTEON CONSTRUCCION") ||
+    texto.includes("CAPILLAS AF") ||
+    texto.includes("CAPILLAS CH") ||
+    texto.includes("EVENTOS") ||
+    texto.includes("ADQUISICION") ||
+    texto.includes("CONSULTORIA") ||
+    texto.includes("PANTEON OTROS");
+}
+
+function esRubroAccionistasFlujo(texto) {
+  return texto.includes("ACCIONISTA") ||
+    texto.includes("SACC") ||
+    texto.includes("MAMG") ||
+    texto.includes("MMMG");
 }
 
 function renderDetalleIngresos(mes, totalIngresos) {
