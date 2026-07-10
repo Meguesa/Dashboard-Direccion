@@ -531,8 +531,9 @@ body {
 ================================ */
 
 .table-scroll-10 {
-  max-height: 520px;
+  max-height: 430px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .table-scroll-10 thead th {
@@ -550,4 +551,106 @@ body {
 .detail-table-egresos-rubro td:nth-child(4),
 .detail-table-egresos-rubro td:nth-child(5) {
   text-align: right;
+}
+
+/* ================================
+   Corrección de márgenes y distribución de tablas
+================================ */
+
+.detail-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.detail-column,
+.detail-section-card,
+.table-scroll {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.detail-section-card {
+  overflow: hidden;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.detail-table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+}
+
+.detail-table th,
+.detail-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  vertical-align: top;
+}
+
+/* Tablas generales de 4 columnas */
+.detail-table:not(.detail-table-egresos-rubro) th:nth-child(1),
+.detail-table:not(.detail-table-egresos-rubro) td:nth-child(1) {
+  width: 46%;
+}
+
+.detail-table:not(.detail-table-egresos-rubro) th:nth-child(2),
+.detail-table:not(.detail-table-egresos-rubro) td:nth-child(2) {
+  width: 16%;
+}
+
+.detail-table:not(.detail-table-egresos-rubro) th:nth-child(3),
+.detail-table:not(.detail-table-egresos-rubro) td:nth-child(3) {
+  width: 22%;
+}
+
+.detail-table:not(.detail-table-egresos-rubro) th:nth-child(4),
+.detail-table:not(.detail-table-egresos-rubro) td:nth-child(4) {
+  width: 16%;
+}
+
+/* Tabla Egresos por rubro: 5 columnas */
+.detail-table-egresos-rubro th:nth-child(1),
+.detail-table-egresos-rubro td:nth-child(1) {
+  width: 36%;
+}
+
+.detail-table-egresos-rubro th:nth-child(2),
+.detail-table-egresos-rubro td:nth-child(2) {
+  width: 15%;
+}
+
+.detail-table-egresos-rubro th:nth-child(3),
+.detail-table-egresos-rubro td:nth-child(3) {
+  width: 13%;
+}
+
+.detail-table-egresos-rubro th:nth-child(4),
+.detail-table-egresos-rubro td:nth-child(4) {
+  width: 20%;
+}
+
+.detail-table-egresos-rubro th:nth-child(5),
+.detail-table-egresos-rubro td:nth-child(5) {
+  width: 16%;
+}
+
+/* Mantener importes y porcentajes alineados a la derecha */
+.detail-table td:nth-child(2),
+.detail-table td:nth-child(3),
+.detail-table td:nth-child(4),
+.detail-table-egresos-rubro td:nth-child(3),
+.detail-table-egresos-rubro td:nth-child(4),
+.detail-table-egresos-rubro td:nth-child(5) {
+  text-align: right;
+}
+
+.detail-table-egresos-rubro td:nth-child(2) {
+  text-align: left;
 }
