@@ -654,3 +654,46 @@ body {
 .detail-table-egresos-rubro td:nth-child(2) {
   text-align: left;
 }
+
+/* ================================
+   Pagos pendientes / por pagar
+================================ */
+
+.detail-full-card {
+  margin-top: 18px;
+}
+
+.detail-table-egresos-pendientes {
+  table-layout: fixed;
+}
+
+.detail-table-egresos-pendientes th:nth-child(1),
+.detail-table-egresos-pendientes td:nth-child(1) {
+  width: 24%;
+}
+
+.detail-table-egresos-pendientes th:nth-child(2),
+.detail-table-egresos-pendientes td:nth-child(2) {
+  width: 18%;
+}
+
+.detail-table-egresos-pendientes th:nth-child(3),
+.detail-table-egresos-pendientes td:nth-child(3) {
+  width: 13%;
+}
+
+.detail-table-egresos-pendientes th:nth-child(4),
+.detail-table-egresos-pendientes td:nth-child(4) {
+  width: 25%;
+}
+
+.detail-table-egresos-pendientes th:nth-child(5),
+.detail-table-egresos-pendientes td:nth-child(5) {
+  width: 12%;
+  text-align: right;
+}
+
+.detail-table-egresos-pendientes th:nth-child(6),
+.detail-table-egresos-pendientes td:nth-child(6) {
+  width: 8%;
+}
