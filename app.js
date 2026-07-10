@@ -1377,33 +1377,25 @@ function renderTablaServiciosTipoServicio(mes, totalServicios) {
       };
     })
     .sort((a, b) => {
-      const ordenOrigen = {
-        "CAPILLAS": 1,
-        "CAPILLA": 1,
-        "PARQUE": 2
-      };
+      const prioridadOrigenA = obtenerOrdenOrigenServicio(a.origen);
+      const prioridadOrigenB = obtenerOrdenOrigenServicio(b.origen);
 
-      const origenA = normalizarTexto(a.origen).toUpperCase();
-      const origenB = normalizarTexto(b.origen).toUpperCase();
+      if (prioridadOrigenA !== prioridadOrigenB) {
+        return prioridadOrigenA - prioridadOrigenB;
+      }
 
-      const prioridadA = ordenOrigen[origenA] || 99;
-      const prioridadB = ordenOrigen[origenB] || 99;
+      const prioridadParqueA = obtenerOrdenServicioParque(a.servicioParque);
+      const prioridadParqueB = obtenerOrdenServicioParque(b.servicioParque);
 
-      if (prioridadA !== prioridadB) {
-        return prioridadA - prioridadB;
+      if (prioridadParqueA !== prioridadParqueB) {
+        return prioridadParqueA - prioridadParqueB;
       }
 
       if (b.registros !== a.registros) {
         return b.registros - a.registros;
       }
 
-      const tipoOrden = a.tipoServicio.localeCompare(b.tipoServicio, "es");
-
-      if (tipoOrden !== 0) {
-        return tipoOrden;
-      }
-
-      return a.servicioParque.localeCompare(b.servicioParque, "es");
+      return a.tipoServicio.localeCompare(b.tipoServicio, "es");
     });
 
   if (filas.length === 0) {
@@ -1433,6 +1425,38 @@ function renderTablaServiciosTipoServicio(mes, totalServicios) {
     })
     .join("");
 }
+
+function obtenerOrdenOrigenServicio(origen) {
+  const origenNormalizado = normalizarTexto(origen).toUpperCase();
+
+  if (origenNormalizado === "CAPILLAS" || origenNormalizado === "CAPILLA") {
+    return 1;
+  }
+
+  if (origenNormalizado === "PARQUE") {
+    return 2;
+  }
+
+  return 99;
+}
+
+function obtenerOrdenServicioParque(servicioParque) {
+  const servicioNormalizado = normalizarTexto(servicioParque).toUpperCase();
+
+  const orden = {
+    "—": 0,
+    "-": 0,
+    "TOTAL SERVICE": 1,
+    "BASICO": 2,
+    "BÁSICO": 2,
+    "COFFEE BREAK": 3,
+    "TOTAL SERVICE COMPLEMENTO": 4,
+    "SIN SERVICIO PARQUE": 99
+  };
+
+  return orden[servicioNormalizado] ?? 98;
+}
+
 
 function obtenerCatalogoTiposServicio() {
   const tipos = new Map();
