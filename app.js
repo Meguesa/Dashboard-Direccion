@@ -848,17 +848,50 @@ function obtenerVentas2026(mes) {
 function obtenerVentasOperativas(mes) {
   return state.datos.ventas
     .filter((item) => {
-      const itemMes = normalizarTexto(item.mes);
-      return itemMes === mes && esFuenteVentas(item.fuente);
+      return coincideMesVenta(item.mes, mes) && esFuenteVentas(item.fuente);
     });
 }
 
 function obtenerContratosVentas(mes) {
   return state.datos.ventas
     .filter((item) => {
-      const itemMes = normalizarTexto(item.mes);
-      return itemMes === mes && esFuenteContratos(item.fuente);
+      return coincideMesVenta(item.mes, mes) && esFuenteContratos(item.fuente);
     });
+}
+
+function coincideMesVenta(mesRegistro, mesSeleccionado) {
+  const mesRegistroNormalizado = normalizarTexto(mesRegistro).toUpperCase();
+  const mesSeleccionadoNormalizado = normalizarTexto(mesSeleccionado).toUpperCase();
+
+  if (mesRegistroNormalizado === mesSeleccionadoNormalizado) {
+    return true;
+  }
+
+  const nombreMesSeleccionado = obtenerNombreMesDesdeClave(mesSeleccionadoNormalizado);
+
+  return mesRegistroNormalizado === nombreMesSeleccionado;
+}
+
+function obtenerNombreMesDesdeClave(mesSeleccionado) {
+  const mapaMeses = {
+    "01": "ENERO",
+    "02": "FEBRERO",
+    "03": "MARZO",
+    "04": "ABRIL",
+    "05": "MAYO",
+    "06": "JUNIO",
+    "07": "JULIO",
+    "08": "AGOSTO",
+    "09": "SEPTIEMBRE",
+    "10": "OCTUBRE",
+    "11": "NOVIEMBRE",
+    "12": "DICIEMBRE"
+  };
+
+  const partes = mesSeleccionado.split("-");
+  const numeroMes = partes.length >= 2 ? partes[1] : "";
+
+  return mapaMeses[numeroMes] || mesSeleccionado;
 }
 
 function esFuenteVentas(valor) {
