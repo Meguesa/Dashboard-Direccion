@@ -1196,3 +1196,23 @@ body {
   text-align: right;
   white-space: nowrap;
 }
+
+/* ================================
+   KPIs de Servicios en 5 columnas
+================================ */
+
+.detail-kpi-grid-5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (max-width: 1200px) {
+  .detail-kpi-grid-5 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .detail-kpi-grid-5 {
+    grid-template-columns: 1fr;
+  }
+}
