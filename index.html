@@ -171,6 +171,19 @@
             <strong id="pageIngresosPromedio">$0.00</strong>
           </div>
         </div>
+
+        <article class="detail-section-card chart-card chart-card-full">
+          <div class="detail-section-header">
+            <div>
+              <h3>Ingresos mensuales del año</h3>
+              <p>Comparativo del total de ingresos por mes.</p>
+            </div>
+          </div>
+        
+          <div class="chart-container chart-container-line">
+            <canvas id="chartIngresosMensuales"></canvas>
+          </div>
+        </article>
         
         <div class="detail-columns">
           <div class="detail-column">
@@ -201,6 +214,10 @@
                     </tr>
                   </tbody>
                 </table>
+              </div>
+              
+              <div class="chart-container chart-container-pie">
+              <canvas id="chartIngresosBanco"></canvas>
               </div>
             </article>
         
@@ -263,6 +280,10 @@
                     </tr>
                   </tbody>
                 </table>
+              </div>
+
+              <div class="chart-container chart-container-pie">
+                <canvas id="chartIngresosCategoria"></canvas>
               </div>
             </article>
           </div>
@@ -740,6 +761,7 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="config.js?v=20260710-01"></script>
   <script src="auth.js?v=20260710-01"></script>
   <script src="graph.js?v=20260710-01"></script>
