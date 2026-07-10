@@ -812,3 +812,36 @@ body {
 .table-filter-input::placeholder {
   color: #94a3b8;
 }
+
+/* ================================
+   Tablas de Ventas
+================================ */
+
+.detail-table-ventas th:nth-child(1),
+.detail-table-ventas td:nth-child(1) {
+  width: 32%;
+}
+
+.detail-table-ventas th:nth-child(2),
+.detail-table-ventas td:nth-child(2) {
+  width: 13%;
+  text-align: right;
+}
+
+.detail-table-ventas th:nth-child(3),
+.detail-table-ventas td:nth-child(3) {
+  width: 13%;
+  text-align: right;
+}
+
+.detail-table-ventas th:nth-child(4),
+.detail-table-ventas td:nth-child(4) {
+  width: 24%;
+  text-align: right;
+}
+
+.detail-table-ventas th:nth-child(5),
+.detail-table-ventas td:nth-child(5) {
+  width: 18%;
+  text-align: right;
+}
