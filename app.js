@@ -359,23 +359,27 @@ function sumarEgresos(mes) {
 }
 
 function sumarVentas(mes) {
-  const ventasMensuales = obtenerVentas2026(mes)
+  const ventas2026 = obtenerVentas2026(mes);
+
+  const ventasMensuales = ventas2026
     .filter((item) => {
       const tipoRegistro = normalizarTexto(item.tipoRegistro).toUpperCase();
-      return tipoRegistro === "MENSUAL";
+      return tipoRegistro === "MENSUAL" && obtenerMontoVenta(item) > 0;
     });
 
-  const base = ventasMensuales.length > 0
-    ? ventasMensuales
-    : obtenerVentas2026(mes).filter((item) => normalizarTexto(item.asesor) !== "");
+  if (ventasMensuales.length > 0) {
+    return ventasMensuales
+      .reduce((total, item) => total + obtenerMontoVenta(item), 0);
+  }
 
-  return base.reduce((total, item) => total + obtenerMontoVenta(item), 0);
-}
+  const ventasPorAsesor = ventas2026
+    .filter((item) => {
+      const asesor = normalizarTexto(item.asesor);
+      return asesor !== "" && obtenerMontoVenta(item) > 0;
+    });
 
-function contarRegistrosIngresos(mes) {
-  return state.datos.ingresos
-    .filter((item) => normalizarTexto(item.mes) === mes)
-    .length;
+  return ventasPorAsesor
+    .reduce((total, item) => total + obtenerMontoVenta(item), 0);
 }
 
 function contarRegistrosEgresos(mes) {
@@ -774,6 +778,10 @@ function agruparVentasPorCampo(mes, campo, etiquetaVacia, base) {
     const montoVenta = obtenerMontoVenta(item);
     const unidades = obtenerUnidadesVenta(item);
 
+    if (montoVenta <= 0 && unidades <= 0) {
+      return;
+    }
+
     if (!grupos.has(nombreGrupo)) {
       grupos.set(nombreGrupo, {
         nombre: nombreGrupo,
@@ -839,15 +847,7 @@ function obtenerVentas2026(mes) {
   return state.datos.ventas
     .filter((item) => {
       const itemMes = normalizarTexto(item.mes);
-      const fuente = normalizarTexto(item.fuente).toUpperCase();
-
-      return itemMes === mes && fuente === "VENTAS 2026";
-    })
-    .filter((item) => {
-      const monto = obtenerMontoVenta(item);
-      const unidades = obtenerUnidadesVenta(item);
-
-      return monto > 0 || unidades > 0;
+      return itemMes === mes && esFuenteVentas2026(item.fuente);
     });
 }
 
@@ -855,10 +855,18 @@ function obtenerContratosVentas(mes) {
   return state.datos.ventas
     .filter((item) => {
       const itemMes = normalizarTexto(item.mes);
-      const fuente = normalizarTexto(item.fuente).toUpperCase();
-
-      return itemMes === mes && fuente === "CONTRATOS";
+      return itemMes === mes && esFuenteContratos(item.fuente);
     });
+}
+
+function esFuenteVentas2026(valor) {
+  const fuente = normalizarTexto(valor).toUpperCase();
+  return fuente.includes("VENTAS 2026");
+}
+
+function esFuenteContratos(valor) {
+  const fuente = normalizarTexto(valor).toUpperCase();
+  return fuente.includes("CONTRATOS");
 }
 
 function obtenerBaseVentasPorTipo(mes, base) {
