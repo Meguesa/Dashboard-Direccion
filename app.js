@@ -1600,7 +1600,7 @@ function renderGraficaVentasPorAsesor(mes) {
     return;
   }
 
-  const labels = filas.map((fila) => fila.asesor || "Sin asesor");
+  const labels = filas.map((fila) => obtenerNombreAsesorAgrupado(fila));
   const valores = filas.map((fila) => Number(fila.total || 0));
 
   dashboardCharts.ventasAsesor = new Chart(canvas, {
@@ -1647,6 +1647,17 @@ function renderGraficaVentasPorAsesor(mes) {
       }
     }
   });
+}
+
+function obtenerNombreAsesorAgrupado(fila) {
+  return normalizarTexto(
+    fila.asesor ||
+    fila.nombre ||
+    fila.nombreAsesor ||
+    fila.responsable ||
+    fila.vendedor ||
+    fila.label
+  ) || "Sin asesor";
 }
 
 function renderDetalleVentas(mes, totalVentas) {
