@@ -307,15 +307,16 @@
               <div class="detail-section-header">
                 <div>
                   <h3>Egresos por rubro</h3>
-                  <p>Distribución de egresos pagados por rubro contable.</p>
+                  <p>Distribución de egresos pagados por rubro contable y tipo de gasto.</p>
                 </div>
               </div>
         
               <div class="table-scroll">
-                <table class="table detail-table">
+                <table class="table detail-table detail-table-egresos-rubro">
                   <thead>
                     <tr>
                       <th>Rubro</th>
+                      <th>Tipo de gasto</th>
                       <th>Registros</th>
                       <th>Pagado</th>
                       <th>% del egreso</th>
@@ -325,35 +326,6 @@
                     <tr>
                       <td>Cargando...</td>
                       <td>—</td>
-                      <td>—</td>
-                      <td>—</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </article>
-        
-            <article class="detail-section-card">
-              <div class="detail-section-header">
-                <div>
-                  <h3>Egresos por beneficiario</h3>
-                  <p>Principales proveedores, beneficiarios o conceptos de pago del mes.</p>
-                </div>
-              </div>
-        
-              <div class="table-scroll">
-                <table class="table detail-table">
-                  <thead>
-                    <tr>
-                      <th>Beneficiario</th>
-                      <th>Registros</th>
-                      <th>Pagado</th>
-                      <th>% del egreso</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tablaEgresosBeneficiarioBody">
-                    <tr>
-                      <td>Cargando...</td>
                       <td>—</td>
                       <td>—</td>
                       <td>—</td>
@@ -384,6 +356,36 @@
                     </tr>
                   </thead>
                   <tbody id="tablaEgresosTipoGastoBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+        
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Egresos por beneficiario</h3>
+                  <p>Principales proveedores, beneficiarios o conceptos de pago del mes.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll table-scroll-10">
+                <table class="table detail-table">
+                  <thead>
+                    <tr>
+                      <th>Beneficiario</th>
+                      <th>Registros</th>
+                      <th>Pagado</th>
+                      <th>% del egreso</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaEgresosBeneficiarioBody">
                     <tr>
                       <td>Cargando...</td>
                       <td>—</td>
