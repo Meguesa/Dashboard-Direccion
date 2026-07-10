@@ -10,7 +10,7 @@
   
   <title>Centro de Control Dirección</title>
 
-  <link rel="stylesheet" href="styles.css?v=20260710-10" />
+  <link rel="stylesheet" href="styles.css?v=20260710-11" />
 </head>
 
 <body>
@@ -93,23 +93,32 @@
       </section>
 
       <section class="grid-main">
-        <article class="card">
-          <h2 class="section-title">Resumen operativo</h2>
-
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Concepto</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody id="summaryTableBody">
-              <tr>
-                <td>Cargando...</td>
-                <td>—</td>
-              </tr>
-            </tbody>
-          </table>
+        <article class="card flujo-card">
+          <div class="flujo-card-header">
+            <div>
+              <h2>Flujo de efectivo neto</h2>
+              <p>Resumen mensual de ingresos, egresos operativos, reinversión y flujo neto.</p>
+            </div>
+          </div>
+        
+          <div class="flujo-table-scroll">
+            <table class="table flujo-table">
+              <thead>
+                <tr>
+                  <th>Concepto</th>
+                  <th>Total</th>
+                  <th>% ingreso</th>
+                </tr>
+              </thead>
+              <tbody id="tablaFlujoEfectivoBody">
+                <tr>
+                  <td>Cargando...</td>
+                  <td>—</td>
+                  <td>—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </article>
 
         <article class="card">
@@ -810,9 +819,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="config.js?v=20260710-10"></script>
-  <script src="auth.js?v=20260710-10"></script>
-  <script src="graph.js?v=20260710-10"></script>
-  <script src="app.js?v=20260710-10"></script>
+  <script src="config.js?v=20260710-11"></script>
+  <script src="auth.js?v=20260710-11"></script>
+  <script src="graph.js?v=20260710-11"></script>
+  <script src="app.js?v=20260710-11"></script>
 </body>
 </html>
