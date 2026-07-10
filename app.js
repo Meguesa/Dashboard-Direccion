@@ -475,7 +475,7 @@ function renderTablaEgresosPendientes(mes) {
   if (pendientes.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="6">Sin pagos pendientes para el mes seleccionado.</td>
+        <td colspan="4">Sin pagos pendientes para el mes seleccionado.</td>
       </tr>
     `;
     return;
@@ -486,18 +486,14 @@ function renderTablaEgresosPendientes(mes) {
       const beneficiario = normalizarTexto(item.beneficiario) || "Sin beneficiario";
       const rubro = normalizarTexto(item.rubro) || "Sin rubro";
       const tipoGasto = normalizarTexto(item.tipoGasto) || "Sin tipo de gasto";
-      const contexto = normalizarTexto(item.contexto) || "Sin contexto";
       const porPagar = Number(item.porPagar || 0);
-      const estatus = normalizarTexto(item.estatus) || "Pendiente";
 
       return `
         <tr>
           <td>${escaparHtml(beneficiario)}</td>
           <td>${escaparHtml(rubro)}</td>
           <td>${escaparHtml(tipoGasto)}</td>
-          <td>${escaparHtml(contexto)}</td>
           <td>${formatoMoneda(porPagar)}</td>
-          <td>${escaparHtml(estatus)}</td>
         </tr>
       `;
     })
