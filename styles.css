@@ -697,3 +697,49 @@ body {
 .detail-table-egresos-pendientes td:nth-child(6) {
   width: 8%;
 }
+
+/* ================================
+   Alturas con scroll para tablas
+================================ */
+
+.table-scroll-20 {
+  max-height: 880px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.table-scroll-10 {
+  max-height: 430px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.table-scroll-20 thead th,
+.table-scroll-10 thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
+}
+
+/* Pagos pendientes con 4 columnas */
+.detail-table-egresos-pendientes th:nth-child(1),
+.detail-table-egresos-pendientes td:nth-child(1) {
+  width: 34%;
+}
+
+.detail-table-egresos-pendientes th:nth-child(2),
+.detail-table-egresos-pendientes td:nth-child(2) {
+  width: 27%;
+}
+
+.detail-table-egresos-pendientes th:nth-child(3),
+.detail-table-egresos-pendientes td:nth-child(3) {
+  width: 17%;
+}
+
+.detail-table-egresos-pendientes th:nth-child(4),
+.detail-table-egresos-pendientes td:nth-child(4) {
+  width: 22%;
+  text-align: right;
+}
