@@ -266,21 +266,36 @@ function renderDashboard() {
 
   const totalIngresos = sumarIngresos(mes);
   const totalEgresos = sumarEgresos(mes);
-  const totalVentas = sumarVentas(mes);
-  const totalContratos = contarContratos(mes);
+
+  let totalVentas = 0;
+  let totalContratos = 0;
+
+  try {
+    totalVentas = sumarVentas(mes);
+  } catch (error) {
+    console.error("Error calculando ventas:", error);
+    totalVentas = 0;
+  }
+
+  try {
+    totalContratos = contarContratos(mes);
+  } catch (error) {
+    console.error("Error contando contratos:", error);
+    totalContratos = 0;
+  }
 
   const totalCapillas = contarServiciosPorOrigen(mes, "CAPILLA");
   const totalParque = contarServiciosPorOrigen(mes, "PARQUE");
   const totalServicios = totalCapillas + totalParque;
-  
+
   const registrosIngresos = contarRegistrosIngresos(mes);
   const registrosEgresos = contarRegistrosEgresos(mes);
   const totalPorPagar = calcularTotalPorPagar(mes);
-  
+
   const promedioIngresos = registrosIngresos > 0 ? totalIngresos / registrosIngresos : 0;
   const promedioEgresos = registrosEgresos > 0 ? totalEgresos / registrosEgresos : 0;
   const promedioVentas = totalContratos > 0 ? totalVentas / totalContratos : 0;
-  
+
   const flujoNeto = totalIngresos - totalEgresos;
 
   setText("kpiIngresos", formatoMoneda(totalIngresos));
@@ -292,20 +307,20 @@ function renderDashboard() {
   setText("pageIngresosTotal", formatoMoneda(totalIngresos));
   setText("pageIngresosRegistros", formatoNumero(registrosIngresos));
   setText("pageIngresosPromedio", formatoMoneda(promedioIngresos));
-  
+
   setText("pageEgresosTotal", formatoMoneda(totalEgresos));
   setText("pageEgresosPorPagar", formatoMoneda(totalPorPagar));
   setText("pageEgresosRegistros", formatoNumero(registrosEgresos));
   setText("pageEgresosPromedio", formatoMoneda(promedioEgresos));
-  
+
   setText("pageVentasTotal", formatoMoneda(totalVentas));
   setText("pageVentasContratos", formatoNumero(totalContratos));
   setText("pageVentasPromedio", formatoMoneda(promedioVentas));
-  
+
   setText("pageServiciosTotal", formatoNumero(totalServicios));
   setText("pageServiciosCapillas", formatoNumero(totalCapillas));
   setText("pageServiciosParque", formatoNumero(totalParque));
-  
+
   aplicarClaseFlujo("kpiFlujo", flujoNeto);
 
   setText("capillasTotal", formatoNumero(totalCapillas));
@@ -327,7 +342,13 @@ function renderDashboard() {
 
   renderDetalleIngresos(mes, totalIngresos);
   renderDetalleEgresos(mes, totalEgresos);
-  renderDetalleVentas(mes, totalVentas);
+
+  try {
+    renderDetalleVentas(mes, totalVentas);
+  } catch (error) {
+    console.error("Error renderizando detalle de ventas:", error);
+  }
+
   aplicarFiltrosTodasLasTablas();
 }
 
