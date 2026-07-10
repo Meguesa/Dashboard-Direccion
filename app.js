@@ -726,9 +726,15 @@ function renderTablaVentasAsesor(mes) {
         ? fila.total / metaMensual
         : 0;
 
+      const detalleDisponible = calcularVentasPorTipoServicioPorAsesor(mes, fila.nombre).length > 0;
+      const icono = detalleDisponible ? "▸" : "";
+
       return `
-        <tr>
-          <td>${escaparHtml(fila.nombre)}</td>
+        <tr class="ventas-asesor-row ${detalleDisponible ? "is-clickable" : ""}" data-asesor="${escaparAtributo(fila.nombre)}">
+          <td>
+            <span class="expand-icon">${icono}</span>
+            ${escaparHtml(fila.nombre)}
+          </td>
           <td>${formatoNumero(fila.registros)}</td>
           <td>${formatoNumero(fila.unidades)}</td>
           <td>${formatoMoneda(fila.total)}</td>
@@ -738,6 +744,80 @@ function renderTablaVentasAsesor(mes) {
       `;
     })
     .join("");
+
+  conectarDespliegueVentasAsesor(mes);
+}
+
+function conectarDespliegueVentasAsesor(mes) {
+  const filasAsesor = document.querySelectorAll("#tablaVentasAsesorBody .ventas-asesor-row");
+
+  filasAsesor.forEach((fila) => {
+    fila.addEventListener("click", () => {
+      if (!fila.classList.contains("is-clickable")) {
+        return;
+      }
+
+      const asesor = fila.dataset.asesor || "";
+      const yaEstaAbierta = fila.classList.contains("is-expanded");
+
+      cerrarDetallesVentasAsesor();
+
+      if (!yaEstaAbierta) {
+        abrirDetalleVentasAsesor(fila, mes, asesor);
+      }
+    });
+  });
+}
+
+function cerrarDetallesVentasAsesor() {
+  document
+    .querySelectorAll(".ventas-asesor-detail-row")
+    .forEach((fila) => fila.remove());
+
+  document
+    .querySelectorAll(".ventas-asesor-row")
+    .forEach((fila) => {
+      fila.classList.remove("is-expanded");
+
+      const icono = fila.querySelector(".expand-icon");
+      if (icono && icono.textContent.trim() !== "") {
+        icono.textContent = "▸";
+      }
+    });
+}
+
+function abrirDetalleVentasAsesor(filaAsesor, mes, asesor) {
+  const detalles = calcularVentasPorTipoServicioPorAsesor(mes, asesor);
+
+  if (detalles.length === 0) {
+    return;
+  }
+
+  filaAsesor.classList.add("is-expanded");
+
+  const icono = filaAsesor.querySelector(".expand-icon");
+  if (icono) {
+    icono.textContent = "▾";
+  }
+
+  const filasDetalle = detalles
+    .map((detalle) => {
+      return `
+        <tr class="ventas-asesor-detail-row">
+          <td class="ventas-detail-label">↳ ${escaparHtml(detalle.nombre)}</td>
+          <td>${formatoNumero(detalle.registros)}</td>
+          <td>${formatoNumero(detalle.unidades)}</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  filaAsesor.insertAdjacentHTML("afterend", filasDetalle);
+
+  aplicarFiltrosTodasLasTablas();
 }
 
 function agruparVentasPorAsesor(mes) {
@@ -817,8 +897,19 @@ function renderTablaVentasTipoServicio(mes) {
 }
 
 function calcularVentasPorTipoServicio(mes) {
-  const ventasBase = obtenerVentasPorAsesorBase(mes);
+  return calcularTiposServicioDesdeVentas(obtenerVentasPorAsesorBase(mes));
+}
 
+function calcularVentasPorTipoServicioPorAsesor(mes, asesor) {
+  const asesorBuscado = normalizarTexto(asesor).toUpperCase();
+
+  const ventasAsesor = obtenerVentasPorAsesorBase(mes)
+    .filter((item) => normalizarTexto(item.asesor).toUpperCase() === asesorBuscado);
+
+  return calcularTiposServicioDesdeVentas(ventasAsesor);
+}
+
+function calcularTiposServicioDesdeVentas(ventasBase) {
   const tiposServicio = [
     {
       nombre: "Servicios AF",
@@ -874,7 +965,7 @@ function renderTablaVentasContratos(mes) {
   if (contratos.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5">Sin contratos para el mes seleccionado.</td>
+        <td colspan="4">Sin contratos para el mes seleccionado.</td>
       </tr>
     `;
     return;
@@ -884,7 +975,6 @@ function renderTablaVentasContratos(mes) {
     .map((item) => {
       const contrato = normalizarTexto(item.numeroContrato || item.referencia) || "Sin contrato";
       const cliente = obtenerNombreClienteVenta(item);
-      const asesor = normalizarTexto(item.asesor) || "Sin asesor";
       const tipo = normalizarTexto(item.tipoServicio || item.tipoContrato || item.tipoRegistro) || "Sin tipo";
       const total = obtenerMontoVenta(item);
 
@@ -892,7 +982,6 @@ function renderTablaVentasContratos(mes) {
         <tr>
           <td>${escaparHtml(contrato)}</td>
           <td>${escaparHtml(cliente)}</td>
-          <td>${escaparHtml(asesor)}</td>
           <td>${escaparHtml(tipo)}</td>
           <td>${formatoMoneda(total)}</td>
         </tr>
@@ -900,7 +989,6 @@ function renderTablaVentasContratos(mes) {
     })
     .join("");
 }
-
 
 function obtenerVentas2026(mes) {
   return obtenerVentasOperativas(mes);
@@ -1216,6 +1304,11 @@ function escaparHtml(valor) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function escaparAtributo(valor) {
+  return escaparHtml(valor)
+    .replaceAll("`", "&#096;");
 }
 
 function obtenerFechaHoraActual() {
