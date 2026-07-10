@@ -242,6 +242,7 @@ function renderDashboard() {
   });
 
   renderDetalleIngresos(mes, totalIngresos);
+  renderDetalleEgresos(mes, totalEgresos);
 }
 
 function sumarPorMes(lista, mes, campo) {
@@ -425,6 +426,95 @@ function agruparIngresosPorCampo(mes, campo, etiquetaVacia) {
     .sort((a, b) => b.total - a.total);
 }
 
+function renderDetalleEgresos(mes, totalEgresos) {
+  renderTablaEgresosAgrupada({
+    tbodyId: "tablaEgresosRubroBody",
+    mes,
+    totalEgresos,
+    campo: "rubro",
+    etiquetaVacia: "Sin rubro"
+  });
+
+  renderTablaEgresosAgrupada({
+    tbodyId: "tablaEgresosTipoGastoBody",
+    mes,
+    totalEgresos,
+    campo: "tipoGasto",
+    etiquetaVacia: "Sin tipo de gasto"
+  });
+}
+
+function renderTablaEgresosAgrupada(configuracion) {
+  const tbody = document.getElementById(configuracion.tbodyId);
+
+  if (!tbody) {
+    return;
+  }
+
+  const filas = agruparEgresosPorCampo(
+    configuracion.mes,
+    configuracion.campo,
+    configuracion.etiquetaVacia
+  );
+
+  if (filas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4">Sin información para el mes seleccionado.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filas
+    .map((fila) => {
+      const porcentaje = configuracion.totalEgresos > 0
+        ? fila.total / configuracion.totalEgresos
+        : 0;
+
+      return `
+        <tr>
+          <td>${escaparHtml(fila.nombre)}</td>
+          <td>${formatoNumero(fila.registros)}</td>
+          <td>${formatoMoneda(fila.total)}</td>
+          <td>${formatoPorcentaje(porcentaje)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function agruparEgresosPorCampo(mes, campo, etiquetaVacia) {
+  const grupos = new Map();
+
+  state.datos.egresos
+    .filter((item) => {
+      const mesEgreso = normalizarTexto(item.mesHoja || item.mes);
+      const pagado = Number(item.pagado || 0);
+
+      return mesEgreso === mes && pagado > 0;
+    })
+    .forEach((item) => {
+      const nombreGrupo = normalizarTexto(item[campo]) || etiquetaVacia;
+      const pagado = Number(item.pagado || 0);
+
+      if (!grupos.has(nombreGrupo)) {
+        grupos.set(nombreGrupo, {
+          nombre: nombreGrupo,
+          registros: 0,
+          total: 0
+        });
+      }
+
+      const grupo = grupos.get(nombreGrupo);
+
+      grupo.registros += 1;
+      grupo.total += pagado;
+    });
+
+  return Array.from(grupos.values())
+    .sort((a, b) => b.total - a.total);
+}
 
 function renderTablaResumen(datos) {
   const tbody = document.getElementById("summaryTableBody");
