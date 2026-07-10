@@ -27,6 +27,7 @@ window.state = {
 };
 
 const state = window.state;
+const dashboardCharts = {};
 
 const DASHBOARD_CACHE_KEY = "dashboardDireccionUltimosDatos";
 const DASHBOARD_REFRESH_MS = 60 * 60 * 1000;
@@ -375,6 +376,11 @@ function mostrarPagina(nombrePagina) {
     top: 0,
     behavior: "smooth"
   });
+  
+    setTimeout(() => {
+    redimensionarGraficas();
+  }, 80);
+  
 }
 
 function renderDashboard() {
@@ -594,6 +600,180 @@ function renderDetalleIngresos(mes, totalIngresos) {
     campo: "subcategoria",
     etiquetaVacia: "Sin subcategoría"
   });
+  
+  renderGraficasIngresos(mes);
+}
+
+function renderGraficasIngresos(mes) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  renderGraficaIngresosMensuales();
+  renderGraficaPieIngresos({
+    canvasId: "chartIngresosBanco",
+    chartKey: "ingresosBanco",
+    mes,
+    campo: "banco",
+    etiquetaVacia: "Sin banco"
+  });
+
+  renderGraficaPieIngresos({
+    canvasId: "chartIngresosCategoria",
+    chartKey: "ingresosCategoria",
+    mes,
+    campo: "categoria",
+    etiquetaVacia: "Sin categoría"
+  });
+}
+
+function renderGraficaIngresosMensuales() {
+  const canvas = document.getElementById("chartIngresosMensuales");
+
+  if (!canvas) {
+    return;
+  }
+
+  const meses = CONFIG.meses || [];
+
+  const labels = meses.map((mes) => mes.nombre);
+  const valores = meses.map((mes) => sumarIngresos(mes.clave));
+
+  destruirGrafica("ingresosMensuales");
+
+  dashboardCharts.ingresosMensuales = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Ingresos",
+          data: valores,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom"
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              return `Ingresos: ${formatoMoneda(context.parsed.y)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => formatoMoneda(value)
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderGraficaPieIngresos(configuracion) {
+  const canvas = document.getElementById(configuracion.canvasId);
+
+  if (!canvas) {
+    return;
+  }
+
+  const filas = agruparIngresosPorCampo(
+    configuracion.mes,
+    configuracion.campo,
+    configuracion.etiquetaVacia
+  )
+    .filter((fila) => Number(fila.total || 0) > 0);
+
+  destruirGrafica(configuracion.chartKey);
+
+  if (filas.length === 0) {
+    return;
+  }
+
+  const labels = filas.map((fila) => fila.nombre);
+  const valores = filas.map((fila) => fila.total);
+  const total = valores.reduce((suma, valor) => suma + Number(valor || 0), 0);
+
+  dashboardCharts[configuracion.chartKey] = new Chart(canvas, {
+    type: "pie",
+    data: {
+      labels,
+      datasets: [
+        {
+          data: valores,
+          backgroundColor: generarColoresGrafica(filas.length),
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom"
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const valor = Number(context.parsed || 0);
+              const porcentaje = total > 0 ? valor / total : 0;
+
+              return `${context.label}: ${formatoMoneda(valor)} (${formatoPorcentaje(porcentaje)})`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function destruirGrafica(chartKey) {
+  if (dashboardCharts[chartKey]) {
+    dashboardCharts[chartKey].destroy();
+    dashboardCharts[chartKey] = null;
+  }
+}
+
+function generarColoresGrafica(total) {
+  const coloresBase = [
+    "#1f4e79",
+    "#3b82f6",
+    "#60a5fa",
+    "#93c5fd",
+    "#0f766e",
+    "#14b8a6",
+    "#f59e0b",
+    "#ef4444",
+    "#8b5cf6",
+    "#64748b",
+    "#22c55e",
+    "#eab308"
+  ];
+
+  return Array.from({ length: total }, (_, index) => {
+    return coloresBase[index % coloresBase.length];
+  });
 }
 
 function renderTablaIngresosAgrupada(configuracion) {
@@ -634,6 +814,14 @@ function renderTablaIngresosAgrupada(configuracion) {
       `;
     })
     .join("");
+}
+
+function redimensionarGraficas() {
+  Object.values(dashboardCharts).forEach((chart) => {
+    if (chart) {
+      chart.resize();
+    }
+  });
 }
 
 function agruparIngresosPorCampo(mes, campo, etiquetaVacia) {
