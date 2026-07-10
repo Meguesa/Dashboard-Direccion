@@ -1512,10 +1512,149 @@ function agruparEgresosPorCampo(
     .sort((a, b) => b.total - a.total);
 }
 
+function renderGraficasVentas(mes) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  renderGraficaVentasMensuales();
+  renderGraficaVentasPorAsesor(mes);
+}
+
+function renderGraficaVentasMensuales() {
+  const canvas = document.getElementById("chartVentasMensuales");
+
+  if (!canvas) {
+    return;
+  }
+
+  const meses = obtenerMesesDelAnioSeleccionado();
+
+  const labels = meses.map((mes) => mes.nombre);
+  const valores = meses.map((mes) => sumarVentas(mes.clave));
+
+  destruirGrafica("ventasMensuales");
+
+  dashboardCharts.ventasMensuales = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Ventas",
+          data: valores,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom"
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              return `Ventas: ${formatoMoneda(context.parsed.y)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => formatoMoneda(value)
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderGraficaVentasPorAsesor(mes) {
+  const canvas = document.getElementById("chartVentasAsesor");
+
+  if (!canvas) {
+    return;
+  }
+
+  const filas = agruparVentasPorAsesor(mes)
+    .filter((fila) => Number(fila.total || 0) > 0)
+    .sort((a, b) => Number(b.total || 0) - Number(a.total || 0));
+
+  destruirGrafica("ventasAsesor");
+
+  if (filas.length === 0) {
+    return;
+  }
+
+  const labels = filas.map((fila) => fila.asesor || "Sin asesor");
+  const valores = filas.map((fila) => Number(fila.total || 0));
+
+  dashboardCharts.ventasAsesor = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Venta mensual",
+          data: valores,
+          backgroundColor: labels.map((label, index) => obtenerColorGraficaVariado(index)),
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              return `Venta: ${formatoMoneda(context.parsed.x)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => formatoMoneda(value)
+          }
+        },
+        y: {
+          ticks: {
+            autoSkip: false
+          }
+        }
+      }
+    }
+  });
+}
+
 function renderDetalleVentas(mes, totalVentas) {
   renderTablaVentasAsesor(mes);
   renderTablaVentasTipoServicio(mes);
   renderTablaVentasContratos(mes);
+  
+  renderGraficasVentas(mes);
 }
 
 function renderTablaVentasAsesor(mes) {
