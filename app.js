@@ -270,8 +270,11 @@ function renderDashboard() {
   const totalContratos = contarContratos(mes);
 
   const totalCapillas = contarServiciosPorOrigen(mes, "CAPILLA");
+  const totalCapillasUsoInmediato = contarServiciosCapillasPorTipoContrato(mes, "USO INMEDIATO");
+  const totalCapillasPrevision = contarServiciosCapillasPorTipoContrato(mes, "PREVISION");
   const totalParque = contarServiciosPorOrigen(mes, "PARQUE");
   const totalServicios = totalCapillas + totalParque;
+
   
   const registrosIngresos = contarRegistrosIngresos(mes);
   const registrosEgresos = contarRegistrosEgresos(mes);
@@ -304,7 +307,10 @@ function renderDashboard() {
   
   setText("pageServiciosTotal", formatoNumero(totalServicios));
   setText("pageServiciosCapillas", formatoNumero(totalCapillas));
+  setText("pageServiciosCapillasUsoInmediato", formatoNumero(totalCapillasUsoInmediato));
+  setText("pageServiciosCapillasPrevision", formatoNumero(totalCapillasPrevision));
   setText("pageServiciosParque", formatoNumero(totalParque));
+
   
   aplicarClaseFlujo("kpiFlujo", flujoNeto);
 
@@ -413,6 +419,22 @@ function contarServiciosPorOrigen(mes, origenBuscado) {
 
       return itemMes === mes
         && origen.includes(origenBuscado);
+    })
+    .length;
+}
+
+function contarServiciosCapillasPorTipoContrato(mes, tipoBuscado) {
+  const tipoNormalizado = normalizarClaveComparacion(tipoBuscado);
+
+  return state.datos.servicios
+    .filter((item) => {
+      const esMes = coincideMesServicio(item.mes, mes);
+      const esCapillas = obtenerOrigenServicio(item) === "Capillas";
+      const tipoRegistro = normalizarClaveComparacion(item.previsionUsoInmediato);
+
+      return esMes
+        && esCapillas
+        && tipoRegistro.includes(tipoNormalizado);
     })
     .length;
 }
@@ -1281,8 +1303,40 @@ function agruparServiciosPorUbicacion(mes) {
   });
 
   return Array.from(grupos.values())
-    .sort((a, b) => b.total - a.total);
+    .sort((a, b) => {
+      const ordenA = obtenerOrdenUbicacionServicio(a.nombre);
+      const ordenB = obtenerOrdenUbicacionServicio(b.nombre);
+  
+      if (ordenA !== ordenB) {
+        return ordenA - ordenB;
+      }
+  
+      if (b.total !== a.total) {
+        return b.total - a.total;
+      }
+  
+      return a.nombre.localeCompare(b.nombre, "es");
+    });
 }
+
+function obtenerOrdenUbicacionServicio(ubicacion) {
+  const texto = normalizarClaveComparacion(ubicacion);
+
+  if (texto.includes("CHURUBUSCO")) {
+    return 1;
+  }
+
+  if (texto.includes("APODACA") || texto.includes("AGUA FRIA")) {
+    return 2;
+  }
+
+  if (texto.includes("PARQUE") || texto.includes("LOTE") || texto.includes("NICHO")) {
+    return 3;
+  }
+
+  return 99;
+}
+
 
 function renderTablaServiciosAgrupada(configuracion) {
   const tbody = document.getElementById(configuracion.tbodyId);
@@ -1362,7 +1416,11 @@ function renderTablaServiciosTipoServicio(mes, totalServicios) {
           const origen = obtenerOrigenServicio(item);
           const tipoServicio = obtenerTipoServicioNormalizado(item);
           const servicioParque = obtenerServicioParqueNormalizado(item);
-
+      
+          if (origen === "Capillas" && esTipoServicioCapillasExcluido(tipoServicio)) {
+            return false;
+          }
+      
           return origen === tipoDisponible.origen
             && tipoServicio === tipoDisponible.tipoServicio
             && servicioParque === tipoDisponible.servicioParque;
@@ -1471,8 +1529,9 @@ function obtenerCatalogoTiposServicio() {
   const catalogoBaseCapillas = [
     { origen: "Capillas", tipoServicio: "Cremación", servicioParque: "—" },
     { origen: "Capillas", tipoServicio: "Cremación Directa (con velación)", servicioParque: "—" },
+    { origen: "Capillas", tipoServicio: "Cremación Directa (sin velación)", servicioParque: "—" },
     { origen: "Capillas", tipoServicio: "Inhumación", servicioParque: "—" },
-    { origen: "Capillas", tipoServicio: "Velación", servicioParque: "—" }
+    { origen: "Capillas", tipoServicio: "Renta de Capillas", servicioParque: "—" }
   ];
 
   const tiposBaseParque = [
@@ -1506,8 +1565,13 @@ function obtenerCatalogoTiposServicio() {
     const origen = obtenerOrigenServicio(item);
     const tipoServicio = obtenerTipoServicioNormalizado(item);
     const servicioParque = obtenerServicioParqueNormalizado(item);
+  
+    if (origen === "Capillas" && esTipoServicioCapillasExcluido(tipoServicio)) {
+      return;
+    }
+  
     const llave = `${origen}||${tipoServicio}||${servicioParque}`;
-
+  
     if (!tipos.has(llave)) {
       tipos.set(llave, {
         origen,
@@ -1521,7 +1585,21 @@ function obtenerCatalogoTiposServicio() {
 }
 
 function obtenerTipoServicioNormalizado(item) {
-  return normalizarTexto(item.tipoServicio) || "Sin tipo de servicio";
+  const origen = obtenerOrigenServicio(item);
+  const tipoOriginal = normalizarTexto(item.tipoServicio) || "Sin tipo de servicio";
+  const tipoComparacion = normalizarClaveComparacion(tipoOriginal);
+
+  if (origen === "Parque" && tipoComparacion === "DEPOSITO DE CENIZAS") {
+    return "Depósito de Cenizas";
+  }
+
+  return tipoOriginal;
+}
+
+function esTipoServicioCapillasExcluido(tipoServicio) {
+  const tipo = normalizarClaveComparacion(tipoServicio);
+
+  return tipo === "VELACION";
 }
 
 function obtenerServicioParqueNormalizado(item) {
