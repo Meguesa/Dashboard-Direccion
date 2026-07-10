@@ -1047,6 +1047,147 @@ function agruparIngresosPorCampo(mes, campo, etiquetaVacia) {
     .sort((a, b) => b.total - a.total);
 }
 
+function renderGraficasEgresos(mes) {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  renderGraficaEgresosMensuales();
+  renderGraficaPieEgresosRubro(mes);
+}
+
+function renderGraficaEgresosMensuales() {
+  const canvas = document.getElementById("chartEgresosMensuales");
+
+  if (!canvas) {
+    return;
+  }
+
+  const meses = CONFIG.meses || [];
+
+  const labels = meses.map((mes) => mes.nombre);
+  const valores = meses.map((mes) => sumarEgresos(mes.clave));
+
+  destruirGrafica("egresosMensuales");
+
+  dashboardCharts.egresosMensuales = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Egresos pagados",
+          data: valores,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom"
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              return `Egresos: ${formatoMoneda(context.parsed.y)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => formatoMoneda(value)
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderGraficaPieEgresosRubro(mes) {
+  const canvas = document.getElementById("chartEgresosRubro");
+
+  if (!canvas) {
+    return;
+  }
+
+  const filas = agruparEgresosPorCampo(
+    mes,
+    "rubro",
+    "Sin rubro"
+  )
+    .filter((fila) => Number(fila.total || 0) > 0);
+
+  destruirGrafica("egresosRubro");
+
+  if (filas.length === 0) {
+    return;
+  }
+
+  const labels = filas.map((fila) => fila.nombre);
+  const valores = filas.map((fila) => fila.total);
+  const total = valores.reduce((suma, valor) => suma + Number(valor || 0), 0);
+
+  dashboardCharts.egresosRubro = new Chart(canvas, {
+    type: "pie",
+    data: {
+      labels,
+      datasets: [
+        {
+          data: valores,
+          backgroundColor: labels.map((label, index) => obtenerColorGraficaVariado(index)),
+          borderColor: "#ffffff",
+          borderWidth: 2
+        }
+      ]
+    },
+    plugins: [
+      crearPluginEtiquetasPie(total)
+    ],
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: 30,
+          right: 90,
+          bottom: 30,
+          left: 90
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const valor = Number(context.parsed || 0);
+              const porcentaje = total > 0 ? valor / total : 0;
+
+              return `${context.label}: ${formatoMoneda(valor)} (${formatoPorcentaje(porcentaje)})`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
 function renderDetalleEgresos(mes, totalEgresos) {
   renderTablaEgresosAgrupada({
     tbodyId: "tablaEgresosRubroBody",
@@ -1075,6 +1216,8 @@ function renderDetalleEgresos(mes, totalEgresos) {
   });
 
   renderTablaEgresosPendientes(mes);
+  
+  renderGraficasEgresos(mes);
 }
 
 function renderTablaEgresosPendientes(mes) {
