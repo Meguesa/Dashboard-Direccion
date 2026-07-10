@@ -1,4 +1,5 @@
 window.state = {
+  anioSeleccionado: "2026",
   mesSeleccionado: "2026-07",
   datos: {
     ingresos: [
@@ -41,6 +42,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function inicializarDashboard() {
   cargarDatosDesdeCache();
+  sincronizarAnioConMesSeleccionado();
+  cargarSelectorAnios();
   cargarSelectorMeses();
   conectarEventos();
   conectarNavegacionInterna();
@@ -49,6 +52,75 @@ function inicializarDashboard() {
   mostrarPagina("resumen");
   ocultarPanelEstado();
   iniciarActualizacionAutomatica();
+}
+
+function cargarSelectorAnios() {
+  const selector = document.getElementById("yearSelector");
+
+  if (!selector) {
+    return;
+  }
+
+  selector.innerHTML = "";
+
+  const anios = obtenerAniosDashboard();
+
+  anios.forEach((anio) => {
+    const option = document.createElement("option");
+    option.value = anio;
+    option.textContent = anio;
+
+    if (anio === state.anioSeleccionado) {
+      option.selected = true;
+    }
+
+    selector.appendChild(option);
+  });
+}
+
+function obtenerAniosDashboard() {
+  const anioActual = new Date().getFullYear();
+  const anios = new Set();
+
+  anios.add("2026");
+  anios.add(String(anioActual));
+  anios.add(String(anioActual + 1));
+
+  if (state.anioSeleccionado) {
+    anios.add(String(state.anioSeleccionado));
+  }
+
+  const anioDesdeMes = obtenerAnioDesdeClaveMes(state.mesSeleccionado);
+
+  if (anioDesdeMes) {
+    anios.add(anioDesdeMes);
+  }
+
+  agregarAniosDesdeLista(anios, state.datos.ingresos, ["mes", "hojaOrigen", "fuente"]);
+  agregarAniosDesdeLista(anios, state.datos.egresos, ["mes", "mesHoja", "hojaOrigen", "fuente"]);
+  agregarAniosDesdeLista(anios, state.datos.ventas, ["mes", "fecha", "fechaContrato", "hojaOrigen", "fuente"]);
+  agregarAniosDesdeLista(anios, state.datos.servicios, ["mes", "fechaServicio", "fechaFin", "fuente"]);
+
+  return Array.from(anios)
+    .filter((anio) => Number(anio) >= 2026)
+    .sort((a, b) => Number(a) - Number(b));
+}
+
+function agregarAniosDesdeLista(anios, lista, campos) {
+  (lista || []).forEach((item) => {
+    campos.forEach((campo) => {
+      extraerAniosDeTexto(item[campo]).forEach((anio) => {
+        anios.add(anio);
+      });
+    });
+  });
+}
+
+function extraerAniosDeTexto(valor) {
+  const texto = normalizarTexto(valor);
+  const coincidencias = texto.match(/20\d{2}/g);
+
+  return coincidencias || [];
 }
 
 function cargarSelectorMeses() {
@@ -60,7 +132,7 @@ function cargarSelectorMeses() {
 
   selector.innerHTML = "";
 
-  CONFIG.meses.forEach((mes) => {
+  obtenerMesesDelAnioSeleccionado().forEach((mes) => {
     const option = document.createElement("option");
     option.value = mes.clave;
     option.textContent = mes.nombre;
@@ -73,16 +145,77 @@ function cargarSelectorMeses() {
   });
 }
 
+function obtenerMesesDelAnioSeleccionado() {
+  const anio = state.anioSeleccionado || obtenerAnioDesdeClaveMes(state.mesSeleccionado) || "2026";
+
+  return (CONFIG.meses || []).map((mes) => {
+    const numeroMes = obtenerNumeroMesDesdeClave(mes.clave)
+      || String(mes.orden).padStart(2, "0");
+
+    return {
+      ...mes,
+      clave: crearClaveMes(anio, numeroMes)
+    };
+  });
+}
+
+function crearClaveMes(anio, numeroMes) {
+  return `${anio}-${String(numeroMes).padStart(2, "0")}`;
+}
+
+function obtenerAnioDesdeClaveMes(claveMes) {
+  const partes = normalizarTexto(claveMes).split("-");
+
+  return partes.length >= 2 ? partes[0] : "";
+}
+
+function obtenerNumeroMesDesdeClave(claveMes) {
+  const partes = normalizarTexto(claveMes).split("-");
+
+  return partes.length >= 2 ? partes[1] : "";
+}
+
+function sincronizarAnioConMesSeleccionado() {
+  const anioDesdeMes = obtenerAnioDesdeClaveMes(state.mesSeleccionado);
+  const numeroMes = obtenerNumeroMesDesdeClave(state.mesSeleccionado) || "01";
+
+  if (!state.anioSeleccionado && anioDesdeMes) {
+    state.anioSeleccionado = anioDesdeMes;
+  }
+
+  if (!state.anioSeleccionado) {
+    state.anioSeleccionado = "2026";
+  }
+
+  state.mesSeleccionado = crearClaveMes(state.anioSeleccionado, numeroMes);
+}
+
 function conectarEventos() {
+  const yearSelector = document.getElementById("yearSelector");
   const selector = document.getElementById("monthSelector");
   const refreshButton = document.getElementById("refreshButton");
   const testSharePointButton = document.getElementById("testSharePointButton");
   const getListsButton = document.getElementById("getListsButton");
   const getIngresosButton = document.getElementById("getIngresosButton");
 
+  if (yearSelector) {
+    yearSelector.addEventListener("change", (event) => {
+      const numeroMesActual = obtenerNumeroMesDesdeClave(state.mesSeleccionado) || "01";
+  
+      state.anioSeleccionado = event.target.value;
+      state.mesSeleccionado = crearClaveMes(state.anioSeleccionado, numeroMesActual);
+  
+      cargarSelectorMeses();
+      renderDashboard();
+    });
+  }
+  
   if (selector) {
     selector.addEventListener("change", (event) => {
       state.mesSeleccionado = event.target.value;
+      state.anioSeleccionado = obtenerAnioDesdeClaveMes(state.mesSeleccionado) || state.anioSeleccionado;
+  
+      cargarSelectorAnios();
       renderDashboard();
     });
   }
@@ -137,8 +270,11 @@ async function actualizarDatosDashboard(opciones = {}) {
     state.datos.ventas = datosSharePoint.ventas || [];
     state.datos.servicios = datosSharePoint.servicios || [];
 
+    cargarSelectorAnios();
+    cargarSelectorMeses();
+    
     guardarDatosEnCache();
-
+    
     renderDashboard();
 
     setAuthStatus("Datos actualizados correctamente.");
@@ -155,10 +291,11 @@ async function actualizarDatosDashboard(opciones = {}) {
 }
 
 function guardarDatosEnCache() {
-  const payload = {
-    fechaGuardado: new Date().toISOString(),
-    mesSeleccionado: state.mesSeleccionado,
-    datos: {
+    const payload = {
+      fechaGuardado: new Date().toISOString(),
+      anioSeleccionado: state.anioSeleccionado,
+      mesSeleccionado: state.mesSeleccionado,
+      datos: {
       ingresos: state.datos.ingresos || [],
       egresos: state.datos.egresos || [],
       ventas: state.datos.ventas || [],
@@ -192,9 +329,16 @@ function cargarDatosDesdeCache() {
     state.datos.ventas = cache.datos.ventas || [];
     state.datos.servicios = cache.datos.servicios || [];
 
+    if (cache.anioSeleccionado) {
+      state.anioSeleccionado = cache.anioSeleccionado;
+    }
+    
     if (cache.mesSeleccionado) {
       state.mesSeleccionado = cache.mesSeleccionado;
     }
+    
+    sincronizarAnioConMesSeleccionado();
+    
   } catch (error) {
     console.warn("No se pudo cargar caché del dashboard:", error);
   }
@@ -536,10 +680,10 @@ function contarContratos(mes) {
 function contarServiciosPorOrigen(mes, origenBuscado) {
   return state.datos.servicios
     .filter((item) => {
-      const itemMes = normalizarTexto(item.mes);
-      const origen = normalizarTexto(item.origen).toUpperCase();
+      const esPeriodo = coincidePeriodoServicio(item, mes);
+      const origen = obtenerOrigenServicio(item).toUpperCase();
 
-      return itemMes === mes
+      return esPeriodo
         && origen.includes(origenBuscado);
     })
     .length;
@@ -550,7 +694,7 @@ function contarServiciosCapillasPorTipoContrato(mes, tipoBuscado) {
 
   return state.datos.servicios
     .filter((item) => {
-      const esMes = coincideMesServicio(item.mes, mes);
+      const esMes = coincidePeriodoServicio(item, mes);
       const esCapillas = obtenerOrigenServicio(item) === "Capillas";
       const tipoRegistro = normalizarClaveComparacion(item.previsionUsoInmediato);
 
@@ -634,7 +778,7 @@ function renderGraficaIngresosMensuales() {
     return;
   }
 
-  const meses = CONFIG.meses || [];
+  const meses = obtenerMesesDelAnioSeleccionado();
 
   const labels = meses.map((mes) => mes.nombre);
   const valores = meses.map((mes) => sumarIngresos(mes.clave));
@@ -1063,7 +1207,7 @@ function renderGraficaEgresosMensuales() {
     return;
   }
 
-  const meses = CONFIG.meses || [];
+  const meses = obtenerMesesDelAnioSeleccionado();
 
   const labels = meses.map((mes) => mes.nombre);
   const valores = meses.map((mes) => sumarEgresos(mes.clave));
@@ -1668,19 +1812,24 @@ function obtenerVentas2026(mes) {
 }
 
 function obtenerVentasOperativas(mes) {
-  return state.datos.ventas
-    .filter((item) => {
-      return coincideMesVenta(item.mes, mes) && esFuenteVentas(item.fuente);
-    });
-}
 
 function obtenerContratosVentas(mes) {
   return state.datos.ventas
     .filter((item) => {
-      return coincideMesVenta(item.mes, mes) && esFuenteContratos(item.fuente);
+      return coincidePeriodoVenta(item, mes) && esFuenteContratos(item.fuente);
     });
 }
 
+function coincidePeriodoVenta(item, mesSeleccionado) {
+  return coincideMesVenta(item.mes, mesSeleccionado)
+    && coincideAnioRegistro(item, mesSeleccionado, [
+      "fecha",
+      "fechaContrato",
+      "hojaOrigen",
+      "fuente"
+    ]);
+}
+  
 function coincideMesVenta(mesRegistro, mesSeleccionado) {
   const mesRegistroNormalizado = normalizarTexto(mesRegistro).toUpperCase();
   const mesSeleccionadoNormalizado = normalizarTexto(mesSeleccionado).toUpperCase();
@@ -2415,9 +2564,18 @@ function renderTablaServiciosRecientes(mes) {
 
 function obtenerServiciosMes(mes) {
   return state.datos.servicios
-    .filter((item) => coincideMesServicio(item.mes, mes));
+    .filter((item) => coincidePeriodoServicio(item, mes));
 }
 
+function coincidePeriodoServicio(item, mesSeleccionado) {
+  return coincideMesServicio(item.mes, mesSeleccionado)
+    && coincideAnioRegistro(item, mesSeleccionado, [
+      "fechaServicio",
+      "fechaFin",
+      "fuente"
+    ]);
+}
+  
 function coincideMesServicio(mesRegistro, mesSeleccionado) {
   const mesRegistroNormalizado = normalizarTexto(mesRegistro).toUpperCase();
   const mesSeleccionadoNormalizado = normalizarTexto(mesSeleccionado).toUpperCase();
@@ -2431,6 +2589,37 @@ function coincideMesServicio(mesRegistro, mesSeleccionado) {
   return mesRegistroNormalizado === nombreMesSeleccionado;
 }
 
+function coincideAnioRegistro(item, mesSeleccionado, campos) {
+  const anioSeleccionado = obtenerAnioDesdeClaveMes(mesSeleccionado);
+
+  if (!anioSeleccionado) {
+    return true;
+  }
+
+  const anioDesdeMes = obtenerAnioDesdeValor(item.mes);
+
+  if (anioDesdeMes) {
+    return anioDesdeMes === anioSeleccionado;
+  }
+
+  for (const campo of campos) {
+    const anioCampo = obtenerAnioDesdeValor(item[campo]);
+
+    if (anioCampo) {
+      return anioCampo === anioSeleccionado;
+    }
+  }
+
+  return true;
+}
+
+function obtenerAnioDesdeValor(valor) {
+  const anios = extraerAniosDeTexto(valor);
+
+  return anios.length > 0 ? anios[0] : "";
+}
+
+  
 function obtenerCampoServicio(item, campo) {
   if (campo === "ubicacionPrincipal") {
     return obtenerUbicacionServicio(item);
