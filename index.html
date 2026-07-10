@@ -301,8 +301,70 @@
           </div>
         </div>
         
-        <div class="placeholder-box">
-          Aquí se agregará el análisis por rubro, tipo de gasto, beneficiario y pagos pendientes.
+        <div class="detail-columns">
+          <div class="detail-column">
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Egresos por rubro</h3>
+                  <p>Distribución de egresos pagados por rubro contable.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll">
+                <table class="table detail-table">
+                  <thead>
+                    <tr>
+                      <th>Rubro</th>
+                      <th>Registros</th>
+                      <th>Pagado</th>
+                      <th>% del egreso</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaEgresosRubroBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        
+          <div class="detail-column">
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Egresos por tipo de gasto</h3>
+                  <p>Clasificación mensual entre gasto fijo, variable, reinversión u otros tipos.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll">
+                <table class="table detail-table">
+                  <thead>
+                    <tr>
+                      <th>Tipo de gasto</th>
+                      <th>Registros</th>
+                      <th>Pagado</th>
+                      <th>% del egreso</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaEgresosTipoGastoBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
         </div>
       </article>
     </section>
