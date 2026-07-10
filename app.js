@@ -1374,14 +1374,24 @@ function renderTablaServiciosTipoServicio(mes, totalServicios) {
       };
     })
     .sort((a, b) => {
-      if (b.registros !== a.registros) {
-        return b.registros - a.registros;
+      const ordenOrigen = {
+        "CAPILLAS": 1,
+        "CAPILLA": 1,
+        "PARQUE": 2
+      };
+
+      const origenA = normalizarTexto(a.origen).toUpperCase();
+      const origenB = normalizarTexto(b.origen).toUpperCase();
+
+      const prioridadA = ordenOrigen[origenA] || 99;
+      const prioridadB = ordenOrigen[origenB] || 99;
+
+      if (prioridadA !== prioridadB) {
+        return prioridadA - prioridadB;
       }
 
-      const origenOrden = a.origen.localeCompare(b.origen, "es");
-
-      if (origenOrden !== 0) {
-        return origenOrden;
+      if (b.registros !== a.registros) {
+        return b.registros - a.registros;
       }
 
       return a.tipoServicio.localeCompare(b.tipoServicio, "es");
