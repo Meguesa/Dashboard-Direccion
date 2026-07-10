@@ -1223,18 +1223,65 @@ function obtenerNombreClienteVenta(item) {
 }
 
 function renderDetalleServicios(mes, totalServicios) {
+  renderTablaServiciosUbicacion(mes, totalServicios);
   renderTablaServiciosTipoServicio(mes, totalServicios);
-
-  renderTablaServiciosAgrupada({
-    tbodyId: "tablaServiciosTipoBody",
-    mes,
-    totalServicios,
-    campo: "tipoServicio",
-    etiquetaVacia: "Sin tipo de servicio"
-  });
-
   renderTablaServiciosResponsable(mes, totalServicios);
   renderTablaServiciosRecientes(mes);
+}
+
+function renderTablaServiciosUbicacion(mes, totalServicios) {
+  const tbody = document.getElementById("tablaServiciosUbicacionBody");
+
+  if (!tbody) {
+    return;
+  }
+
+  const filas = agruparServiciosPorUbicacion(mes);
+
+  if (filas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="3">Sin información para el mes seleccionado.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filas
+    .map((fila) => {
+      const porcentaje = totalServicios > 0
+        ? fila.total / totalServicios
+        : 0;
+
+      return `
+        <tr>
+          <td>${escaparHtml(fila.nombre)}</td>
+          <td>${formatoNumero(fila.total)}</td>
+          <td>${formatoPorcentaje(porcentaje)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function agruparServiciosPorUbicacion(mes) {
+  const grupos = new Map();
+
+  obtenerServiciosMes(mes).forEach((item) => {
+    const ubicacion = obtenerUbicacionServicio(item);
+
+    if (!grupos.has(ubicacion)) {
+      grupos.set(ubicacion, {
+        nombre: ubicacion,
+        total: 0
+      });
+    }
+
+    grupos.get(ubicacion).total += 1;
+  });
+
+  return Array.from(grupos.values())
+    .sort((a, b) => b.total - a.total);
 }
 
 function renderTablaServiciosAgrupada(configuracion) {
@@ -1305,12 +1352,15 @@ function renderTablaServiciosTipoServicio(mes, totalServicios) {
     return;
   }
 
-  const filas = obtenerTiposServicioDisponibles()
+  const serviciosMes = obtenerServiciosMes(mes);
+  const tiposDisponibles = obtenerCatalogoTiposServicio();
+
+  const filas = tiposDisponibles
     .map((tipoDisponible) => {
-      const registros = obtenerServiciosMes(mes)
+      const registros = serviciosMes
         .filter((item) => {
           const origen = obtenerOrigenServicio(item);
-          const tipoServicio = normalizarTexto(item.tipoServicio) || "Sin tipo de servicio";
+          const tipoServicio = obtenerTipoServicioNormalizado(item);
 
           return origen === tipoDisponible.origen
             && tipoServicio === tipoDisponible.tipoServicio;
@@ -1328,9 +1378,10 @@ function renderTablaServiciosTipoServicio(mes, totalServicios) {
         return b.registros - a.registros;
       }
 
-      const origenCompare = a.origen.localeCompare(b.origen, "es");
-      if (origenCompare !== 0) {
-        return origenCompare;
+      const origenOrden = a.origen.localeCompare(b.origen, "es");
+
+      if (origenOrden !== 0) {
+        return origenOrden;
       }
 
       return a.tipoServicio.localeCompare(b.tipoServicio, "es");
@@ -1363,6 +1414,80 @@ function renderTablaServiciosTipoServicio(mes, totalServicios) {
     .join("");
 }
 
+function obtenerCatalogoTiposServicio() {
+  const tipos = new Map();
+
+  const catalogoBase = [
+    { origen: "Capillas", tipoServicio: "Cremación" },
+    { origen: "Capillas", tipoServicio: "Cremación Directa (con velación)" },
+    { origen: "Capillas", tipoServicio: "Inhumación" },
+    { origen: "Capillas", tipoServicio: "Velación" },
+
+    { origen: "Parque", tipoServicio: "Inhumación" },
+    { origen: "Parque", tipoServicio: "Depósito de Cenizas" },
+    { origen: "Parque", tipoServicio: "Resguardo de Cenizas" },
+    { origen: "Parque", tipoServicio: "Exhumación" },
+    { origen: "Parque", tipoServicio: "Reubicación" },
+    { origen: "Parque", tipoServicio: "Retiro de Cenizas" }
+  ];
+
+  catalogoBase.forEach((item) => {
+    const llave = `${item.origen}||${item.tipoServicio}`;
+    tipos.set(llave, item);
+  });
+
+  state.datos.servicios.forEach((item) => {
+    const origen = obtenerOrigenServicio(item);
+    const tipoServicio = obtenerTipoServicioNormalizado(item);
+    const llave = `${origen}||${tipoServicio}`;
+
+    if (!tipos.has(llave)) {
+      tipos.set(llave, {
+        origen,
+        tipoServicio
+      });
+    }
+  });
+
+  return Array.from(tipos.values());
+}
+
+function obtenerTipoServicioNormalizado(item) {
+  return normalizarTexto(item.tipoServicio) || "Sin tipo de servicio";
+}
+
+function obtenerOrigenServicio(item) {
+  const origen = normalizarTexto(item.origen).toUpperCase();
+  const tipoOrigen = normalizarTexto(item.tipoOrigen).toUpperCase();
+  const fuente = normalizarTexto(item.fuente).toUpperCase();
+
+  if (origen.includes("CAPILLA") || tipoOrigen.includes("CAPILLA") || fuente.includes("CAPILLA")) {
+    return "Capillas";
+  }
+
+  if (origen.includes("PARQUE") || tipoOrigen.includes("PARQUE") || fuente.includes("PARQUE")) {
+    return "Parque";
+  }
+
+  const sucursal = normalizarTexto(item.sucursal).toUpperCase();
+
+  if (sucursal.includes("CHURUBUSCO") || sucursal.includes("APODACA") || sucursal.includes("AGUA")) {
+    return "Capillas";
+  }
+
+  const ubicacion = normalizarTexto(item.ubicacionServicio).toUpperCase();
+
+  if (ubicacion.includes("LOTE") || ubicacion.includes("NICHO") || ubicacion.includes("SECCION")) {
+    return "Parque";
+  }
+
+  return normalizarTexto(item.origen)
+    || normalizarTexto(item.tipoOrigen)
+    || normalizarTexto(item.fuente)
+    || "Sin origen";
+}
+
+
 function obtenerTiposServicioDisponibles() {
   const tipos = new Map();
 
@@ -1380,16 +1505,6 @@ function obtenerTiposServicioDisponibles() {
   });
 
   return Array.from(tipos.values());
-}
-
-function obtenerOrigenServicio(item) {
-  const origen =
-    normalizarTexto(item.origen)
-    || normalizarTexto(item.tipoOrigen)
-    || normalizarTexto(item.fuente)
-    || "Sin origen";
-
-  return origen;
 }
 
 function renderTablaServiciosResponsable(mes, totalServicios) {
@@ -1519,14 +1634,34 @@ function obtenerCampoServicio(item, campo) {
 }
 
 function obtenerUbicacionServicio(item) {
-  const ubicacion =
-    normalizarTexto(item.ubicacionServicio)
-    || normalizarTexto(item.sucursal)
-    || normalizarTexto(item.sala)
-    || normalizarTexto(item.seccion)
-    || normalizarTexto(item.origen);
+  const sucursal = normalizarTexto(item.sucursal);
+  const ubicacionServicio = normalizarTexto(item.ubicacionServicio);
+  const sala = normalizarTexto(item.sala);
+  const seccion = normalizarTexto(item.seccion);
+  const loteNicho = normalizarTexto(item.loteNicho || item.numLoteNicho);
+  const origen = obtenerOrigenServicio(item);
 
-  return ubicacion || "Sin ubicación";
+  if (sucursal) {
+    return sucursal;
+  }
+
+  if (ubicacionServicio) {
+    return ubicacionServicio;
+  }
+
+  if (sala) {
+    return sala;
+  }
+
+  if (seccion && loteNicho) {
+    return `${seccion} - ${loteNicho}`;
+  }
+
+  if (seccion) {
+    return seccion;
+  }
+
+  return origen || "Sin ubicación";
 }
 
 function obtenerTimestampServicio(valor) {
