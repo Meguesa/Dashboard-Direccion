@@ -359,19 +359,23 @@ function sumarEgresos(mes) {
 }
 
 function sumarVentas(mes) {
-  const ventasMensuales = obtenerVentas2026(mes)
-    .filter((item) => {
-      const tipoRegistro = normalizarTexto(item.tipoRegistro).toUpperCase();
-      return tipoRegistro === "MENSUAL";
-    });
+  const ventasMensuales = obtenerVentasMensuales(mes);
 
-  const base = ventasMensuales.length > 0
-    ? ventasMensuales
-    : obtenerVentas2026(mes).filter((item) => normalizarTexto(item.asesor) !== "");
+  if (ventasMensuales.length > 0) {
+    return ventasMensuales
+      .reduce((total, item) => total + obtenerMontoVenta(item), 0);
+  }
 
-  return base.reduce((total, item) => total + obtenerMontoVenta(item), 0);
+  const ventasPorAsesor = obtenerVentasPorAsesorBase(mes);
+
+  if (ventasPorAsesor.length > 0) {
+    return ventasPorAsesor
+      .reduce((total, item) => total + obtenerMontoVenta(item), 0);
+  }
+
+  return obtenerVentasOperativas(mes)
+    .reduce((total, item) => total + obtenerMontoVenta(item), 0);
 }
-
 function contarRegistrosIngresos(mes) {
   return state.datos.ingresos
     .filter((item) => normalizarTexto(item.mes) === mes)
@@ -698,7 +702,7 @@ function renderDetalleVentas(mes, totalVentas) {
     totalVentas,
     campo: "asesor",
     etiquetaVacia: "Sin asesor",
-    base: "VENTAS_2026_CON_ASESOR"
+    base: "VENTAS_ASESOR"
   });
 
   renderTablaVentasAgrupada({
@@ -707,7 +711,7 @@ function renderDetalleVentas(mes, totalVentas) {
     totalVentas,
     campo: "sucursal",
     etiquetaVacia: "Sin sucursal",
-    base: "VENTAS_2026"
+    base: "VENTAS_SUCURSAL"
   });
 
   renderTablaVentasAgrupada({
@@ -716,12 +720,11 @@ function renderDetalleVentas(mes, totalVentas) {
     totalVentas,
     campo: "tipoRegistro",
     etiquetaVacia: "Sin tipo de registro",
-    base: "VENTAS_2026"
+    base: "VENTAS_TIPO_REGISTRO"
   });
 
   renderTablaVentasContratos(mes);
 }
-
 function renderTablaVentasAgrupada(configuracion) {
   const tbody = document.getElementById(configuracion.tbodyId);
 
@@ -766,13 +769,16 @@ function renderTablaVentasAgrupada(configuracion) {
 
 function agruparVentasPorCampo(mes, campo, etiquetaVacia, base) {
   const grupos = new Map();
-
   const datosBase = obtenerBaseVentasPorTipo(mes, base);
 
   datosBase.forEach((item) => {
     const nombreGrupo = normalizarTexto(item[campo]) || etiquetaVacia;
     const montoVenta = obtenerMontoVenta(item);
     const unidades = obtenerUnidadesVenta(item);
+
+    if (montoVenta <= 0 && unidades <= 0) {
+      return;
+    }
 
     if (!grupos.has(nombreGrupo)) {
       grupos.set(nombreGrupo, {
@@ -836,18 +842,14 @@ function renderTablaVentasContratos(mes) {
 
 
 function obtenerVentas2026(mes) {
+  return obtenerVentasOperativas(mes);
+}
+
+function obtenerVentasOperativas(mes) {
   return state.datos.ventas
     .filter((item) => {
       const itemMes = normalizarTexto(item.mes);
-      const fuente = normalizarTexto(item.fuente).toUpperCase();
-
-      return itemMes === mes && fuente === "VENTAS 2026";
-    })
-    .filter((item) => {
-      const monto = obtenerMontoVenta(item);
-      const unidades = obtenerUnidadesVenta(item);
-
-      return monto > 0 || unidades > 0;
+      return itemMes === mes && esFuenteVentas(item.fuente);
     });
 }
 
@@ -855,35 +857,121 @@ function obtenerContratosVentas(mes) {
   return state.datos.ventas
     .filter((item) => {
       const itemMes = normalizarTexto(item.mes);
-      const fuente = normalizarTexto(item.fuente).toUpperCase();
+      return itemMes === mes && esFuenteContratos(item.fuente);
+    });
+}
 
-      return itemMes === mes && fuente === "CONTRATOS";
+function esFuenteVentas(valor) {
+  const fuente = normalizarTexto(valor).toUpperCase();
+
+  return fuente.includes("VENTAS")
+    && !fuente.includes("CONTRATOS");
+}
+
+function esFuenteContratos(valor) {
+  const fuente = normalizarTexto(valor).toUpperCase();
+
+  return fuente.includes("CONTRATOS");
+}
+
+function obtenerVentasMensuales(mes) {
+  return obtenerVentasOperativas(mes)
+    .filter((item) => {
+      const tipoRegistro = normalizarTexto(item.tipoRegistro).toUpperCase();
+      const montoVenta = obtenerMontoVenta(item);
+
+      return montoVenta > 0
+        && (
+          tipoRegistro.includes("MENSUAL")
+          || tipoRegistro.includes("MES")
+          || tipoRegistro.includes("TOTAL MES")
+        );
+    });
+}
+
+function obtenerVentasPorAsesorBase(mes) {
+  return obtenerVentasOperativas(mes)
+    .filter((item) => {
+      const asesor = normalizarTexto(item.asesor);
+      const montoVenta = obtenerMontoVenta(item);
+      const unidades = obtenerUnidadesVenta(item);
+
+      return asesor !== "" && (montoVenta > 0 || unidades > 0);
+    });
+}
+
+function obtenerVentasPorSucursalBase(mes) {
+  const ventasConAsesor = obtenerVentasOperativas(mes)
+    .filter((item) => {
+      const asesor = normalizarTexto(item.asesor);
+      const sucursal = normalizarTexto(item.sucursal);
+      const montoVenta = obtenerMontoVenta(item);
+      const unidades = obtenerUnidadesVenta(item);
+
+      return asesor !== ""
+        && sucursal !== ""
+        && (montoVenta > 0 || unidades > 0);
+    });
+
+  if (ventasConAsesor.length > 0) {
+    return ventasConAsesor;
+  }
+
+  return obtenerVentasOperativas(mes)
+    .filter((item) => {
+      const sucursal = normalizarTexto(item.sucursal);
+      const montoVenta = obtenerMontoVenta(item);
+      const unidades = obtenerUnidadesVenta(item);
+
+      return sucursal !== "" && (montoVenta > 0 || unidades > 0);
+    });
+}
+
+function obtenerVentasPorTipoRegistroBase(mes) {
+  return obtenerVentasOperativas(mes)
+    .filter((item) => {
+      const tipoRegistro = normalizarTexto(item.tipoRegistro);
+      const montoVenta = obtenerMontoVenta(item);
+      const unidades = obtenerUnidadesVenta(item);
+
+      return tipoRegistro !== "" && (montoVenta > 0 || unidades > 0);
     });
 }
 
 function obtenerBaseVentasPorTipo(mes, base) {
-  if (base === "VENTAS_2026_CON_ASESOR") {
-    return obtenerVentas2026(mes)
-      .filter((item) => normalizarTexto(item.asesor) !== "");
+  if (base === "VENTAS_ASESOR") {
+    return obtenerVentasPorAsesorBase(mes);
+  }
+
+  if (base === "VENTAS_SUCURSAL") {
+    return obtenerVentasPorSucursalBase(mes);
+  }
+
+  if (base === "VENTAS_TIPO_REGISTRO") {
+    return obtenerVentasPorTipoRegistroBase(mes);
   }
 
   if (base === "CONTRATOS") {
     return obtenerContratosVentas(mes);
   }
 
-  return obtenerVentas2026(mes);
+  return obtenerVentasOperativas(mes);
 }
 
 function obtenerMontoVenta(item) {
-  const montoVenta = Number(item.montoVenta || 0);
-  const total = Number(item.total || 0);
+  const posiblesMontos = [
+    item.montoVenta,
+    item.monto,
+    item.totalVenta,
+    item.total
+  ];
 
-  if (montoVenta > 0) {
-    return montoVenta;
-  }
+  for (const valor of posiblesMontos) {
+    const numero = Number(valor || 0);
 
-  if (total > 0) {
-    return total;
+    if (numero > 0) {
+      return numero;
+    }
   }
 
   return 0;
@@ -891,13 +979,23 @@ function obtenerMontoVenta(item) {
 
 function obtenerUnidadesVenta(item) {
   const totalUnidades = Number(item.totalUnidades || 0);
-  const montoVenta = obtenerMontoVenta(item);
 
   if (totalUnidades > 0) {
     return totalUnidades;
   }
 
-  return montoVenta > 0 ? 1 : 0;
+  const sumaUnidades =
+    Number(item.serviciosAf || 0)
+    + Number(item.serviciosCh || 0)
+    + Number(item.tsTsc || 0)
+    + Number(item.propiedades || 0)
+    + Number(item.nichos || 0);
+
+  if (sumaUnidades > 0) {
+    return sumaUnidades;
+  }
+
+  return obtenerMontoVenta(item) > 0 ? 1 : 0;
 }
 
 function obtenerNombreClienteVenta(item) {
