@@ -761,3 +761,24 @@ body {
   z-index: 2;
   background: #f8fafc;
 }
+
+/* ================================
+   KPIs de 4 columnas
+================================ */
+
+.detail-kpi-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .detail-kpi-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .detail-kpi-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
