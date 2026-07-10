@@ -193,6 +193,7 @@ function renderDashboard() {
   
   const registrosIngresos = contarRegistrosIngresos(mes);
   const registrosEgresos = contarRegistrosEgresos(mes);
+  const totalPorPagar = calcularTotalPorPagar(mes);
   
   const promedioIngresos = registrosIngresos > 0 ? totalIngresos / registrosIngresos : 0;
   const promedioEgresos = registrosEgresos > 0 ? totalEgresos / registrosEgresos : 0;
@@ -211,6 +212,7 @@ function renderDashboard() {
   setText("pageIngresosPromedio", formatoMoneda(promedioIngresos));
   
   setText("pageEgresosTotal", formatoMoneda(totalEgresos));
+  setText("pageEgresosPorPagar", formatoMoneda(totalPorPagar));
   setText("pageEgresosRegistros", formatoNumero(registrosEgresos));
   setText("pageEgresosPromedio", formatoMoneda(promedioEgresos));
   
@@ -299,6 +301,15 @@ function contarRegistrosEgresos(mes) {
       return mesEgreso === mes;
     })
     .length;
+}
+
+function calcularTotalPorPagar(mes) {
+  return state.datos.egresos
+    .filter((item) => {
+      const mesEgreso = normalizarTexto(item.mesHoja || item.mes);
+      return mesEgreso === mes;
+    })
+    .reduce((total, item) => total + Number(item.porPagar || 0), 0);
 }
 
 function contarContratos(mes) {
