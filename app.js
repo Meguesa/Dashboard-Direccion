@@ -733,16 +733,23 @@ function renderGraficaPieIngresos(configuracion) {
       responsive: true,
       maintainAspectRatio: false,
       layout: {
-        padding: {
-          top: 20,
-          right: 36,
-          bottom: 20,
-          left: 36
-        }
+        padding: configuracion.chartKey === "ingresosCategoria"
+          ? {
+              top: 30,
+              right: 90,
+              bottom: 30,
+              left: 90
+            }
+          : {
+              top: 20,
+              right: 36,
+              bottom: 20,
+              left: 36
+            }
       },
       plugins: {
         legend: {
-          display: true,
+          display: configuracion.chartKey !== "ingresosCategoria",
           position: "bottom"
         },
         tooltip: {
