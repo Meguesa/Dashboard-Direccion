@@ -442,6 +442,15 @@ function renderDetalleEgresos(mes, totalEgresos) {
     campo: "tipoGasto",
     etiquetaVacia: "Sin tipo de gasto"
   });
+
+  renderTablaEgresosAgrupada({
+    tbodyId: "tablaEgresosBeneficiarioBody",
+    mes,
+    totalEgresos,
+    campo: "beneficiario",
+    etiquetaVacia: "Sin beneficiario",
+    limite: 10
+  });
 }
 
 function renderTablaEgresosAgrupada(configuracion) {
@@ -466,7 +475,11 @@ function renderTablaEgresosAgrupada(configuracion) {
     return;
   }
 
-  tbody.innerHTML = filas
+  const filasVisibles = configuracion.limite
+    ? filas.slice(0, configuracion.limite)
+    : filas;
+
+  tbody.innerHTML = filasVisibles
     .map((fila) => {
       const porcentaje = configuracion.totalEgresos > 0
         ? fila.total / configuracion.totalEgresos
