@@ -349,6 +349,7 @@ async function obtenerServiciosSharePoint() {
         sucursal: limpiarTexto(f.Sucursal),
         origen: limpiarTexto(f.Origen),
         tipoServicio: limpiarTexto(f.Tipo_Servicio || f.Tipo_x005f_Servicio || f.TipoServicio),
+        serviciosParque: limpiarTexto(f.Servicios_Parque || f.Servicios_x005f_Parque || f.ServiciosParque),
         sala: limpiarTexto(f.Sala),
         estatus: limpiarTexto(f.Estatus),
         referenciaContrato: limpiarTexto(f.Referencia_Contrato || f.Referencia_x005f_Contrato || f.ReferenciaContrato),
