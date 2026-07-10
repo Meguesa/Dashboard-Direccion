@@ -743,3 +743,21 @@ body {
   width: 22%;
   text-align: right;
 }
+
+
+/* ================================
+   Altura para tablas de 15 filas
+================================ */
+
+.table-scroll-15 {
+  max-height: 640px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.table-scroll-15 thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
+}
