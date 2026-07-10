@@ -1093,3 +1093,48 @@ body {
 .detail-table-servicios-recientes td:nth-child(5) {
   width: 18%;
 }
+
+/* ================================
+   Servicios por tipo + modalidad parque
+================================ */
+
+#tablaServiciosTipoBody td:nth-child(1),
+#tablaServiciosTipoBody td:nth-child(2),
+#tablaServiciosTipoBody td:nth-child(3) {
+  text-align: left;
+}
+
+#tablaServiciosTipoBody td:nth-child(4),
+#tablaServiciosTipoBody td:nth-child(5) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-servicios th:nth-child(1),
+.detail-table-servicios td:nth-child(1) {
+  width: 20%;
+}
+
+.detail-table-servicios th:nth-child(2),
+.detail-table-servicios td:nth-child(2) {
+  width: 28%;
+}
+
+.detail-table-servicios th:nth-child(3),
+.detail-table-servicios td:nth-child(3) {
+  width: 24%;
+}
+
+.detail-table-servicios th:nth-child(4),
+.detail-table-servicios td:nth-child(4) {
+  width: 12%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-servicios th:nth-child(5),
+.detail-table-servicios td:nth-child(5) {
+  width: 16%;
+  text-align: right;
+  white-space: nowrap;
+}
