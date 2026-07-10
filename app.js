@@ -328,6 +328,7 @@ function renderDashboard() {
   renderDetalleIngresos(mes, totalIngresos);
   renderDetalleEgresos(mes, totalEgresos);
   renderDetalleVentas(mes, totalVentas);
+  renderDetalleServicios(mes, totalServicios);
   aplicarFiltrosTodasLasTablas();
 }
 
@@ -1219,6 +1220,249 @@ function obtenerNombreClienteVenta(item) {
   return partes.length > 0
     ? partes.join(" ")
     : "Sin cliente";
+}
+
+function renderDetalleServicios(mes, totalServicios) {
+  renderTablaServiciosAgrupada({
+    tbodyId: "tablaServiciosUbicacionBody",
+    mes,
+    totalServicios,
+    campo: "ubicacionPrincipal",
+    etiquetaVacia: "Sin ubicación"
+  });
+
+  renderTablaServiciosAgrupada({
+    tbodyId: "tablaServiciosTipoBody",
+    mes,
+    totalServicios,
+    campo: "tipoServicio",
+    etiquetaVacia: "Sin tipo de servicio"
+  });
+
+  renderTablaServiciosResponsable(mes, totalServicios);
+  renderTablaServiciosRecientes(mes);
+}
+
+function renderTablaServiciosAgrupada(configuracion) {
+  const tbody = document.getElementById(configuracion.tbodyId);
+
+  if (!tbody) {
+    return;
+  }
+
+  const filas = agruparServiciosPorCampo(
+    configuracion.mes,
+    configuracion.campo,
+    configuracion.etiquetaVacia
+  );
+
+  if (filas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="3">Sin información para el mes seleccionado.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filas
+    .map((fila) => {
+      const porcentaje = configuracion.totalServicios > 0
+        ? fila.total / configuracion.totalServicios
+        : 0;
+
+      return `
+        <tr>
+          <td>${escaparHtml(fila.nombre)}</td>
+          <td>${formatoNumero(fila.total)}</td>
+          <td>${formatoPorcentaje(porcentaje)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function agruparServiciosPorCampo(mes, campo, etiquetaVacia) {
+  const grupos = new Map();
+
+  obtenerServiciosMes(mes)
+    .forEach((item) => {
+      const nombreGrupo = obtenerCampoServicio(item, campo) || etiquetaVacia;
+
+      if (!grupos.has(nombreGrupo)) {
+        grupos.set(nombreGrupo, {
+          nombre: nombreGrupo,
+          total: 0
+        });
+      }
+
+      const grupo = grupos.get(nombreGrupo);
+      grupo.total += 1;
+    });
+
+  return Array.from(grupos.values())
+    .sort((a, b) => b.total - a.total);
+}
+
+function renderTablaServiciosResponsable(mes, totalServicios) {
+  const tbody = document.getElementById("tablaServiciosResponsableBody");
+
+  if (!tbody) {
+    return;
+  }
+
+  const grupos = new Map();
+
+  obtenerServiciosMes(mes).forEach((item) => {
+    const responsable =
+      normalizarTexto(item.responsable)
+      || normalizarTexto(item.asesor)
+      || normalizarTexto(item.embalsamador)
+      || "Sin responsable";
+
+    if (!grupos.has(responsable)) {
+      grupos.set(responsable, {
+        nombre: responsable,
+        total: 0
+      });
+    }
+
+    grupos.get(responsable).total += 1;
+  });
+
+  const filas = Array.from(grupos.values())
+    .sort((a, b) => b.total - a.total);
+
+  if (filas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="3">Sin información para el mes seleccionado.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filas
+    .map((fila) => {
+      const porcentaje = totalServicios > 0
+        ? fila.total / totalServicios
+        : 0;
+
+      return `
+        <tr>
+          <td>${escaparHtml(fila.nombre)}</td>
+          <td>${formatoNumero(fila.total)}</td>
+          <td>${formatoPorcentaje(porcentaje)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function renderTablaServiciosRecientes(mes) {
+  const tbody = document.getElementById("tablaServiciosRecientesBody");
+
+  if (!tbody) {
+    return;
+  }
+
+  const servicios = obtenerServiciosMes(mes)
+    .sort((a, b) => {
+      const fechaA = obtenerTimestampServicio(a.fechaServicio);
+      const fechaB = obtenerTimestampServicio(b.fechaServicio);
+
+      return fechaB - fechaA;
+    });
+
+  if (servicios.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5">Sin servicios para el mes seleccionado.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = servicios
+    .map((item) => {
+      const numeroServicio = normalizarTexto(item.numeroServicio) || "—";
+      const fecha = formatearFechaServicio(item.fechaServicio);
+      const finado = normalizarTexto(item.finado) || normalizarTexto(item.titular) || "Sin nombre";
+      const ubicacion = obtenerUbicacionServicio(item);
+      const tipo = normalizarTexto(item.tipoServicio) || "Sin tipo";
+
+      return `
+        <tr>
+          <td>${escaparHtml(numeroServicio)}</td>
+          <td>${escaparHtml(fecha)}</td>
+          <td>${escaparHtml(finado)}</td>
+          <td>${escaparHtml(ubicacion)}</td>
+          <td>${escaparHtml(tipo)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function obtenerServiciosMes(mes) {
+  return state.datos.servicios
+    .filter((item) => coincideMesServicio(item.mes, mes));
+}
+
+function coincideMesServicio(mesRegistro, mesSeleccionado) {
+  const mesRegistroNormalizado = normalizarTexto(mesRegistro).toUpperCase();
+  const mesSeleccionadoNormalizado = normalizarTexto(mesSeleccionado).toUpperCase();
+
+  if (mesRegistroNormalizado === mesSeleccionadoNormalizado) {
+    return true;
+  }
+
+  const nombreMesSeleccionado = obtenerNombreMesDesdeClave(mesSeleccionadoNormalizado);
+
+  return mesRegistroNormalizado === nombreMesSeleccionado;
+}
+
+function obtenerCampoServicio(item, campo) {
+  if (campo === "ubicacionPrincipal") {
+    return obtenerUbicacionServicio(item);
+  }
+
+  return normalizarTexto(item[campo]);
+}
+
+function obtenerUbicacionServicio(item) {
+  const ubicacion =
+    normalizarTexto(item.ubicacionServicio)
+    || normalizarTexto(item.sucursal)
+    || normalizarTexto(item.sala)
+    || normalizarTexto(item.seccion)
+    || normalizarTexto(item.origen);
+
+  return ubicacion || "Sin ubicación";
+}
+
+function obtenerTimestampServicio(valor) {
+  const fecha = new Date(valor);
+
+  if (!Number.isNaN(fecha.getTime())) {
+    return fecha.getTime();
+  }
+
+  return 0;
+}
+
+function formatearFechaServicio(valor) {
+  const fecha = new Date(valor);
+
+  if (Number.isNaN(fecha.getTime())) {
+    return normalizarTexto(valor) || "—";
+  }
+
+  return new Intl.DateTimeFormat("es-MX", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  }).format(fecha);
 }
 
 function renderTablaResumen(datos) {
