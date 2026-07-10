@@ -1138,3 +1138,61 @@ body {
   text-align: right;
   white-space: nowrap;
 }
+
+/* ================================
+   Servicios por tipo de servicio
+   Tabla específica de 5 columnas
+================================ */
+
+.detail-table-servicios-tipo {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.detail-table-servicios-tipo th,
+.detail-table-servicios-tipo td {
+  vertical-align: middle;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.detail-table-servicios-tipo thead tr:first-child th {
+  padding: 12px 10px;
+  line-height: 1.2;
+}
+
+.detail-table-servicios-tipo .table-filter-row th {
+  padding: 6px 8px 10px;
+}
+
+.detail-table-servicios-tipo th:nth-child(1),
+.detail-table-servicios-tipo td:nth-child(1) {
+  width: 16%;
+  text-align: left;
+}
+
+.detail-table-servicios-tipo th:nth-child(2),
+.detail-table-servicios-tipo td:nth-child(2) {
+  width: 30%;
+  text-align: left;
+}
+
+.detail-table-servicios-tipo th:nth-child(3),
+.detail-table-servicios-tipo td:nth-child(3) {
+  width: 24%;
+  text-align: left;
+}
+
+.detail-table-servicios-tipo th:nth-child(4),
+.detail-table-servicios-tipo td:nth-child(4) {
+  width: 14%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-servicios-tipo th:nth-child(5),
+.detail-table-servicios-tipo td:nth-child(5) {
+  width: 16%;
+  text-align: right;
+  white-space: nowrap;
+}
