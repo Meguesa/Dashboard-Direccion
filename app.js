@@ -266,36 +266,21 @@ function renderDashboard() {
 
   const totalIngresos = sumarIngresos(mes);
   const totalEgresos = sumarEgresos(mes);
-
-  let totalVentas = 0;
-  let totalContratos = 0;
-
-  try {
-    totalVentas = sumarVentas(mes);
-  } catch (error) {
-    console.error("Error calculando ventas:", error);
-    totalVentas = 0;
-  }
-
-  try {
-    totalContratos = contarContratos(mes);
-  } catch (error) {
-    console.error("Error contando contratos:", error);
-    totalContratos = 0;
-  }
+  const totalVentas = sumarVentas(mes);
+  const totalContratos = contarContratos(mes);
 
   const totalCapillas = contarServiciosPorOrigen(mes, "CAPILLA");
   const totalParque = contarServiciosPorOrigen(mes, "PARQUE");
   const totalServicios = totalCapillas + totalParque;
-
+  
   const registrosIngresos = contarRegistrosIngresos(mes);
   const registrosEgresos = contarRegistrosEgresos(mes);
   const totalPorPagar = calcularTotalPorPagar(mes);
-
+  
   const promedioIngresos = registrosIngresos > 0 ? totalIngresos / registrosIngresos : 0;
   const promedioEgresos = registrosEgresos > 0 ? totalEgresos / registrosEgresos : 0;
   const promedioVentas = totalContratos > 0 ? totalVentas / totalContratos : 0;
-
+  
   const flujoNeto = totalIngresos - totalEgresos;
 
   setText("kpiIngresos", formatoMoneda(totalIngresos));
@@ -307,20 +292,20 @@ function renderDashboard() {
   setText("pageIngresosTotal", formatoMoneda(totalIngresos));
   setText("pageIngresosRegistros", formatoNumero(registrosIngresos));
   setText("pageIngresosPromedio", formatoMoneda(promedioIngresos));
-
+  
   setText("pageEgresosTotal", formatoMoneda(totalEgresos));
   setText("pageEgresosPorPagar", formatoMoneda(totalPorPagar));
   setText("pageEgresosRegistros", formatoNumero(registrosEgresos));
   setText("pageEgresosPromedio", formatoMoneda(promedioEgresos));
-
+  
   setText("pageVentasTotal", formatoMoneda(totalVentas));
   setText("pageVentasContratos", formatoNumero(totalContratos));
   setText("pageVentasPromedio", formatoMoneda(promedioVentas));
-
+  
   setText("pageServiciosTotal", formatoNumero(totalServicios));
   setText("pageServiciosCapillas", formatoNumero(totalCapillas));
   setText("pageServiciosParque", formatoNumero(totalParque));
-
+  
   aplicarClaseFlujo("kpiFlujo", flujoNeto);
 
   setText("capillasTotal", formatoNumero(totalCapillas));
@@ -342,13 +327,7 @@ function renderDashboard() {
 
   renderDetalleIngresos(mes, totalIngresos);
   renderDetalleEgresos(mes, totalEgresos);
-
-  try {
-    renderDetalleVentas(mes, totalVentas);
-  } catch (error) {
-    console.error("Error renderizando detalle de ventas:", error);
-  }
-
+  renderDetalleVentas(mes, totalVentas);
   aplicarFiltrosTodasLasTablas();
 }
 
@@ -380,27 +359,23 @@ function sumarEgresos(mes) {
 }
 
 function sumarVentas(mes) {
-  const ventas2026 = obtenerVentas2026(mes);
-
-  const ventasMensuales = ventas2026
+  const ventasMensuales = obtenerVentas2026(mes)
     .filter((item) => {
       const tipoRegistro = normalizarTexto(item.tipoRegistro).toUpperCase();
-      return tipoRegistro === "MENSUAL" && obtenerMontoVenta(item) > 0;
+      return tipoRegistro === "MENSUAL";
     });
 
-  if (ventasMensuales.length > 0) {
-    return ventasMensuales
-      .reduce((total, item) => total + obtenerMontoVenta(item), 0);
-  }
+  const base = ventasMensuales.length > 0
+    ? ventasMensuales
+    : obtenerVentas2026(mes).filter((item) => normalizarTexto(item.asesor) !== "");
 
-  const ventasPorAsesor = ventas2026
-    .filter((item) => {
-      const asesor = normalizarTexto(item.asesor);
-      return asesor !== "" && obtenerMontoVenta(item) > 0;
-    });
+  return base.reduce((total, item) => total + obtenerMontoVenta(item), 0);
+}
 
-  return ventasPorAsesor
-    .reduce((total, item) => total + obtenerMontoVenta(item), 0);
+function contarRegistrosIngresos(mes) {
+  return state.datos.ingresos
+    .filter((item) => normalizarTexto(item.mes) === mes)
+    .length;
 }
 
 function contarRegistrosEgresos(mes) {
@@ -799,10 +774,6 @@ function agruparVentasPorCampo(mes, campo, etiquetaVacia, base) {
     const montoVenta = obtenerMontoVenta(item);
     const unidades = obtenerUnidadesVenta(item);
 
-    if (montoVenta <= 0 && unidades <= 0) {
-      return;
-    }
-
     if (!grupos.has(nombreGrupo)) {
       grupos.set(nombreGrupo, {
         nombre: nombreGrupo,
@@ -868,7 +839,15 @@ function obtenerVentas2026(mes) {
   return state.datos.ventas
     .filter((item) => {
       const itemMes = normalizarTexto(item.mes);
-      return itemMes === mes && esFuenteVentas2026(item.fuente);
+      const fuente = normalizarTexto(item.fuente).toUpperCase();
+
+      return itemMes === mes && fuente === "VENTAS 2026";
+    })
+    .filter((item) => {
+      const monto = obtenerMontoVenta(item);
+      const unidades = obtenerUnidadesVenta(item);
+
+      return monto > 0 || unidades > 0;
     });
 }
 
@@ -876,18 +855,10 @@ function obtenerContratosVentas(mes) {
   return state.datos.ventas
     .filter((item) => {
       const itemMes = normalizarTexto(item.mes);
-      return itemMes === mes && esFuenteContratos(item.fuente);
+      const fuente = normalizarTexto(item.fuente).toUpperCase();
+
+      return itemMes === mes && fuente === "CONTRATOS";
     });
-}
-
-function esFuenteVentas2026(valor) {
-  const fuente = normalizarTexto(valor).toUpperCase();
-  return fuente.includes("VENTAS 2026");
-}
-
-function esFuenteContratos(valor) {
-  const fuente = normalizarTexto(valor).toUpperCase();
-  return fuente.includes("CONTRATOS");
 }
 
 function obtenerBaseVentasPorTipo(mes, base) {
