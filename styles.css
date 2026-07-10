@@ -845,3 +845,103 @@ body {
   width: 18%;
   text-align: right;
 }
+
+/* ================================
+   Ajustes específicos de Ventas
+================================ */
+
+/* Ventas por asesor: 6 columnas */
+.detail-table-ventas-asesor th:nth-child(1),
+.detail-table-ventas-asesor td:nth-child(1) {
+  width: 26%;
+}
+
+.detail-table-ventas-asesor th:nth-child(2),
+.detail-table-ventas-asesor td:nth-child(2) {
+  width: 12%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-asesor th:nth-child(3),
+.detail-table-ventas-asesor td:nth-child(3) {
+  width: 11%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-asesor th:nth-child(4),
+.detail-table-ventas-asesor td:nth-child(4) {
+  width: 17%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-asesor th:nth-child(5),
+.detail-table-ventas-asesor td:nth-child(5) {
+  width: 17%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-asesor th:nth-child(6),
+.detail-table-ventas-asesor td:nth-child(6) {
+  width: 17%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Ventas por tipo de servicio: 4 columnas */
+.detail-table-ventas-servicio th:nth-child(1),
+.detail-table-ventas-servicio td:nth-child(1) {
+  width: 42%;
+}
+
+.detail-table-ventas-servicio th:nth-child(2),
+.detail-table-ventas-servicio td:nth-child(2) {
+  width: 18%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-servicio th:nth-child(3),
+.detail-table-ventas-servicio td:nth-child(3) {
+  width: 20%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-servicio th:nth-child(4),
+.detail-table-ventas-servicio td:nth-child(4) {
+  width: 20%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Contratos: dar más espacio a la columna Tipo */
+.detail-table-ventas-contratos th:nth-child(1),
+.detail-table-ventas-contratos td:nth-child(1) {
+  width: 18%;
+}
+
+.detail-table-ventas-contratos th:nth-child(2),
+.detail-table-ventas-contratos td:nth-child(2) {
+  width: 22%;
+}
+
+.detail-table-ventas-contratos th:nth-child(3),
+.detail-table-ventas-contratos td:nth-child(3) {
+  width: 13%;
+}
+
+.detail-table-ventas-contratos th:nth-child(4),
+.detail-table-ventas-contratos td:nth-child(4) {
+  width: 32%;
+}
+
+.detail-table-ventas-contratos th:nth-child(5),
+.detail-table-ventas-contratos td:nth-child(5) {
+  width: 15%;
+  text-align: right;
+  white-space: nowrap;
+}
