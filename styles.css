@@ -1281,3 +1281,155 @@ body {
   min-height: 360px;
   width: 100%;
 }
+
+/* ================================
+   Flujo de efectivo neto
+================================ */
+
+.flujo-card {
+  overflow: hidden;
+}
+
+.flujo-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.flujo-card-header h2 {
+  margin: 0;
+}
+
+.flujo-card-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.flujo-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.flujo-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.flujo-table th:nth-child(1),
+.flujo-table td:nth-child(1) {
+  width: 52%;
+}
+
+.flujo-table th:nth-child(2),
+.flujo-table td:nth-child(2) {
+  width: 24%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.flujo-table th:nth-child(3),
+.flujo-table td:nth-child(3) {
+  width: 24%;
+  text-align: right;
+}
+
+.flujo-row-grupo {
+  cursor: pointer;
+}
+
+.flujo-row-grupo td {
+  border-top: 1px solid #cbd5e1;
+  font-weight: 700;
+}
+
+.flujo-row-detalle td {
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.flujo-row-detalle td:first-child {
+  padding-left: 42px;
+  font-style: italic;
+}
+
+.flujo-row-resultado td {
+  border-top: 2px solid #0f172a;
+  border-bottom: 2px solid #0f172a;
+  font-weight: 800;
+  background: #f8fafc;
+}
+
+.flujo-row-resultado-final td {
+  border-top: 2px solid #0f172a;
+  border-bottom: 2px solid #0f172a;
+  font-weight: 900;
+  background: #ecfdf5;
+}
+
+.flujo-toggle {
+  width: 24px;
+  border: none;
+  background: transparent;
+  color: #1f4e79;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.flujo-toggle:disabled {
+  color: #94a3b8;
+  cursor: default;
+}
+
+.flujo-total.positivo {
+  color: #0f172a;
+}
+
+.flujo-total.negativo {
+  color: #991b1b;
+}
+
+.flujo-total.detalle {
+  color: #64748b;
+}
+
+.flujo-percent-wrapper {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.flujo-percent-text {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.flujo-percent-track {
+  display: block;
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.flujo-percent-bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.flujo-percent-bar.positivo {
+  background: #22c55e;
+}
+
+.flujo-percent-bar.negativo {
+  background: #ef4444;
+}
+
+.hidden {
+  display: none !important;
+}
