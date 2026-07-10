@@ -281,16 +281,32 @@ async function obtenerVentasSharePoint() {
 
       return {
         id: item.id,
+        fecha: limpiarTexto(f.Fecha),
         mes: limpiarTexto(f.Mes),
-        hojaOrigen: limpiarTexto(f.Hoja_Origen),
-        fuente: limpiarTexto(f.Fuente),
-        tipoRegistro: limpiarTexto(f.Tipo_Registro),
         asesor: limpiarTexto(f.Asesor),
-        numeroContrato: limpiarTexto(f.Numero_Contrato),
+        semana: limpiarTexto(f.Semana),
+        sucursal: limpiarTexto(f.Sucursal),
         montoVenta: convertirNumero(f.Monto_Venta),
+        serviciosAf: convertirNumero(f.Servicios_AF),
+        serviciosCh: convertirNumero(f.Servicios_CH),
+        tsTsc: convertirNumero(f.TS_TSC),
+        propiedades: convertirNumero(f.Propiedades),
+        nichos: convertirNumero(f.Nichos),
+        totalUnidades: convertirNumero(f.Total_Unidades),
+        tipoRegistro: limpiarTexto(f.Tipo_Registro),
+        fuente: limpiarTexto(f.Fuente),
+        hojaOrigen: limpiarTexto(f.Hoja_Origen),
+        numeroContrato: limpiarTexto(f.Numero_Contrato),
+        referencia: limpiarTexto(f.Referencia),
+        cliente: limpiarTexto(f.Cliente),
+        nombre: limpiarTexto(f.Nombre),
+        apellidoPaterno: limpiarTexto(f.Apellido_Paterno),
+        apellidoMaterno: limpiarTexto(f.Apellido_Materno),
+        tipoServicio: limpiarTexto(f.Tipo_Servicio),
         total: convertirNumero(f.Total),
-        precioVenta: convertirNumero(f.Precio_Venta),
-        precioTotalServicio: convertirNumero(f.Precio_Total_Servicio)
+        fechaContrato: limpiarTexto(f.Fecha_Contrato),
+        mensualidad: convertirNumero(f.Mensualidad),
+        tipoContrato: limpiarTexto(f.Tipo_Contrato)
       };
     });
 
