@@ -432,7 +432,9 @@ function renderDetalleEgresos(mes, totalEgresos) {
     mes,
     totalEgresos,
     campo: "rubro",
-    etiquetaVacia: "Sin rubro"
+    etiquetaVacia: "Sin rubro",
+    campoSecundario: "tipoGasto",
+    etiquetaVaciaSecundaria: "Sin tipo de gasto"
   });
 
   renderTablaEgresosAgrupada({
@@ -448,8 +450,7 @@ function renderDetalleEgresos(mes, totalEgresos) {
     mes,
     totalEgresos,
     campo: "beneficiario",
-    etiquetaVacia: "Sin beneficiario",
-    limite: 10
+    etiquetaVacia: "Sin beneficiario"
   });
 }
 
@@ -463,13 +464,18 @@ function renderTablaEgresosAgrupada(configuracion) {
   const filas = agruparEgresosPorCampo(
     configuracion.mes,
     configuracion.campo,
-    configuracion.etiquetaVacia
+    configuracion.etiquetaVacia,
+    configuracion.campoSecundario,
+    configuracion.etiquetaVaciaSecundaria
   );
+
+  const tieneCampoSecundario = Boolean(configuracion.campoSecundario);
+  const columnas = tieneCampoSecundario ? 5 : 4;
 
   if (filas.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="4">Sin información para el mes seleccionado.</td>
+        <td colspan="${columnas}">Sin información para el mes seleccionado.</td>
       </tr>
     `;
     return;
@@ -485,9 +491,18 @@ function renderTablaEgresosAgrupada(configuracion) {
         ? fila.total / configuracion.totalEgresos
         : 0;
 
+      const celdasGrupo = tieneCampoSecundario
+        ? `
+          <td>${escaparHtml(fila.nombre)}</td>
+          <td>${escaparHtml(fila.nombreSecundario)}</td>
+        `
+        : `
+          <td>${escaparHtml(fila.nombre)}</td>
+        `;
+
       return `
         <tr>
-          <td>${escaparHtml(fila.nombre)}</td>
+          ${celdasGrupo}
           <td>${formatoNumero(fila.registros)}</td>
           <td>${formatoMoneda(fila.total)}</td>
           <td>${formatoPorcentaje(porcentaje)}</td>
@@ -497,7 +512,13 @@ function renderTablaEgresosAgrupada(configuracion) {
     .join("");
 }
 
-function agruparEgresosPorCampo(mes, campo, etiquetaVacia) {
+function agruparEgresosPorCampo(
+  mes,
+  campo,
+  etiquetaVacia,
+  campoSecundario,
+  etiquetaVaciaSecundaria
+) {
   const grupos = new Map();
 
   state.datos.egresos
@@ -509,17 +530,25 @@ function agruparEgresosPorCampo(mes, campo, etiquetaVacia) {
     })
     .forEach((item) => {
       const nombreGrupo = normalizarTexto(item[campo]) || etiquetaVacia;
-      const pagado = Number(item.pagado || 0);
+      const nombreSecundario = campoSecundario
+        ? normalizarTexto(item[campoSecundario]) || etiquetaVaciaSecundaria
+        : "";
 
-      if (!grupos.has(nombreGrupo)) {
-        grupos.set(nombreGrupo, {
+      const llaveGrupo = campoSecundario
+        ? `${nombreGrupo}||${nombreSecundario}`
+        : nombreGrupo;
+
+      if (!grupos.has(llaveGrupo)) {
+        grupos.set(llaveGrupo, {
           nombre: nombreGrupo,
+          nombreSecundario,
           registros: 0,
           total: 0
         });
       }
 
-      const grupo = grupos.get(nombreGrupo);
+      const grupo = grupos.get(llaveGrupo);
+      const pagado = Number(item.pagado || 0);
 
       grupo.registros += 1;
       grupo.total += pagado;
