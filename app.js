@@ -1020,20 +1020,30 @@ function obtenerSubgrupoIngresoFlujo(item) {
     return "DESTAPES";
   }
 
-  if (texto.includes("ENGANCHE") || texto === "ENG") {
+  if (
+    texto.includes("ENGANCHE") ||
+    texto.includes("ENGACHES") ||
+    /\bENG\b/.test(texto)
+  ) {
     return "ENGANCHES";
   }
 
-  if (texto.includes("USO INMEDIATO") || texto.includes("UI")) {
+  if (
+    texto.includes("ANUALIDAD") ||
+    texto.includes("ANUALIDADES") ||
+    /\bANUA\b/.test(texto)
+  ) {
+    return "ANUALIDADES";
+  }
+
+  if (texto.includes("USO INMEDIATO") || /\bUI\b/.test(texto)) {
     return "USO INMEDIATO";
   }
 
   if (
     texto.includes("COBRANZA") ||
     texto.includes("MENSUALIDAD") ||
-    texto.includes("MENSUALIDAD") ||
-    texto.includes("ANUALIDAD") ||
-    texto.includes("MEN")
+    /\bMEN\b/.test(texto)
   ) {
     return "COBRANZA";
   }
