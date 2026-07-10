@@ -1044,3 +1044,52 @@ body {
   text-align: right;
   white-space: nowrap;
 }
+
+
+/* ================================
+   Tablas de Servicios
+================================ */
+
+.detail-table-servicios th:nth-child(1),
+.detail-table-servicios td:nth-child(1) {
+  width: 58%;
+}
+
+.detail-table-servicios th:nth-child(2),
+.detail-table-servicios td:nth-child(2) {
+  width: 20%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-servicios th:nth-child(3),
+.detail-table-servicios td:nth-child(3) {
+  width: 22%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-servicios-recientes th:nth-child(1),
+.detail-table-servicios-recientes td:nth-child(1) {
+  width: 18%;
+}
+
+.detail-table-servicios-recientes th:nth-child(2),
+.detail-table-servicios-recientes td:nth-child(2) {
+  width: 16%;
+}
+
+.detail-table-servicios-recientes th:nth-child(3),
+.detail-table-servicios-recientes td:nth-child(3) {
+  width: 30%;
+}
+
+.detail-table-servicios-recientes th:nth-child(4),
+.detail-table-servicios-recientes td:nth-child(4) {
+  width: 18%;
+}
+
+.detail-table-servicios-recientes th:nth-child(5),
+.detail-table-servicios-recientes td:nth-child(5) {
+  width: 18%;
+}
