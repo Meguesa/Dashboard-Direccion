@@ -177,19 +177,6 @@ function convertirNumero(valor) {
   return Number.isFinite(numero) ? numero : 0;
 }
 
-function leerCampo(fields, nombres) {
-  for (const nombre of nombres) {
-    if (Object.prototype.hasOwnProperty.call(fields, nombre)) {
-      const valor = fields[nombre];
-
-      if (valor !== null && valor !== undefined && valor !== "") {
-        return valor;
-      }
-    }
-  }
-
-  return "";
-}
 
 async function cargarDatosSharePoint() {
   try {
@@ -294,103 +281,32 @@ async function obtenerVentasSharePoint() {
 
       return {
         id: item.id,
-        fecha: limpiarTexto(leerCampo(f, ["Fecha"])),
-        mes: limpiarTexto(leerCampo(f, ["Mes"])),
-        asesor: limpiarTexto(leerCampo(f, ["Asesor"])),
-        semana: limpiarTexto(leerCampo(f, ["Semana"])),
-        sucursal: limpiarTexto(leerCampo(f, ["Sucursal"])),
-      
-        montoVenta: convertirNumero(leerCampo(f, [
-          "Monto_Venta",
-          "Monto_x005f_Venta",
-          "Monto_x0020_Venta",
-          "MontoVenta"
-        ])),
-      
-        serviciosAf: convertirNumero(leerCampo(f, [
-          "Servicios_AF",
-          "Servicios_x005f_AF",
-          "ServiciosAF"
-        ])),
-      
-        serviciosCh: convertirNumero(leerCampo(f, [
-          "Servicios_CH",
-          "Servicios_x005f_CH",
-          "ServiciosCH"
-        ])),
-      
-        tsTsc: convertirNumero(leerCampo(f, [
-          "TS_TSC",
-          "TS_x005f_TSC",
-          "TSTSC"
-        ])),
-      
-        propiedades: convertirNumero(leerCampo(f, ["Propiedades"])),
-        nichos: convertirNumero(leerCampo(f, ["Nichos"])),
-      
-        totalUnidades: convertirNumero(leerCampo(f, [
-          "Total_Unidades",
-          "Total_x005f_Unidades",
-          "TotalUnidades"
-        ])),
-      
-        tipoRegistro: limpiarTexto(leerCampo(f, [
-          "Tipo_Registro",
-          "Tipo_x005f_Registro",
-          "TipoRegistro"
-        ])),
-      
-        fuente: limpiarTexto(leerCampo(f, ["Fuente"])),
-      
-        hojaOrigen: limpiarTexto(leerCampo(f, [
-          "Hoja_Origen",
-          "Hoja_x005f_Origen",
-          "HojaOrigen"
-        ])),
-      
-        numeroContrato: limpiarTexto(leerCampo(f, [
-          "Numero_Contrato",
-          "Numero_x005f_Contrato",
-          "NumeroContrato"
-        ])),
-      
-        referencia: limpiarTexto(leerCampo(f, ["Referencia"])),
-        cliente: limpiarTexto(leerCampo(f, ["Cliente"])),
-        nombre: limpiarTexto(leerCampo(f, ["Nombre"])),
-      
-        apellidoPaterno: limpiarTexto(leerCampo(f, [
-          "Apellido_Paterno",
-          "Apellido_x005f_Paterno",
-          "ApellidoPaterno"
-        ])),
-      
-        apellidoMaterno: limpiarTexto(leerCampo(f, [
-          "Apellido_Materno",
-          "Apellido_x005f_Materno",
-          "ApellidoMaterno"
-        ])),
-      
-        tipoServicio: limpiarTexto(leerCampo(f, [
-          "Tipo_Servicio",
-          "Tipo_x005f_Servicio",
-          "TipoServicio"
-        ])),
-      
-        total: convertirNumero(leerCampo(f, ["Total"])),
-      
-        fechaContrato: limpiarTexto(leerCampo(f, [
-          "Fecha_Contrato",
-          "Fecha_x005f_Contrato",
-          "FechaContrato"
-        ])),
-      
-        mensualidad: convertirNumero(leerCampo(f, ["Mensualidad"])),
-      
-        tipoContrato: limpiarTexto(leerCampo(f, [
-          "Tipo_Contrato",
-          "Tipo_x005f_Contrato",
-          "TipoContrato"
-        ]))
+        fecha: limpiarTexto(f.Fecha),
+        mes: limpiarTexto(f.Mes),
+        asesor: limpiarTexto(f.Asesor),
+        semana: limpiarTexto(f.Semana),
+        sucursal: limpiarTexto(f.Sucursal),
+        montoVenta: convertirNumero(f.Monto_Venta),
+        serviciosAf: convertirNumero(f.Servicios_AF),
+        serviciosCh: convertirNumero(f.Servicios_CH),
+        tsTsc: convertirNumero(f.TS_TSC),
+        propiedades: convertirNumero(f.Propiedades),
+        nichos: convertirNumero(f.Nichos),
+        totalUnidades: convertirNumero(f.Total_Unidades),
+        tipoRegistro: limpiarTexto(f.Tipo_Registro),
+        fuente: limpiarTexto(f.Fuente),
+        hojaOrigen: limpiarTexto(f.Hoja_Origen),
+        numeroContrato: limpiarTexto(f.Numero_Contrato),
+        referencia: limpiarTexto(f.Referencia),
+        cliente: limpiarTexto(f.Cliente),
+        nombre: limpiarTexto(f.Nombre),
+        apellidoPaterno: limpiarTexto(f.Apellido_Paterno),
+        apellidoMaterno: limpiarTexto(f.Apellido_Materno),
+        tipoServicio: limpiarTexto(f.Tipo_Servicio),
+        total: convertirNumero(f.Total),
+        fechaContrato: limpiarTexto(f.Fecha_Contrato),
+        mensualidad: convertirNumero(f.Mensualidad),
+        tipoContrato: limpiarTexto(f.Tipo_Contrato)
       };
     });
 
