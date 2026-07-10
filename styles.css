@@ -1251,3 +1251,13 @@ body {
   width: 100% !important;
   height: 100% !important;
 }
+
+/* ================================
+   Gráfica pie de ingresos por categoría
+================================ */
+
+.chart-container-pie-categoria {
+  height: 520px;
+  max-width: 720px;
+  min-height: 520px;
+}
