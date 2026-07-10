@@ -720,14 +720,26 @@ function renderGraficaPieIngresos(configuracion) {
       datasets: [
         {
           data: valores,
-          backgroundColor: generarColoresGrafica(filas.length),
-          borderWidth: 1
+          backgroundColor: generarColoresIngresosPie(configuracion.chartKey, labels),
+          borderColor: "#ffffff",
+          borderWidth: 2
         }
       ]
     },
+    plugins: [
+      crearPluginEtiquetasPie(total)
+    ],
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: 20,
+          right: 36,
+          bottom: 20,
+          left: 36
+        }
+      },
       plugins: {
         legend: {
           display: true,
@@ -746,6 +758,121 @@ function renderGraficaPieIngresos(configuracion) {
       }
     }
   });
+}
+
+function crearPluginEtiquetasPie(total) {
+  return {
+    id: "etiquetasPorcentajePie",
+    afterDatasetsDraw(chart) {
+      const dataset = chart.data.datasets[0];
+      const meta = chart.getDatasetMeta(0);
+
+      if (!dataset || !meta) {
+        return;
+      }
+
+      const ctx = chart.ctx;
+
+      ctx.save();
+
+      meta.data.forEach((segmento, index) => {
+        const valor = Number(dataset.data[index] || 0);
+
+        if (valor <= 0 || total <= 0) {
+          return;
+        }
+
+        const porcentaje = valor / total;
+        const textoPorcentaje = formatoPorcentaje(porcentaje);
+
+        const props = segmento.getProps(
+          ["x", "y", "startAngle", "endAngle", "innerRadius", "outerRadius"],
+          true
+        );
+
+        const angulo = (props.startAngle + props.endAngle) / 2;
+        const centroX = props.x;
+        const centroY = props.y;
+
+        if (porcentaje >= 0.07) {
+          dibujarEtiquetaPieInterna(ctx, {
+            texto: textoPorcentaje,
+            centroX,
+            centroY,
+            angulo,
+            radio: (props.innerRadius + props.outerRadius) / 2
+          });
+
+          return;
+        }
+
+        dibujarEtiquetaPieExterna(ctx, {
+          texto: `${recortarTextoGrafica(chart.data.labels[index], 18)} ${textoPorcentaje}`,
+          centroX,
+          centroY,
+          angulo,
+          radioExterior: props.outerRadius
+        });
+      });
+
+      ctx.restore();
+    }
+  };
+}
+
+function dibujarEtiquetaPieInterna(ctx, opciones) {
+  const x = opciones.centroX + Math.cos(opciones.angulo) * opciones.radio;
+  const y = opciones.centroY + Math.sin(opciones.angulo) * opciones.radio;
+
+  ctx.font = "700 12px Arial";
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+  ctx.shadowBlur = 4;
+
+  ctx.fillText(opciones.texto, x, y);
+
+  ctx.shadowBlur = 0;
+}
+
+function dibujarEtiquetaPieExterna(ctx, opciones) {
+  const direccionX = Math.cos(opciones.angulo);
+  const direccionY = Math.sin(opciones.angulo);
+
+  const xInicio = opciones.centroX + direccionX * (opciones.radioExterior + 4);
+  const yInicio = opciones.centroY + direccionY * (opciones.radioExterior + 4);
+
+  const xLinea = opciones.centroX + direccionX * (opciones.radioExterior + 18);
+  const yLinea = opciones.centroY + direccionY * (opciones.radioExterior + 18);
+
+  const xTexto = opciones.centroX + direccionX * (opciones.radioExterior + 28);
+  const yTexto = opciones.centroY + direccionY * (opciones.radioExterior + 28);
+
+  ctx.strokeStyle = "#475569";
+  ctx.lineWidth = 1;
+
+  ctx.beginPath();
+  ctx.moveTo(xInicio, yInicio);
+  ctx.lineTo(xLinea, yLinea);
+  ctx.stroke();
+
+  ctx.font = "600 11px Arial";
+  ctx.fillStyle = "#1f2937";
+  ctx.textAlign = direccionX >= 0 ? "left" : "right";
+  ctx.textBaseline = "middle";
+
+  ctx.fillText(opciones.texto, xTexto, yTexto);
+}
+
+function recortarTextoGrafica(texto, maximo) {
+  const valor = normalizarTexto(texto);
+
+  if (valor.length <= maximo) {
+    return valor;
+  }
+
+  return `${valor.slice(0, maximo - 1)}…`;
 }
 
 function destruirGrafica(chartKey) {
@@ -775,6 +902,68 @@ function generarColoresGrafica(total) {
     return coloresBase[index % coloresBase.length];
   });
 }
+
+function generarColoresIngresosPie(chartKey, labels) {
+  if (chartKey === "ingresosBanco") {
+    return labels.map((label, index) => obtenerColorBanco(label, index));
+  }
+
+  return labels.map((label, index) => obtenerColorGraficaVariado(index));
+}
+
+function obtenerColorBanco(nombreBanco, index) {
+  const banco = normalizarClaveComparacion(nombreBanco);
+
+  if (banco.includes("BANAMEX")) {
+    return "#dc2626";
+  }
+
+  if (banco.includes("BANREGIO")) {
+    return "#1d4ed8";
+  }
+
+  if (banco.includes("CAJA")) {
+    return "#16a34a";
+  }
+
+  if (banco.includes("JDJP")) {
+    return "#7c3aed";
+  }
+
+  if (banco.includes("CUENTA 18") || banco.includes("18")) {
+    return "#f97316";
+  }
+
+  if (banco.includes("CUENTA 24") || banco.includes("24")) {
+    return "#0891b2";
+  }
+
+  if (banco.includes("CUENTA 42") || banco.includes("42")) {
+    return "#be123c";
+  }
+
+  return obtenerColorGraficaVariado(index);
+}
+
+function obtenerColorGraficaVariado(index) {
+  const colores = [
+    "#2563eb",
+    "#dc2626",
+    "#16a34a",
+    "#f97316",
+    "#7c3aed",
+    "#0891b2",
+    "#ca8a04",
+    "#be123c",
+    "#0f766e",
+    "#9333ea",
+    "#ea580c",
+    "#475569"
+  ];
+
+  return colores[index % colores.length];
+}
+
 
 function renderTablaIngresosAgrupada(configuracion) {
   const tbody = document.getElementById(configuracion.tbodyId);
