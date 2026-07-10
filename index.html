@@ -600,8 +600,126 @@
           </div>
         </div>
         
-        <div class="placeholder-box">
-          Aquí se agregará el análisis por Capillas, Parque, tipo de servicio, sucursal y ubicación.
+        <div class="detail-columns">
+          <div class="detail-column">
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Servicios por ubicación / sucursal</h3>
+                  <p>Distribución mensual de servicios por sucursal, parque o ubicación registrada.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll">
+                <table class="table detail-table detail-table-servicios">
+                  <thead>
+                    <tr>
+                      <th>Ubicación / Sucursal</th>
+                      <th>Registros</th>
+                      <th>% servicios</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaServiciosUbicacionBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+        
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Servicios por tipo de servicio</h3>
+                  <p>Resumen mensual por velación, inhumación, cremación, depósito u otro tipo de servicio.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll">
+                <table class="table detail-table detail-table-servicios">
+                  <thead>
+                    <tr>
+                      <th>Tipo de servicio</th>
+                      <th>Registros</th>
+                      <th>% servicios</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaServiciosTipoBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        
+          <div class="detail-column">
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Servicios recientes</h3>
+                  <p>Últimos servicios registrados para el mes seleccionado.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll table-scroll-15">
+                <table class="table detail-table detail-table-servicios-recientes">
+                  <thead>
+                    <tr>
+                      <th>No. servicio</th>
+                      <th>Fecha</th>
+                      <th>Finado</th>
+                      <th>Ubicación</th>
+                      <th>Tipo</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaServiciosRecientesBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+        
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Servicios por asesor / responsable</h3>
+                  <p>Servicios relacionados con asesor, responsable o embalsamador registrado.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll table-scroll-15">
+                <table class="table detail-table detail-table-servicios">
+                  <thead>
+                    <tr>
+                      <th>Responsable / Asesor</th>
+                      <th>Registros</th>
+                      <th>% servicios</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaServiciosResponsableBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
         </div>
       </article>
     </section>
