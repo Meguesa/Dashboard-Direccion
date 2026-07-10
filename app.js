@@ -1812,6 +1812,11 @@ function obtenerVentas2026(mes) {
 }
 
 function obtenerVentasOperativas(mes) {
+  return state.datos.ventas
+    .filter((item) => {
+      return coincidePeriodoVenta(item, mes) && esFuenteVentas(item.fuente);
+    });
+}
 
 function obtenerContratosVentas(mes) {
   return state.datos.ventas
