@@ -1223,13 +1223,7 @@ function obtenerNombreClienteVenta(item) {
 }
 
 function renderDetalleServicios(mes, totalServicios) {
-  renderTablaServiciosAgrupada({
-    tbodyId: "tablaServiciosUbicacionBody",
-    mes,
-    totalServicios,
-    campo: "ubicacionPrincipal",
-    etiquetaVacia: "Sin ubicación"
-  });
+  renderTablaServiciosTipoServicio(mes, totalServicios);
 
   renderTablaServiciosAgrupada({
     tbodyId: "tablaServiciosTipoBody",
@@ -1302,6 +1296,100 @@ function agruparServiciosPorCampo(mes, campo, etiquetaVacia) {
 
   return Array.from(grupos.values())
     .sort((a, b) => b.total - a.total);
+}
+
+function renderTablaServiciosTipoServicio(mes, totalServicios) {
+  const tbody = document.getElementById("tablaServiciosTipoBody");
+
+  if (!tbody) {
+    return;
+  }
+
+  const filas = obtenerTiposServicioDisponibles()
+    .map((tipoDisponible) => {
+      const registros = obtenerServiciosMes(mes)
+        .filter((item) => {
+          const origen = obtenerOrigenServicio(item);
+          const tipoServicio = normalizarTexto(item.tipoServicio) || "Sin tipo de servicio";
+
+          return origen === tipoDisponible.origen
+            && tipoServicio === tipoDisponible.tipoServicio;
+        })
+        .length;
+
+      return {
+        origen: tipoDisponible.origen,
+        tipoServicio: tipoDisponible.tipoServicio,
+        registros
+      };
+    })
+    .sort((a, b) => {
+      if (b.registros !== a.registros) {
+        return b.registros - a.registros;
+      }
+
+      const origenCompare = a.origen.localeCompare(b.origen, "es");
+      if (origenCompare !== 0) {
+        return origenCompare;
+      }
+
+      return a.tipoServicio.localeCompare(b.tipoServicio, "es");
+    });
+
+  if (filas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4">Sin tipos de servicio disponibles.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filas
+    .map((fila) => {
+      const porcentaje = totalServicios > 0
+        ? fila.registros / totalServicios
+        : 0;
+
+      return `
+        <tr>
+          <td>${escaparHtml(fila.origen)}</td>
+          <td>${escaparHtml(fila.tipoServicio)}</td>
+          <td>${formatoNumero(fila.registros)}</td>
+          <td>${formatoPorcentaje(porcentaje)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function obtenerTiposServicioDisponibles() {
+  const tipos = new Map();
+
+  state.datos.servicios.forEach((item) => {
+    const origen = obtenerOrigenServicio(item);
+    const tipoServicio = normalizarTexto(item.tipoServicio) || "Sin tipo de servicio";
+    const llave = `${origen}||${tipoServicio}`;
+
+    if (!tipos.has(llave)) {
+      tipos.set(llave, {
+        origen,
+        tipoServicio
+      });
+    }
+  });
+
+  return Array.from(tipos.values());
+}
+
+function obtenerOrigenServicio(item) {
+  const origen =
+    normalizarTexto(item.origen)
+    || normalizarTexto(item.tipoOrigen)
+    || normalizarTexto(item.fuente)
+    || "Sin origen";
+
+  return origen;
 }
 
 function renderTablaServiciosResponsable(mes, totalServicios) {
