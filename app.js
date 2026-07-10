@@ -359,8 +359,17 @@ function sumarEgresos(mes) {
 }
 
 function sumarVentas(mes) {
-  return obtenerVentasBase(mes)
-    .reduce((total, item) => total + obtenerMontoVenta(item), 0);
+  const ventasMensuales = obtenerVentas2026(mes)
+    .filter((item) => {
+      const tipoRegistro = normalizarTexto(item.tipoRegistro).toUpperCase();
+      return tipoRegistro === "MENSUAL";
+    });
+
+  const base = ventasMensuales.length > 0
+    ? ventasMensuales
+    : obtenerVentas2026(mes).filter((item) => normalizarTexto(item.asesor) !== "");
+
+  return base.reduce((total, item) => total + obtenerMontoVenta(item), 0);
 }
 
 function contarRegistrosIngresos(mes) {
@@ -388,22 +397,9 @@ function calcularTotalPorPagar(mes) {
 }
 
 function contarContratos(mes) {
-  return state.datos.ventas
-    .filter((item) => {
-      const itemMes = normalizarTexto(item.mes);
-      const hojaOrigen = normalizarTexto(item.hojaOrigen).toUpperCase();
-      const tipoRegistro = normalizarTexto(item.tipoRegistro).toUpperCase();
-      const numeroContrato = normalizarTexto(item.numeroContrato);
-
-      return itemMes === mes
-        && (
-          hojaOrigen === "LOTES"
-          || tipoRegistro === "TRANSACCION"
-          || numeroContrato !== ""
-        );
-    })
-    .length;
+  return obtenerContratosVentas(mes).length;
 }
+
 function contarServiciosPorOrigen(mes, origenBuscado) {
   return state.datos.servicios
     .filter((item) => {
@@ -701,7 +697,8 @@ function renderDetalleVentas(mes, totalVentas) {
     mes,
     totalVentas,
     campo: "asesor",
-    etiquetaVacia: "Sin asesor"
+    etiquetaVacia: "Sin asesor",
+    base: "VENTAS_2026_CON_ASESOR"
   });
 
   renderTablaVentasAgrupada({
@@ -709,7 +706,8 @@ function renderDetalleVentas(mes, totalVentas) {
     mes,
     totalVentas,
     campo: "sucursal",
-    etiquetaVacia: "Sin sucursal"
+    etiquetaVacia: "Sin sucursal",
+    base: "VENTAS_2026"
   });
 
   renderTablaVentasAgrupada({
@@ -717,7 +715,8 @@ function renderDetalleVentas(mes, totalVentas) {
     mes,
     totalVentas,
     campo: "tipoRegistro",
-    etiquetaVacia: "Sin tipo de registro"
+    etiquetaVacia: "Sin tipo de registro",
+    base: "VENTAS_2026"
   });
 
   renderTablaVentasContratos(mes);
@@ -733,7 +732,8 @@ function renderTablaVentasAgrupada(configuracion) {
   const filas = agruparVentasPorCampo(
     configuracion.mes,
     configuracion.campo,
-    configuracion.etiquetaVacia
+    configuracion.etiquetaVacia,
+    configuracion.base
   );
 
   if (filas.length === 0) {
@@ -764,10 +764,12 @@ function renderTablaVentasAgrupada(configuracion) {
     .join("");
 }
 
-function agruparVentasPorCampo(mes, campo, etiquetaVacia) {
+function agruparVentasPorCampo(mes, campo, etiquetaVacia, base) {
   const grupos = new Map();
 
-  obtenerVentasBase(mes).forEach((item) => {
+  const datosBase = obtenerBaseVentasPorTipo(mes, base);
+
+  datosBase.forEach((item) => {
     const nombreGrupo = normalizarTexto(item[campo]) || etiquetaVacia;
     const montoVenta = obtenerMontoVenta(item);
     const unidades = obtenerUnidadesVenta(item);
@@ -799,20 +801,7 @@ function renderTablaVentasContratos(mes) {
     return;
   }
 
-  const contratos = state.datos.ventas
-    .filter((item) => {
-      const itemMes = normalizarTexto(item.mes);
-      const numeroContrato = normalizarTexto(item.numeroContrato);
-      const hojaOrigen = normalizarTexto(item.hojaOrigen).toUpperCase();
-      const tipoRegistro = normalizarTexto(item.tipoRegistro).toUpperCase();
-
-      return itemMes === mes
-        && (
-          numeroContrato !== ""
-          || hojaOrigen === "LOTES"
-          || tipoRegistro === "TRANSACCION"
-        );
-    })
+  const contratos = obtenerContratosVentas(mes)
     .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
 
   if (contratos.length === 0) {
@@ -845,28 +834,44 @@ function renderTablaVentasContratos(mes) {
     .join("");
 }
 
-function obtenerVentasBase(mes) {
-  const ventasMes = state.datos.ventas
-    .filter((item) => normalizarTexto(item.mes) === mes);
 
-  const ventasMensuales = ventasMes.filter((item) => {
-    const fuente = normalizarTexto(item.fuente).toUpperCase();
-    const tipoRegistro = normalizarTexto(item.tipoRegistro).toUpperCase();
+function obtenerVentas2026(mes) {
+  return state.datos.ventas
+    .filter((item) => {
+      const itemMes = normalizarTexto(item.mes);
+      const fuente = normalizarTexto(item.fuente).toUpperCase();
 
-    return fuente === "VENTAS 2026"
-      && tipoRegistro === "MENSUAL";
-  });
+      return itemMes === mes && fuente === "VENTAS 2026";
+    })
+    .filter((item) => {
+      const monto = obtenerMontoVenta(item);
+      const unidades = obtenerUnidadesVenta(item);
 
-  const base = ventasMensuales.length > 0
-    ? ventasMensuales
-    : ventasMes;
+      return monto > 0 || unidades > 0;
+    });
+}
 
-  return base.filter((item) => {
-    const monto = obtenerMontoVenta(item);
-    const unidades = obtenerUnidadesVenta(item);
+function obtenerContratosVentas(mes) {
+  return state.datos.ventas
+    .filter((item) => {
+      const itemMes = normalizarTexto(item.mes);
+      const fuente = normalizarTexto(item.fuente).toUpperCase();
 
-    return monto > 0 || unidades > 0;
-  });
+      return itemMes === mes && fuente === "CONTRATOS";
+    });
+}
+
+function obtenerBaseVentasPorTipo(mes, base) {
+  if (base === "VENTAS_2026_CON_ASESOR") {
+    return obtenerVentas2026(mes)
+      .filter((item) => normalizarTexto(item.asesor) !== "");
+  }
+
+  if (base === "CONTRATOS") {
+    return obtenerContratosVentas(mes);
+  }
+
+  return obtenerVentas2026(mes);
 }
 
 function obtenerMontoVenta(item) {
