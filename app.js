@@ -696,53 +696,24 @@ function agruparEgresosPorCampo(
 }
 
 function renderDetalleVentas(mes, totalVentas) {
-  renderTablaVentasAgrupada({
-    tbodyId: "tablaVentasAsesorBody",
-    mes,
-    totalVentas,
-    campo: "asesor",
-    etiquetaVacia: "Sin asesor",
-    base: "VENTAS_ASESOR"
-  });
-
-  renderTablaVentasAgrupada({
-    tbodyId: "tablaVentasSucursalBody",
-    mes,
-    totalVentas,
-    campo: "sucursal",
-    etiquetaVacia: "Sin sucursal",
-    base: "VENTAS_SUCURSAL"
-  });
-
-  renderTablaVentasAgrupada({
-    tbodyId: "tablaVentasTipoRegistroBody",
-    mes,
-    totalVentas,
-    campo: "tipoRegistro",
-    etiquetaVacia: "Sin tipo de registro",
-    base: "VENTAS_TIPO_REGISTRO"
-  });
-
+  renderTablaVentasAsesor(mes);
+  renderTablaVentasTipoServicio(mes);
   renderTablaVentasContratos(mes);
 }
-function renderTablaVentasAgrupada(configuracion) {
-  const tbody = document.getElementById(configuracion.tbodyId);
+
+function renderTablaVentasAsesor(mes) {
+  const tbody = document.getElementById("tablaVentasAsesorBody");
 
   if (!tbody) {
     return;
   }
 
-  const filas = agruparVentasPorCampo(
-    configuracion.mes,
-    configuracion.campo,
-    configuracion.etiquetaVacia,
-    configuracion.base
-  );
+  const filas = agruparVentasPorAsesor(mes);
 
   if (filas.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5">Sin información para el mes seleccionado.</td>
+        <td colspan="6">Sin información para el mes seleccionado.</td>
       </tr>
     `;
     return;
@@ -750,8 +721,9 @@ function renderTablaVentasAgrupada(configuracion) {
 
   tbody.innerHTML = filas
     .map((fila) => {
-      const porcentaje = configuracion.totalVentas > 0
-        ? fila.total / configuracion.totalVentas
+      const metaMensual = Number(fila.metaMensual || 0);
+      const porcentajeCumplimiento = metaMensual > 0
+        ? fila.total / metaMensual
         : 0;
 
       return `
@@ -760,6 +732,83 @@ function renderTablaVentasAgrupada(configuracion) {
           <td>${formatoNumero(fila.registros)}</td>
           <td>${formatoNumero(fila.unidades)}</td>
           <td>${formatoMoneda(fila.total)}</td>
+          <td>${metaMensual > 0 ? formatoMoneda(metaMensual) : "Sin meta"}</td>
+          <td>${metaMensual > 0 ? formatoPorcentaje(porcentajeCumplimiento) : "—"}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function agruparVentasPorAsesor(mes) {
+  const grupos = new Map();
+  const datosBase = obtenerVentasPorAsesorBase(mes);
+
+  datosBase.forEach((item) => {
+    const asesor = normalizarTexto(item.asesor) || "Sin asesor";
+    const montoVenta = obtenerMontoVenta(item);
+    const unidades = obtenerUnidadesVenta(item);
+    const metaMensual = Number(item.metaMensual || 0);
+
+    if (montoVenta <= 0 && unidades <= 0 && metaMensual <= 0) {
+      return;
+    }
+
+    if (!grupos.has(asesor)) {
+      grupos.set(asesor, {
+        nombre: asesor,
+        registros: 0,
+        unidades: 0,
+        total: 0,
+        metaMensual: 0
+      });
+    }
+
+    const grupo = grupos.get(asesor);
+
+    grupo.registros += 1;
+    grupo.unidades += unidades;
+    grupo.total += montoVenta;
+
+    if (metaMensual > grupo.metaMensual) {
+      grupo.metaMensual = metaMensual;
+    }
+  });
+
+  return Array.from(grupos.values())
+    .sort((a, b) => b.total - a.total);
+}
+
+function renderTablaVentasTipoServicio(mes) {
+  const tbody = document.getElementById("tablaVentasTipoServicioBody");
+
+  if (!tbody) {
+    return;
+  }
+
+  const filas = calcularVentasPorTipoServicio(mes);
+  const totalUnidades = filas.reduce((total, fila) => total + fila.unidades, 0);
+
+  if (filas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4">Sin información para el mes seleccionado.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filas
+    .map((fila) => {
+      const porcentaje = totalUnidades > 0
+        ? fila.unidades / totalUnidades
+        : 0;
+
+      return `
+        <tr>
+          <td>${escaparHtml(fila.nombre)}</td>
+          <td>${formatoNumero(fila.registros)}</td>
+          <td>${formatoNumero(fila.unidades)}</td>
           <td>${formatoPorcentaje(porcentaje)}</td>
         </tr>
       `;
@@ -767,37 +816,49 @@ function renderTablaVentasAgrupada(configuracion) {
     .join("");
 }
 
-function agruparVentasPorCampo(mes, campo, etiquetaVacia, base) {
-  const grupos = new Map();
-  const datosBase = obtenerBaseVentasPorTipo(mes, base);
+function calcularVentasPorTipoServicio(mes) {
+  const ventasBase = obtenerVentasPorAsesorBase(mes);
 
-  datosBase.forEach((item) => {
-    const nombreGrupo = normalizarTexto(item[campo]) || etiquetaVacia;
-    const montoVenta = obtenerMontoVenta(item);
-    const unidades = obtenerUnidadesVenta(item);
-
-    if (montoVenta <= 0 && unidades <= 0) {
-      return;
+  const tiposServicio = [
+    {
+      nombre: "Servicios AF",
+      campo: "serviciosAf"
+    },
+    {
+      nombre: "Servicios CH",
+      campo: "serviciosCh"
+    },
+    {
+      nombre: "TS / TSC",
+      campo: "tsTsc"
+    },
+    {
+      nombre: "Propiedades",
+      campo: "propiedades"
+    },
+    {
+      nombre: "Nichos",
+      campo: "nichos"
     }
+  ];
 
-    if (!grupos.has(nombreGrupo)) {
-      grupos.set(nombreGrupo, {
-        nombre: nombreGrupo,
-        registros: 0,
-        unidades: 0,
-        total: 0
-      });
-    }
+  return tiposServicio
+    .map((tipo) => {
+      const unidades = ventasBase
+        .reduce((total, item) => total + Number(item[tipo.campo] || 0), 0);
 
-    const grupo = grupos.get(nombreGrupo);
+      const registros = ventasBase
+        .filter((item) => Number(item[tipo.campo] || 0) > 0)
+        .length;
 
-    grupo.registros += 1;
-    grupo.unidades += unidades;
-    grupo.total += montoVenta;
-  });
-
-  return Array.from(grupos.values())
-    .sort((a, b) => b.total - a.total);
+      return {
+        nombre: tipo.nombre,
+        registros,
+        unidades
+      };
+    })
+    .filter((fila) => fila.unidades > 0)
+    .sort((a, b) => b.unidades - a.unidades);
 }
 
 function renderTablaVentasContratos(mes) {
@@ -923,13 +984,34 @@ function obtenerVentasMensuales(mes) {
 }
 
 function obtenerVentasPorAsesorBase(mes) {
-  return obtenerVentasOperativas(mes)
+  const ventasOperativas = obtenerVentasOperativas(mes);
+
+  const ventasMensuales = ventasOperativas
+    .filter((item) => {
+      const asesor = normalizarTexto(item.asesor);
+      const tipoRegistro = normalizarTexto(item.tipoRegistro).toUpperCase();
+      const montoVenta = obtenerMontoVenta(item);
+      const unidades = obtenerUnidadesVenta(item);
+      const metaMensual = Number(item.metaMensual || 0);
+
+      return asesor !== ""
+        && tipoRegistro.includes("MENSUAL")
+        && (montoVenta > 0 || unidades > 0 || metaMensual > 0);
+    });
+
+  if (ventasMensuales.length > 0) {
+    return ventasMensuales;
+  }
+
+  return ventasOperativas
     .filter((item) => {
       const asesor = normalizarTexto(item.asesor);
       const montoVenta = obtenerMontoVenta(item);
       const unidades = obtenerUnidadesVenta(item);
+      const metaMensual = Number(item.metaMensual || 0);
 
-      return asesor !== "" && (montoVenta > 0 || unidades > 0);
+      return asesor !== ""
+        && (montoVenta > 0 || unidades > 0 || metaMensual > 0);
     });
 }
 
