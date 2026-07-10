@@ -36,6 +36,7 @@ function inicializarDashboard() {
   cargarSelectorMeses();
   conectarEventos();
   conectarNavegacionInterna();
+  conectarFiltrosTablas();
   renderDashboard();
   mostrarPagina("resumen");
 }
@@ -114,6 +115,87 @@ async function actualizarDatosDashboard() {
   state.datos.servicios = datosSharePoint.servicios || [];
 
   renderDashboard();
+}
+
+function conectarFiltrosTablas() {
+  const tablas = document.querySelectorAll(".detail-table");
+
+  tablas.forEach((tabla) => {
+    const thead = tabla.querySelector("thead");
+    const filaEncabezados = thead ? thead.querySelector("tr") : null;
+
+    if (!thead || !filaEncabezados) {
+      return;
+    }
+
+    if (thead.querySelector(".table-filter-row")) {
+      return;
+    }
+
+    const filtrosRow = document.createElement("tr");
+    filtrosRow.className = "table-filter-row";
+
+    Array.from(filaEncabezados.children).forEach((th, index) => {
+      const filtroCelda = document.createElement("th");
+      const input = document.createElement("input");
+
+      input.type = "text";
+      input.className = "table-filter-input";
+      input.placeholder = `Filtrar ${th.textContent.trim()}`;
+      input.dataset.columnIndex = String(index);
+
+      input.addEventListener("input", () => {
+        aplicarFiltrosTabla(tabla);
+      });
+
+      filtroCelda.appendChild(input);
+      filtrosRow.appendChild(filtroCelda);
+    });
+
+    thead.appendChild(filtrosRow);
+  });
+}
+
+function aplicarFiltrosTodasLasTablas() {
+  const tablas = document.querySelectorAll(".detail-table");
+
+  tablas.forEach((tabla) => {
+    aplicarFiltrosTabla(tabla);
+  });
+}
+
+function aplicarFiltrosTabla(tabla) {
+  const filtros = Array.from(tabla.querySelectorAll(".table-filter-input"));
+  const filas = Array.from(tabla.querySelectorAll("tbody tr"));
+
+  if (filtros.length === 0 || filas.length === 0) {
+    return;
+  }
+
+  filas.forEach((fila) => {
+    const celdas = Array.from(fila.children);
+
+    const cumpleFiltros = filtros.every((filtro) => {
+      const valorFiltro = normalizarTexto(filtro.value);
+
+      if (!valorFiltro) {
+        return true;
+      }
+
+      const indiceColumna = Number(filtro.dataset.columnIndex);
+      const celda = celdas[indiceColumna];
+
+      if (!celda) {
+        return false;
+      }
+
+      const valorCelda = normalizarTexto(celda.textContent);
+
+      return valorCelda.includes(valorFiltro);
+    });
+
+    fila.classList.toggle("hidden", !cumpleFiltros);
+  });
 }
 
 function conectarNavegacionInterna() {
@@ -245,6 +327,7 @@ function renderDashboard() {
 
   renderDetalleIngresos(mes, totalIngresos);
   renderDetalleEgresos(mes, totalEgresos);
+  aplicarFiltrosTodasLasTablas();
 }
 
 function sumarPorMes(lista, mes, campo) {
