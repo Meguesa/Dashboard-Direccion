@@ -1257,7 +1257,7 @@ body {
 ================================ */
 
 .chart-container-pie-categoria {
-  height: 520px;
-  max-width: 720px;
-  min-height: 520px;
+  height: 360px;
+  max-width: 540px;
+  min-height: 360px;
 }
