@@ -28,17 +28,26 @@ window.state = {
 
 const state = window.state;
 
+const DASHBOARD_CACHE_KEY = "dashboardDireccionUltimosDatos";
+const DASHBOARD_REFRESH_MS = 60 * 60 * 1000;
+
+let intervaloActualizacionDashboard = null;
+let actualizacionEnCurso = false;
+
 document.addEventListener("DOMContentLoaded", () => {
   inicializarDashboard();
 });
 
 function inicializarDashboard() {
+  cargarDatosDesdeCache();
   cargarSelectorMeses();
   conectarEventos();
   conectarNavegacionInterna();
   conectarFiltrosTablas();
   renderDashboard();
   mostrarPagina("resumen");
+  ocultarPanelEstado();
+  iniciarActualizacionAutomatica();
 }
 
 function cargarSelectorMeses() {
@@ -79,7 +88,9 @@ function conectarEventos() {
 
   if (refreshButton) {
     refreshButton.addEventListener("click", async () => {
-      await actualizarDatosDashboard();
+      await actualizarDatosDashboard({
+        mensaje: "Actualizando información manualmente..."
+      });
     });
   }
 
@@ -102,19 +113,124 @@ function conectarEventos() {
   }
 }
 
-async function actualizarDatosDashboard() {
-  const datosSharePoint = await cargarDatosSharePoint();
-
-  if (!datosSharePoint) {
+async function actualizarDatosDashboard(opciones = {}) {
+  if (actualizacionEnCurso) {
     return;
   }
 
-  state.datos.ingresos = datosSharePoint.ingresos || [];
-  state.datos.egresos = datosSharePoint.egresos || [];
-  state.datos.ventas = datosSharePoint.ventas || [];
-  state.datos.servicios = datosSharePoint.servicios || [];
+  actualizacionEnCurso = true;
 
-  renderDashboard();
+  const mensaje = opciones.mensaje || "Actualizando información desde SharePoint...";
+
+  mostrarPanelEstado(mensaje);
+
+  try {
+    const datosSharePoint = await cargarDatosSharePoint();
+
+    if (!datosSharePoint) {
+      return;
+    }
+
+    state.datos.ingresos = datosSharePoint.ingresos || [];
+    state.datos.egresos = datosSharePoint.egresos || [];
+    state.datos.ventas = datosSharePoint.ventas || [];
+    state.datos.servicios = datosSharePoint.servicios || [];
+
+    guardarDatosEnCache();
+
+    renderDashboard();
+
+    setAuthStatus("Datos actualizados correctamente.");
+  } catch (error) {
+    console.error("Error actualizando dashboard:", error);
+    setAuthStatus("No se pudo actualizar la información.");
+  } finally {
+    actualizacionEnCurso = false;
+
+    setTimeout(() => {
+      ocultarPanelEstado();
+    }, 2500);
+  }
+}
+
+function guardarDatosEnCache() {
+  const payload = {
+    fechaGuardado: new Date().toISOString(),
+    mesSeleccionado: state.mesSeleccionado,
+    datos: {
+      ingresos: state.datos.ingresos || [],
+      egresos: state.datos.egresos || [],
+      ventas: state.datos.ventas || [],
+      servicios: state.datos.servicios || []
+    }
+  };
+
+  try {
+    localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify(payload));
+  } catch (error) {
+    console.warn("No se pudo guardar caché del dashboard:", error);
+  }
+}
+
+function cargarDatosDesdeCache() {
+  try {
+    const cacheTexto = localStorage.getItem(DASHBOARD_CACHE_KEY);
+
+    if (!cacheTexto) {
+      return;
+    }
+
+    const cache = JSON.parse(cacheTexto);
+
+    if (!cache || !cache.datos) {
+      return;
+    }
+
+    state.datos.ingresos = cache.datos.ingresos || [];
+    state.datos.egresos = cache.datos.egresos || [];
+    state.datos.ventas = cache.datos.ventas || [];
+    state.datos.servicios = cache.datos.servicios || [];
+
+    if (cache.mesSeleccionado) {
+      state.mesSeleccionado = cache.mesSeleccionado;
+    }
+  } catch (error) {
+    console.warn("No se pudo cargar caché del dashboard:", error);
+  }
+}
+
+function iniciarActualizacionAutomatica() {
+  if (intervaloActualizacionDashboard) {
+    clearInterval(intervaloActualizacionDashboard);
+  }
+
+  intervaloActualizacionDashboard = setInterval(async () => {
+    if (typeof window.haySesionActiva === "function" && !window.haySesionActiva()) {
+      return;
+    }
+
+    await actualizarDatosDashboard({
+      mensaje: "Actualizando información automáticamente..."
+    });
+  }, DASHBOARD_REFRESH_MS);
+}
+
+function mostrarPanelEstado(mensaje) {
+  const panel = document.getElementById("statusPanel");
+
+  if (panel) {
+    panel.classList.remove("hidden");
+  }
+
+  setAuthStatus(mensaje);
+}
+
+function ocultarPanelEstado() {
+  const panel = document.getElementById("statusPanel");
+
+  if (panel) {
+    panel.classList.add("hidden");
+  }
 }
 
 function conectarFiltrosTablas() {
