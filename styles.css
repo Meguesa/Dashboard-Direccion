@@ -1629,81 +1629,92 @@ body {
    Metas cobranza sin scroll horizontal
 ================================ */
 
+/* ================================
+   Tabla metas cobranza responsiva
+   - Sin scroll en escritorio si cabe
+   - Con scroll horizontal en pantallas chicas
+================================ */
+
 .metas-table-scroll {
   width: 100%;
-  overflow-x: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .metas-cobranza-table {
   width: 100%;
-  min-width: 0;
+  min-width: 760px;   /* conserva forma de columnas */
   table-layout: fixed;
+  border-collapse: collapse;
 }
 
 .metas-cobranza-table th,
 .metas-cobranza-table td {
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   padding: 10px 8px;
-  white-space: normal;
-  overflow: hidden;
-  text-overflow: clip;
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .metas-cobranza-table th {
+  white-space: nowrap;
   line-height: 1.1;
 }
 
-/* Área */
+.metas-cobranza-table td {
+  white-space: nowrap;
+}
+
+/* Columna 1: Área */
 .metas-cobranza-table th:nth-child(1),
 .metas-cobranza-table td:nth-child(1) {
-  width: 17%;
+  width: 18%;
   text-align: left;
 }
 
-/* Real cobrado */
+/* Columna 2: Real cobrado */
 .metas-cobranza-table th:nth-child(2),
 .metas-cobranza-table td:nth-child(2) {
-  width: 19%;
+  width: 18%;
   text-align: right;
-  white-space: nowrap;
 }
 
-/* Meta mensual */
+/* Columna 3: Meta mensual */
 .metas-cobranza-table th:nth-child(3),
 .metas-cobranza-table td:nth-child(3) {
-  width: 19%;
+  width: 18%;
   text-align: right;
-  white-space: nowrap;
 }
 
-/* % Cumplido */
+/* Columna 4: % cumplido */
 .metas-cobranza-table th:nth-child(4),
 .metas-cobranza-table td:nth-child(4) {
-  width: 23%;
+  width: 24%;
   text-align: left;
 }
 
-/* Por cumplir */
+/* Columna 5: Por cumplir */
 .metas-cobranza-table th:nth-child(5),
 .metas-cobranza-table td:nth-child(5) {
   width: 22%;
   text-align: right;
-  white-space: nowrap;
 }
 
 .meta-progress-wrapper {
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr);
-  gap: 6px;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 8px;
   align-items: center;
   width: 100%;
 }
 
 .meta-progress-text {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 800;
   text-align: right;
+  white-space: nowrap;
 }
 
 .meta-progress-track {
@@ -1713,6 +1724,14 @@ body {
 }
 
 .metas-total-row td {
-  font-size: 0.8rem;
+  font-size: 0.84rem;
   font-weight: 900;
+}
+
+/* En pantallas grandes, si el espacio alcanza, que no se vea "encerrado" */
+@media (min-width: 1280px) {
+  .metas-cobranza-table {
+    min-width: 0;
+    width: 100%;
+  }
 }
