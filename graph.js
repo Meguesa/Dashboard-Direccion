@@ -177,6 +177,27 @@ function convertirNumero(valor) {
   return Number.isFinite(numero) ? numero : 0;
 }
 
+function convertirBooleano(valor) {
+  if (valor === true) {
+    return true;
+  }
+
+  if (valor === false) {
+    return false;
+  }
+
+  const texto = limpiarTexto(valor).toUpperCase();
+
+  if (!texto) {
+    return true;
+  }
+
+  return texto === "SI" ||
+    texto === "SÍ" ||
+    texto === "TRUE" ||
+    texto === "YES" ||
+    texto === "1";
+}
 
 async function cargarDatosSharePoint() {
   try {
@@ -190,20 +211,22 @@ async function cargarDatosSharePoint() {
     const egresos = await obtenerEgresosSharePoint();
     const ventas = await obtenerVentasSharePoint();
     const servicios = await obtenerServiciosSharePoint();
+    const metasCobranza = await obtenerMetasCobranzaSharePoint();
 
     const datos = {
       listas,
       ingresos,
       egresos,
       ventas,
-      servicios
+      servicios,
+      metasCobranza
     };
 
     console.log("Datos cargados desde SharePoint:", datos);
 
     setText(
       "sharePointStatus",
-      `Datos actualizados. Ingresos: ${ingresos.length}, Egresos: ${egresos.length}, Ventas: ${ventas.length}, Servicios: ${servicios.length}.`
+      `Datos actualizados. Ingresos: ${ingresos.length}, Egresos: ${egresos.length}, Ventas: ${ventas.length}, Servicios: ${servicios.length}, Metas cobranza: ${metasCobranza.length}.`
     );
 
     setAuthStatus("Datos actualizados correctamente.");
@@ -379,6 +402,51 @@ async function obtenerServiciosSharePoint() {
   } catch (error) {
     console.error("Error leyendo BI_Servicios:", error);
     setAuthStatus("Error al leer BI_Servicios.");
+    return [];
+  }
+}
+
+async function obtenerMetasCobranzaSharePoint() {
+  try {
+    setAuthStatus("Leyendo BI_Metas_Cobranza desde SharePoint...");
+
+    const listId = CONFIG.sharepoint.lists.metasCobranza.listId;
+
+    if (!listId) {
+      throw new Error("No está configurado el listId de BI_Metas_Cobranza.");
+    }
+
+    const items = await obtenerItemsLista(listId);
+
+    const metasCobranza = items.map((item) => {
+      const f = item.fields || {};
+
+      return {
+        id: item.id,
+        mes: limpiarTexto(f.Mes),
+        area: limpiarTexto(f.Area || f.Title),
+        metaMensual: convertirNumero(
+          f.Meta_Mensual ||
+          f.Meta_x005f_Mensual ||
+          f.MetaMensual ||
+          f.Meta_x0020_Mensual
+        ),
+        activo: convertirBooleano(f.Activo)
+      };
+    });
+
+    console.log("BI_Metas_Cobranza leídas:", metasCobranza);
+    console.table(metasCobranza);
+
+    return metasCobranza;
+  } catch (error) {
+    console.error("Error leyendo BI_Metas_Cobranza:", error);
+
+    setText(
+      "sharePointStatus",
+      "Error al leer BI_Metas_Cobranza. Revisa la consola del navegador."
+    );
+
     return [];
   }
 }
