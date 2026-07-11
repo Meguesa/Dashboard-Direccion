@@ -10,7 +10,7 @@
   
   <title>Centro de Control Dirección</title>
 
-  <link rel="stylesheet" href="styles.css?v=20260710-11" />
+  <link rel="stylesheet" href="styles.css?v=20260710-12" />
 </head>
 
 <body>
@@ -121,36 +121,41 @@
           </div>
         </article>
 
-        <article class="card">
-          <h2 class="section-title">Servicios</h2>
-
-          <div class="status-box">
-            Total servicios: <span id="serviciosTotal">0</span>
+        <article class="card metas-cobranza-card">
+          <div class="metas-card-header">
+            <div>
+              <h2 class="section-title">Avance contra meta de cobranza</h2>
+              <p>Comparativo mensual del cobro real contra la meta definida por área.</p>
+            </div>
           </div>
-
-          <table class="table" style="margin-top: 16px;">
-            <thead>
-              <tr>
-                <th>Origen</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Capillas</td>
-                <td id="capillasTotal">0</td>
-              </tr>
-              <tr>
-                <td>Parque</td>
-                <td id="parqueTotal">0</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <p class="footer-note">
-            Última actualización visual:
-            <span id="lastUpdate">—</span>
-          </p>
+        
+          <div class="status-box metas-status-box">
+            Cumplimiento total:
+            <span id="metasCobranzaCumplimiento">0.0%</span>
+          </div>
+        
+          <div class="metas-table-scroll">
+            <table class="table metas-cobranza-table">
+              <thead>
+                <tr>
+                  <th>Área</th>
+                  <th>Real cobrado</th>
+                  <th>Meta mensual</th>
+                  <th>% cumplido</th>
+                  <th>Por cumplir</th>
+                </tr>
+              </thead>
+              <tbody id="tablaMetasCobranzaBody">
+                <tr>
+                  <td>Cargando...</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </article>
       </section>
     </section>
@@ -819,9 +824,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="config.js?v=20260710-11"></script>
-  <script src="auth.js?v=20260710-11"></script>
-  <script src="graph.js?v=20260710-11"></script>
-  <script src="app.js?v=20260710-11"></script>
+  <script src="config.js?v=20260710-12"></script>
+  <script src="auth.js?v=20260710-12"></script>
+  <script src="graph.js?v=20260710-12"></script>
+  <script src="app.js?v=20260710-12"></script>
 </body>
 </html>
