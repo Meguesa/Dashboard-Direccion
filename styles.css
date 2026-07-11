@@ -1999,3 +1999,89 @@ body {
   padding-left: 8px;
   padding-right: 8px;
 }
+
+/* ================================
+   Ventas por asesor: encabezados con wrap
+   y columnas estables
+================================ */
+
+.detail-table-ventas-asesor {
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* Permitir que los títulos se partan en 2 líneas si no caben */
+.detail-table-ventas-asesor th {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.15;
+  vertical-align: middle;
+  text-align: center;
+}
+
+/* Mantener los datos en una línea */
+.detail-table-ventas-asesor td {
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+/* Asesor */
+.detail-table-ventas-asesor th:nth-child(1),
+.detail-table-ventas-asesor td:nth-child(1) {
+  width: 20% !important;
+  text-align: left;
+}
+
+/* Registros */
+.detail-table-ventas-asesor th:nth-child(2),
+.detail-table-ventas-asesor td:nth-child(2) {
+  width: 10% !important;
+  text-align: right;
+}
+
+/* Unidades */
+.detail-table-ventas-asesor th:nth-child(3),
+.detail-table-ventas-asesor td:nth-child(3) {
+  width: 10% !important;
+  text-align: right;
+}
+
+/* Total venta */
+.detail-table-ventas-asesor th:nth-child(4),
+.detail-table-ventas-asesor td:nth-child(4) {
+  width: 20% !important;
+  text-align: right;
+}
+
+/* Meta mensual */
+.detail-table-ventas-asesor th:nth-child(5),
+.detail-table-ventas-asesor td:nth-child(5) {
+  width: 20% !important;
+  text-align: right;
+}
+
+/* % cumplimiento */
+.detail-table-ventas-asesor th:nth-child(6),
+.detail-table-ventas-asesor td:nth-child(6) {
+  width: 20% !important;
+  text-align: right;
+}
+
+/* Mejorar lectura de encabezados */
+.detail-table-ventas-asesor th {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-size: 0.76rem;
+}
+
+/* Mantener datos compactos */
+.detail-table-ventas-asesor td {
+  font-size: 0.82rem;
+  padding-left: 8px;
+  padding-right: 8px;
+}
