@@ -1948,14 +1948,14 @@ body {
 /* Asesor */
 .detail-table-ventas-asesor th:nth-child(1),
 .detail-table-ventas-asesor td:nth-child(1) {
-  width: 5%;
+  width: 3%;
   text-align: left;
 }
 
 /* Registros */
 .detail-table-ventas-asesor th:nth-child(2),
 .detail-table-ventas-asesor td:nth-child(2) {
-  width: 10%;
+  width: 11%;
   text-align: right;
   white-space: nowrap;
 }
@@ -1963,7 +1963,7 @@ body {
 /* Unidades */
 .detail-table-ventas-asesor th:nth-child(3),
 .detail-table-ventas-asesor td:nth-child(3) {
-  width: 9%;
+  width: 8%;
   text-align: right;
   white-space: nowrap;
 }
@@ -1971,7 +1971,7 @@ body {
 /* Total venta */
 .detail-table-ventas-asesor th:nth-child(4),
 .detail-table-ventas-asesor td:nth-child(4) {
-  width: 27%;
+  width: 28%;
   text-align: right;
   white-space: nowrap;
 }
@@ -1987,7 +1987,7 @@ body {
 /* % cumplimiento */
 .detail-table-ventas-asesor th:nth-child(6),
 .detail-table-ventas-asesor td:nth-child(6) {
-  width: 24%;
+  width: 25%;
   text-align: right;
   white-space: nowrap;
 }
