@@ -1293,54 +1293,65 @@ function calcularRealCobranzaArea(mes, areaBuscada) {
 }
 
 function clasificarAreaIngresoCobranza(item) {
+  const banco = normalizarClaveComparacion(item.banco);
+
+  if (!esBancoValidoMetaCobranza(banco)) {
+    return "Sin área";
+  }
+
   const categoria = normalizarClaveComparacion(item.categoria);
   const subcategoria = normalizarClaveComparacion(item.subcategoria);
-  const banco = normalizarClaveComparacion(item.banco);
-  const texto = `${categoria} ${subcategoria} ${banco}`;
+  const texto = `${categoria} ${subcategoria}`.replace(/\s+/g, " ").trim();
 
-  if (
-    texto.includes("PANTEON") ||
-    texto.includes("PANTEON") ||
-    texto.includes("COB PROP") ||
-    texto.includes("PROPIEDAD") ||
-    texto.includes("LOTE") ||
-    texto.includes("NICHO")
-  ) {
+  if (coincideCategoriaMetaCobranza(texto, [
+    "COB PROP",
+    "ENG PROP",
+    "PAGOS EX PROP"
+  ])) {
     return "Panteon";
   }
 
-  if (
-    texto.includes("SERVICIOS CH") ||
-    texto.includes("SERVICIO CH") ||
-    texto.includes("CAPILLAS CH") ||
-    texto.includes("CHURUBUSCO") ||
-    /\bCH\b/.test(texto)
-  ) {
+  if (coincideCategoriaMetaCobranza(texto, [
+    "COBRANZA SERVICIO CH",
+    "ENG CH",
+    "PAGOS EX CH"
+  ])) {
     return "Servicios CH";
   }
 
-  if (
-    texto.includes("SERVICIOS AF") ||
-    texto.includes("SERVICIO AF") ||
-    texto.includes("CAPILLAS AF") ||
-    texto.includes("AGUA FRIA") ||
-    texto.includes("AGUA FRIA") ||
-    texto.includes("APODACA") ||
-    /\bAF\b/.test(texto)
-  ) {
+  if (coincideCategoriaMetaCobranza(texto, [
+    "COBRANZA AGUA FRIA",
+    "ENG AF",
+    "PAGOS EX AF"
+  ])) {
     return "Servicios AF";
   }
 
-  if (
-    texto.includes("TOTAL SERVICE") ||
-    texto.includes("TOTAL SERVIC") ||
-    /\bTS\b/.test(texto) ||
-    /\bTSC\b/.test(texto)
-  ) {
+  if (coincideCategoriaMetaCobranza(texto, [
+    "MENSUALIDAD TS",
+    "PAGOS EX TS",
+    "TSC",
+    "PAGOS EX TSC"
+  ])) {
     return "Total Service";
   }
 
   return "Sin área";
+}
+
+function esBancoValidoMetaCobranza(banco) {
+  return banco.includes("BANAMEX") ||
+    banco.includes("BANREGIO") ||
+    banco.includes("JDJP") ||
+    banco.includes("CAJA");
+}
+
+function coincideCategoriaMetaCobranza(texto, categoriasPermitidas) {
+  return categoriasPermitidas.some((categoriaPermitida) => {
+    const categoriaNormalizada = normalizarClaveComparacion(categoriaPermitida);
+
+    return texto.includes(categoriaNormalizada);
+  });
 }
 
 function normalizarAreaMetaCobranza(area) {
