@@ -23,7 +23,8 @@ window.state = {
       { mes: "2026-06", origen: "Parque", total: 52 },
       { mes: "2026-07", origen: "Capillas", total: 8 },
       { mes: "2026-07", origen: "Parque", total: 6 }
-    ]
+    ],
+    metasCobranza: []
   }
 };
 
@@ -269,6 +270,7 @@ async function actualizarDatosDashboard(opciones = {}) {
     state.datos.egresos = datosSharePoint.egresos || [];
     state.datos.ventas = datosSharePoint.ventas || [];
     state.datos.servicios = datosSharePoint.servicios || [];
+    state.datos.metasCobranza = datosSharePoint.metasCobranza || [];
 
     cargarSelectorAnios();
     cargarSelectorMeses();
@@ -296,11 +298,12 @@ function guardarDatosEnCache() {
       anioSeleccionado: state.anioSeleccionado,
       mesSeleccionado: state.mesSeleccionado,
       datos: {
-      ingresos: state.datos.ingresos || [],
-      egresos: state.datos.egresos || [],
-      ventas: state.datos.ventas || [],
-      servicios: state.datos.servicios || []
-    }
+        ingresos: state.datos.ingresos || [],
+        egresos: state.datos.egresos || [],
+        ventas: state.datos.ventas || [],
+        servicios: state.datos.servicios || [],
+        metasCobranza: state.datos.metasCobranza || []
+      }
   };
 
   try {
@@ -328,6 +331,7 @@ function cargarDatosDesdeCache() {
     state.datos.egresos = cache.datos.egresos || [];
     state.datos.ventas = cache.datos.ventas || [];
     state.datos.servicios = cache.datos.servicios || [];
+    state.datos.metasCobranza = cache.datos.metasCobranza || [];
 
     if (cache.anioSeleccionado) {
       state.anioSeleccionado = cache.anioSeleccionado;
@@ -597,6 +601,8 @@ function renderDashboard() {
     totalServicios
   });
 
+  renderAvanceMetasCobranza(mes);
+  
   renderDetalleIngresos(mes, totalIngresos);
   renderDetalleEgresos(mes, totalEgresos);
   renderDetalleVentas(mes, totalVentas);
@@ -1136,6 +1142,262 @@ function esRubroAccionistasFlujo(texto) {
     texto.includes("MAMG") ||
     texto.includes("MMMG");
 }
+
+const AREAS_META_COBRANZA = [
+  "Panteon",
+  "Servicios CH",
+  "Servicios AF",
+  "Total Service"
+];
+
+function renderAvanceMetasCobranza(mes) {
+  const tbody = document.getElementById("tablaMetasCobranzaBody");
+
+  if (!tbody) {
+    return;
+  }
+
+  const filas = calcularAvanceMetasCobranza(mes);
+  const total = calcularTotalAvanceMetasCobranza(filas);
+
+  setText("metasCobranzaCumplimiento", formatoPorcentaje(total.porcentajeCumplido));
+
+  if (filas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5">No hay metas de cobranza configuradas para este mes.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  const filasHtml = filas
+    .map((fila) => renderFilaMetaCobranza(fila, false))
+    .join("");
+
+  const totalHtml = renderFilaMetaCobranza(total, true);
+
+  tbody.innerHTML = filasHtml + totalHtml;
+}
+
+function calcularAvanceMetasCobranza(mes) {
+  const metasMes = obtenerMetasCobranzaMes(mes);
+  const areas = obtenerAreasOrdenadasMetasCobranza(metasMes);
+
+  return areas
+    .map((area) => {
+      const real = calcularRealCobranzaArea(mes, area);
+      const meta = obtenerMetaCobranzaArea(metasMes, area);
+      const porcentajeCumplido = meta > 0 ? real / meta : 0;
+      const porCumplir = Math.max(meta - real, 0);
+
+      return {
+        area,
+        real,
+        meta,
+        porcentajeCumplido,
+        porCumplir
+      };
+    })
+    .filter((fila) => fila.meta > 0 || fila.real > 0);
+}
+
+function calcularTotalAvanceMetasCobranza(filas) {
+  const real = filas.reduce((suma, fila) => suma + Number(fila.real || 0), 0);
+  const meta = filas.reduce((suma, fila) => suma + Number(fila.meta || 0), 0);
+  const porcentajeCumplido = meta > 0 ? real / meta : 0;
+  const porCumplir = Math.max(meta - real, 0);
+
+  return {
+    area: "TOTAL",
+    real,
+    meta,
+    porcentajeCumplido,
+    porCumplir
+  };
+}
+
+function renderFilaMetaCobranza(fila, esTotal) {
+  const porcentajeBarra = Math.min(fila.porcentajeCumplido * 100, 100);
+  const claseCumplimiento = fila.porcentajeCumplido >= 1 ? "cumplido" : "pendiente";
+
+  return `
+    <tr class="${esTotal ? "metas-total-row" : ""}">
+      <td>${escaparHtml(fila.area)}</td>
+      <td>${formatoMoneda(fila.real)}</td>
+      <td>${formatoMoneda(fila.meta)}</td>
+      <td>
+        <div class="meta-progress-wrapper">
+          <span class="meta-progress-text">
+            ${formatoPorcentaje(fila.porcentajeCumplido)}
+          </span>
+          <span class="meta-progress-track">
+            <span
+              class="meta-progress-bar ${claseCumplimiento}"
+              style="width: ${porcentajeBarra}%;"
+            ></span>
+          </span>
+        </div>
+      </td>
+      <td>${formatoMoneda(fila.porCumplir)}</td>
+    </tr>
+  `;
+}
+
+function obtenerMetasCobranzaMes(mes) {
+  return (state.datos.metasCobranza || [])
+    .filter((meta) => {
+      const esMes = normalizarTexto(meta.mes) === mes;
+      const estaActivo = meta.activo !== false;
+
+      return esMes && estaActivo;
+    })
+    .map((meta) => {
+      return {
+        ...meta,
+        area: normalizarAreaMetaCobranza(meta.area)
+      };
+    });
+}
+
+function obtenerAreasOrdenadasMetasCobranza(metasMes) {
+  const areas = new Set();
+
+  AREAS_META_COBRANZA.forEach((area) => areas.add(area));
+
+  metasMes.forEach((meta) => {
+    if (meta.area) {
+      areas.add(meta.area);
+    }
+  });
+
+  return Array.from(areas)
+    .sort((a, b) => obtenerOrdenAreaMetaCobranza(a) - obtenerOrdenAreaMetaCobranza(b));
+}
+
+function obtenerMetaCobranzaArea(metasMes, areaBuscada) {
+  const areaNormalizada = normalizarAreaMetaCobranza(areaBuscada);
+
+  return metasMes
+    .filter((meta) => normalizarAreaMetaCobranza(meta.area) === areaNormalizada)
+    .reduce((suma, meta) => suma + Number(meta.metaMensual || 0), 0);
+}
+
+function calcularRealCobranzaArea(mes, areaBuscada) {
+  const areaNormalizada = normalizarAreaMetaCobranza(areaBuscada);
+
+  return (state.datos.ingresos || [])
+    .filter((item) => normalizarTexto(item.mes) === mes)
+    .filter((item) => clasificarAreaIngresoCobranza(item) === areaNormalizada)
+    .reduce((suma, item) => suma + Number(item.importe || 0), 0);
+}
+
+function clasificarAreaIngresoCobranza(item) {
+  const categoria = normalizarClaveComparacion(item.categoria);
+  const subcategoria = normalizarClaveComparacion(item.subcategoria);
+  const banco = normalizarClaveComparacion(item.banco);
+  const texto = `${categoria} ${subcategoria} ${banco}`;
+
+  if (
+    texto.includes("PANTEON") ||
+    texto.includes("PANTEON") ||
+    texto.includes("COB PROP") ||
+    texto.includes("PROPIEDAD") ||
+    texto.includes("LOTE") ||
+    texto.includes("NICHO")
+  ) {
+    return "Panteon";
+  }
+
+  if (
+    texto.includes("SERVICIOS CH") ||
+    texto.includes("SERVICIO CH") ||
+    texto.includes("CAPILLAS CH") ||
+    texto.includes("CHURUBUSCO") ||
+    /\bCH\b/.test(texto)
+  ) {
+    return "Servicios CH";
+  }
+
+  if (
+    texto.includes("SERVICIOS AF") ||
+    texto.includes("SERVICIO AF") ||
+    texto.includes("CAPILLAS AF") ||
+    texto.includes("AGUA FRIA") ||
+    texto.includes("AGUA FRIA") ||
+    texto.includes("APODACA") ||
+    /\bAF\b/.test(texto)
+  ) {
+    return "Servicios AF";
+  }
+
+  if (
+    texto.includes("TOTAL SERVICE") ||
+    texto.includes("TOTAL SERVIC") ||
+    /\bTS\b/.test(texto) ||
+    /\bTSC\b/.test(texto)
+  ) {
+    return "Total Service";
+  }
+
+  return "Sin área";
+}
+
+function normalizarAreaMetaCobranza(area) {
+  const texto = normalizarClaveComparacion(area);
+
+  if (
+    texto.includes("PANTEON") ||
+    texto.includes("PANTEON")
+  ) {
+    return "Panteon";
+  }
+
+  if (
+    texto.includes("SERVICIOS CH") ||
+    texto.includes("SERVICIO CH") ||
+    texto.includes("CHURUBUSCO") ||
+    texto === "CH"
+  ) {
+    return "Servicios CH";
+  }
+
+  if (
+    texto.includes("SERVICIOS AF") ||
+    texto.includes("SERVICIO AF") ||
+    texto.includes("AGUA FRIA") ||
+    texto.includes("APODACA") ||
+    texto === "AF"
+  ) {
+    return "Servicios AF";
+  }
+
+  if (
+    texto.includes("TOTAL SERVICE") ||
+    texto.includes("TOTAL SERVIC") ||
+    texto === "TS" ||
+    texto === "TSC"
+  ) {
+    return "Total Service";
+  }
+
+  return normalizarTexto(area) || "Sin área";
+}
+
+function obtenerOrdenAreaMetaCobranza(area) {
+  const areaNormalizada = normalizarAreaMetaCobranza(area);
+
+  const orden = {
+    "Panteon": 1,
+    "Servicios CH": 2,
+    "Servicios AF": 3,
+    "Total Service": 4,
+    "Sin área": 99
+  };
+
+  return orden[areaNormalizada] || 98;
+}
+
 
 function renderDetalleIngresos(mes, totalIngresos) {
   renderTablaIngresosAgrupada({
