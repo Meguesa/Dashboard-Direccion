@@ -10,7 +10,7 @@
   
   <title>Centro de Control Dirección</title>
 
-  <link rel="stylesheet" href="styles.css?v=20260710-12" />
+  <link rel="stylesheet" href="styles.css?v=20260710-13" />
 </head>
 
 <body>
@@ -545,8 +545,10 @@
             </div>
           </div>
         
-          <div class="chart-container chart-container-bar">
-            <canvas id="chartVentasAsesor"></canvas>
+          <div class="chart-container chart-container-bar chart-container-bar-ventas-asesor">
+            <div id="chartVentasAsesorInner" class="chart-scroll-inner-ventas-asesor">
+              <canvas id="chartVentasAsesor"></canvas>
+            </div>
           </div>
         </article>
         
@@ -824,9 +826,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="config.js?v=20260710-12"></script>
-  <script src="auth.js?v=20260710-12"></script>
-  <script src="graph.js?v=20260710-12"></script>
-  <script src="app.js?v=20260710-12"></script>
+  <script src="config.js?v=20260710-13"></script>
+  <script src="auth.js?v=20260710-13"></script>
+  <script src="graph.js?v=20260710-13"></script>
+  <script src="app.js?v=20260710-13"></script>
 </body>
 </html>
