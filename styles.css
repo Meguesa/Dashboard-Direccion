@@ -1883,3 +1883,26 @@ body {
     font-size: 28px;
   }
 }
+
+/* ================================
+   Ventas: gráfica barras por asesor con scroll
+================================ */
+
+.chart-container-bar-ventas-asesor {
+  height: 432px;
+  min-height: 432px;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.chart-scroll-inner-ventas-asesor {
+  position: relative;
+  width: 100%;
+  min-height: 432px;
+}
+
+.chart-container-bar-ventas-asesor canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
