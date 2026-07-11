@@ -2293,8 +2293,10 @@ function renderGraficaVentasPorAsesor(mes) {
   
   const labels = filas.map((fila) => obtenerNombreAsesorAgrupado(fila));
   const valores = filas.map((fila) => Number(fila.total || 0));
+  const maximoEje = calcularMaximoEjeVentasAsesor(valores);
   
   ajustarAlturaGraficaVentasAsesor(labels.length);
+  renderGraficaVentasAsesorAxis(maximoEje);
   
   dashboardCharts.ventasAsesor = new Chart(canvas, {
     type: "bar",
@@ -2330,8 +2332,13 @@ function renderGraficaVentasPorAsesor(mes) {
       scales: {
         x: {
           beginAtZero: true,
+          max: maximoEje,
           ticks: {
+            display: false,
             callback: (value) => formatoMoneda(value)
+          },
+          grid: {
+            display: true
           }
         },
         y: {
@@ -2342,6 +2349,80 @@ function renderGraficaVentasPorAsesor(mes) {
       }
     }
   });
+}
+
+function renderGraficaVentasAsesorAxis(maximoEje) {
+  const canvas = document.getElementById("chartVentasAsesorAxis");
+
+  if (!canvas || typeof Chart === "undefined") {
+    return;
+  }
+
+  destruirGrafica("ventasAsesorAxis");
+
+  dashboardCharts.ventasAsesorAxis = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: [""],
+      datasets: [
+        {
+          data: [0],
+          backgroundColor: "rgba(0, 0, 0, 0)",
+          borderWidth: 0
+        }
+      ]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      layout: {
+        padding: {
+          left: 92,
+          right: 24,
+          top: 0,
+          bottom: 0
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          enabled: false
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          max: maximoEje,
+          position: "bottom",
+          ticks: {
+            callback: (value) => formatoMoneda(value)
+          },
+          grid: {
+            display: true
+          }
+        },
+        y: {
+          display: false
+        }
+      }
+    }
+  });
+}
+
+function calcularMaximoEjeVentasAsesor(valores) {
+  const maximo = Math.max(...valores, 0);
+
+  if (maximo <= 0) {
+    return 100000;
+  }
+
+  const base = maximo <= 100000 ? 25000 : 50000;
+
+  return Math.ceil(maximo / base) * base;
 }
 
 function ajustarAlturaGraficaVentasAsesor(totalFilas) {
