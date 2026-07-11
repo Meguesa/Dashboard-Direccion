@@ -1433,3 +1433,132 @@ body {
 .hidden {
   display: none !important;
 }
+
+/* ================================
+   Página principal: flujo + metas
+================================ */
+
+.grid-main {
+  align-items: stretch;
+}
+
+.grid-main > .card {
+  height: 100%;
+}
+
+.flujo-card,
+.metas-cobranza-card {
+  min-height: 560px;
+  display: flex;
+  flex-direction: column;
+}
+
+.flujo-table-scroll,
+.metas-table-scroll {
+  flex: 1;
+  overflow: auto;
+}
+
+.metas-card-header {
+  margin-bottom: 14px;
+}
+
+.metas-card-header h2 {
+  margin: 0;
+}
+
+.metas-card-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.metas-status-box {
+  margin-bottom: 14px;
+  font-weight: 700;
+}
+
+.metas-cobranza-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.metas-cobranza-table th,
+.metas-cobranza-table td {
+  vertical-align: middle;
+}
+
+.metas-cobranza-table th:nth-child(1),
+.metas-cobranza-table td:nth-child(1) {
+  width: 22%;
+  text-align: left;
+}
+
+.metas-cobranza-table th:nth-child(2),
+.metas-cobranza-table td:nth-child(2),
+.metas-cobranza-table th:nth-child(3),
+.metas-cobranza-table td:nth-child(3),
+.metas-cobranza-table th:nth-child(5),
+.metas-cobranza-table td:nth-child(5) {
+  width: 18%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.metas-cobranza-table th:nth-child(4),
+.metas-cobranza-table td:nth-child(4) {
+  width: 24%;
+}
+
+.meta-progress-wrapper {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.meta-progress-text {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #0f172a;
+  text-align: right;
+}
+
+.meta-progress-track {
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+  display: block;
+}
+
+.meta-progress-bar {
+  height: 100%;
+  display: block;
+  border-radius: 999px;
+}
+
+.meta-progress-bar.pendiente {
+  background: #f59e0b;
+}
+
+.meta-progress-bar.cumplido {
+  background: #22c55e;
+}
+
+.metas-total-row td {
+  border-top: 2px solid #0f172a;
+  font-weight: 900;
+  background: #f8fafc;
+}
+
+@media (max-width: 1100px) {
+  .flujo-card,
+  .metas-cobranza-card {
+    min-height: auto;
+  }
+
+  .metas-cobranza-table {
+    min-width: 760px;
+  }
+}
