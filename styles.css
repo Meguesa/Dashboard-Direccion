@@ -1735,3 +1735,119 @@ body {
     width: 100%;
   }
 }
+
+/* ================================
+   Regla global: scroll horizontal responsivo en tablas
+   - En escritorio las tablas usan el ancho disponible
+   - En pantalla reducida conservan columnas y aparece scroll
+================================ */
+
+/* Contenedores generales de tablas */
+.table-scroll,
+.flujo-table-scroll,
+.metas-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Contenedores con altura fija: conservar scroll vertical y permitir horizontal */
+.table-scroll-10,
+.table-scroll-15,
+.table-scroll-20 {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+
+/* Evita que las tarjetas obliguen a comprimir el contenido */
+.detail-section-card,
+.detail-column,
+.card,
+.flujo-card,
+.metas-cobranza-card {
+  min-width: 0;
+}
+
+/* En escritorio: las tablas se adaptan al ancho disponible sin forzar scroll */
+.table-scroll > table,
+.flujo-table,
+.metas-cobranza-table {
+  width: 100%;
+  max-width: none;
+  table-layout: fixed;
+}
+
+/* Escritorio / pantalla completa: sin min-width forzado */
+@media (min-width: 1101px) {
+  .table-scroll > table,
+  .flujo-table,
+  .metas-cobranza-table,
+  .detail-table,
+  .detail-table-egresos-rubro,
+  .detail-table-egresos-pendientes,
+  .detail-table-ventas,
+  .detail-table-ventas-asesor,
+  .detail-table-ventas-servicio,
+  .detail-table-ventas-contratos,
+  .detail-table-servicios,
+  .detail-table-servicios-tipo,
+  .detail-table-servicios-recientes {
+    min-width: 0 !important;
+    width: 100%;
+  }
+}
+
+/* Pantallas reducidas: conservar tamaño de columnas y activar scroll horizontal */
+@media (max-width: 1100px) {
+  .table-scroll > table,
+  .detail-table {
+    min-width: 640px;
+  }
+
+  /* Flujo de efectivo neto */
+  .flujo-table {
+    min-width: 620px;
+  }
+
+  /* Metas de cobranza */
+  .metas-cobranza-table {
+    min-width: 760px;
+  }
+
+  /* Egresos */
+  .detail-table-egresos-rubro {
+    min-width: 860px;
+  }
+
+  .detail-table-egresos-pendientes {
+    min-width: 760px;
+  }
+
+  /* Ventas */
+  .detail-table-ventas,
+  .detail-table-ventas-asesor {
+    min-width: 880px;
+  }
+
+  .detail-table-ventas-servicio {
+    min-width: 720px;
+  }
+
+  .detail-table-ventas-contratos {
+    min-width: 820px;
+  }
+
+  /* Servicios */
+  .detail-table-servicios {
+    min-width: 640px;
+  }
+
+  .detail-table-servicios-tipo {
+    min-width: 780px;
+  }
+
+  .detail-table-servicios-recientes {
+    min-width: 840px;
+  }
+}
