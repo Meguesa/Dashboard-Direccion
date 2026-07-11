@@ -1906,3 +1906,32 @@ body {
   width: 100% !important;
   height: 100% !important;
 }
+
+/* ================================
+   Ventas: eje X fijo en gráfica por asesor
+================================ */
+
+.chart-ventas-asesor-wrapper {
+  width: 100%;
+}
+
+.chart-ventas-asesor-axis {
+  position: relative;
+  width: 100%;
+  height: 56px;
+  min-height: 56px;
+  margin-top: 8px;
+  margin-bottom: 0;
+  padding-left: 0;
+  background: #ffffff;
+  z-index: 3;
+}
+
+.chart-ventas-asesor-axis canvas {
+  width: 100% !important;
+  height: 56px !important;
+}
+
+.chart-container-bar-ventas-asesor {
+  margin-top: 0;
+}
