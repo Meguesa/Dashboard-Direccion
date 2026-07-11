@@ -1624,3 +1624,95 @@ body {
 .metas-cobranza-table td:nth-child(4) {
   width: 25%;
 }
+
+/* ================================
+   Metas cobranza sin scroll horizontal
+================================ */
+
+.metas-table-scroll {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.metas-cobranza-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.metas-cobranza-table th,
+.metas-cobranza-table td {
+  font-size: 0.78rem;
+  padding: 10px 8px;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: clip;
+  vertical-align: middle;
+}
+
+.metas-cobranza-table th {
+  line-height: 1.1;
+}
+
+/* Área */
+.metas-cobranza-table th:nth-child(1),
+.metas-cobranza-table td:nth-child(1) {
+  width: 17%;
+  text-align: left;
+}
+
+/* Real cobrado */
+.metas-cobranza-table th:nth-child(2),
+.metas-cobranza-table td:nth-child(2) {
+  width: 19%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Meta mensual */
+.metas-cobranza-table th:nth-child(3),
+.metas-cobranza-table td:nth-child(3) {
+  width: 19%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* % Cumplido */
+.metas-cobranza-table th:nth-child(4),
+.metas-cobranza-table td:nth-child(4) {
+  width: 23%;
+  text-align: left;
+}
+
+/* Por cumplir */
+.metas-cobranza-table th:nth-child(5),
+.metas-cobranza-table td:nth-child(5) {
+  width: 22%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.meta-progress-wrapper {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+}
+
+.meta-progress-text {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.meta-progress-track {
+  width: 100%;
+  min-width: 0;
+  height: 10px;
+}
+
+.metas-total-row td {
+  font-size: 0.8rem;
+  font-weight: 900;
+}
