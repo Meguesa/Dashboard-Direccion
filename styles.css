@@ -2085,3 +2085,64 @@ body {
   padding-left: 8px;
   padding-right: 8px;
 }
+
+/* ================================
+   Ventas: contratos recientes ajuste final
+================================ */
+
+.detail-table-ventas-contratos {
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* Permitir que encabezados se acomoden sin cortar */
+.detail-table-ventas-contratos th {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  line-height: 1.15;
+  vertical-align: middle;
+}
+
+/* Columna Contrato: más angosta */
+.detail-table-ventas-contratos th:nth-child(1),
+.detail-table-ventas-contratos td:nth-child(1) {
+  width: 14% !important;
+  text-align: left;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+/* Columna Cliente: más amplia */
+.detail-table-ventas-contratos th:nth-child(2),
+.detail-table-ventas-contratos td:nth-child(2) {
+  width: 30% !important;
+  text-align: left;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+/* Columna Tipo: más amplia */
+.detail-table-ventas-contratos th:nth-child(3),
+.detail-table-ventas-contratos td:nth-child(3) {
+  width: 41% !important;
+  text-align: left;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+/* Columna Total */
+.detail-table-ventas-contratos th:nth-child(4),
+.detail-table-ventas-contratos td:nth-child(4) {
+  width: 15% !important;
+  text-align: right;
+  white-space: nowrap !important;
+}
+
+/* Compactar texto sin cambiar estructura */
+.detail-table-ventas-contratos th,
+.detail-table-ventas-contratos td {
+  font-size: 0.82rem;
+  padding-left: 8px;
+  padding-right: 8px;
+}
