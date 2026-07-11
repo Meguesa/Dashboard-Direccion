@@ -2281,18 +2281,21 @@ function renderGraficaVentasPorAsesor(mes) {
   }
 
   const filas = agruparVentasPorAsesor(mes)
-    .filter((fila) => Number(fila.total || 0) > 0)
+    .filter((fila) => obtenerNombreAsesorAgrupado(fila) !== "Sin asesor")
     .sort((a, b) => Number(b.total || 0) - Number(a.total || 0));
-
+  
   destruirGrafica("ventasAsesor");
-
+  
   if (filas.length === 0) {
+    ajustarAlturaGraficaVentasAsesor(8);
     return;
   }
-
+  
   const labels = filas.map((fila) => obtenerNombreAsesorAgrupado(fila));
   const valores = filas.map((fila) => Number(fila.total || 0));
-
+  
+  ajustarAlturaGraficaVentasAsesor(labels.length);
+  
   dashboardCharts.ventasAsesor = new Chart(canvas, {
     type: "bar",
     data: {
@@ -2302,7 +2305,9 @@ function renderGraficaVentasPorAsesor(mes) {
           label: "Venta mensual",
           data: valores,
           backgroundColor: labels.map((label, index) => obtenerColorGraficaVariado(index)),
-          borderWidth: 1
+          borderWidth: 1,
+          barThickness: 26,
+          maxBarThickness: 26
         }
       ]
     },
@@ -2337,6 +2342,26 @@ function renderGraficaVentasPorAsesor(mes) {
       }
     }
   });
+}
+
+function ajustarAlturaGraficaVentasAsesor(totalFilas) {
+  const contenedor = document.querySelector(".chart-container-bar-ventas-asesor");
+  const inner = document.getElementById("chartVentasAsesorInner");
+
+  if (!contenedor || !inner) {
+    return;
+  }
+
+  const filasVisibles = 8;
+  const altoPorFila = 44;
+  const espacioExtra = 80;
+
+  const altoVisible = filasVisibles * altoPorFila + espacioExtra;
+  const altoTotal = Math.max(totalFilas, filasVisibles) * altoPorFila + espacioExtra;
+
+  contenedor.style.height = `${altoVisible}px`;
+  contenedor.style.minHeight = `${altoVisible}px`;
+  inner.style.height = `${altoTotal}px`;
 }
 
 function obtenerNombreAsesorAgrupado(fila) {
