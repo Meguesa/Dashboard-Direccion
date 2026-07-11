@@ -1562,3 +1562,65 @@ body {
     min-width: 760px;
   }
 }
+
+/* ================================
+   Página principal: columnas iguales
+================================ */
+
+.grid-main {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: stretch;
+}
+
+.grid-main > .card {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+}
+
+.flujo-card,
+.metas-cobranza-card {
+  width: 100%;
+  min-width: 0;
+}
+
+.flujo-table-scroll,
+.metas-table-scroll {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+/* ================================
+   Ajuste visual tabla metas cobranza
+================================ */
+
+.metas-cobranza-table {
+  min-width: 720px;
+}
+
+.metas-cobranza-table th,
+.metas-cobranza-table td {
+  font-size: 0.88rem;
+}
+
+.metas-cobranza-table th:nth-child(1),
+.metas-cobranza-table td:nth-child(1) {
+  width: 18%;
+}
+
+.metas-cobranza-table th:nth-child(2),
+.metas-cobranza-table td:nth-child(2),
+.metas-cobranza-table th:nth-child(3),
+.metas-cobranza-table td:nth-child(3),
+.metas-cobranza-table th:nth-child(5),
+.metas-cobranza-table td:nth-child(5) {
+  width: 19%;
+}
+
+.metas-cobranza-table th:nth-child(4),
+.metas-cobranza-table td:nth-child(4) {
+  width: 25%;
+}
