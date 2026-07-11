@@ -1935,3 +1935,67 @@ body {
 .chart-container-bar-ventas-asesor {
   margin-top: 0;
 }
+
+/* ================================
+   Ventas por asesor: ajuste de columnas
+================================ */
+
+.detail-table-ventas-asesor {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* Asesor */
+.detail-table-ventas-asesor th:nth-child(1),
+.detail-table-ventas-asesor td:nth-child(1) {
+  width: 13%;
+  text-align: left;
+}
+
+/* Registros */
+.detail-table-ventas-asesor th:nth-child(2),
+.detail-table-ventas-asesor td:nth-child(2) {
+  width: 8%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Unidades */
+.detail-table-ventas-asesor th:nth-child(3),
+.detail-table-ventas-asesor td:nth-child(3) {
+  width: 9%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Total venta */
+.detail-table-ventas-asesor th:nth-child(4),
+.detail-table-ventas-asesor td:nth-child(4) {
+  width: 24%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Meta mensual */
+.detail-table-ventas-asesor th:nth-child(5),
+.detail-table-ventas-asesor td:nth-child(5) {
+  width: 24%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* % cumplimiento */
+.detail-table-ventas-asesor th:nth-child(6),
+.detail-table-ventas-asesor td:nth-child(6) {
+  width: 22%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Reducir un poco el texto para evitar empalmes */
+.detail-table-ventas-asesor th,
+.detail-table-ventas-asesor td {
+  font-size: 0.82rem;
+  padding-left: 8px;
+  padding-right: 8px;
+}
