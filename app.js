@@ -2290,10 +2290,11 @@ function renderGraficaVentasPorAsesor(mes) {
     ajustarAlturaGraficaVentasAsesor(8);
     return;
   }
-  
+    
   const labels = filas.map((fila) => obtenerNombreAsesorAgrupado(fila));
   const valores = filas.map((fila) => Number(fila.total || 0));
-  const maximoEje = calcularMaximoEjeVentasAsesor(valores);
+  const metas = filas.map((fila) => obtenerMetaAsesorAgrupado(fila));
+  const maximoEje = calcularMaximoEjeVentasAsesor([...valores, ...metas]);
   
   ajustarAlturaGraficaVentasAsesor(labels.length);
   renderGraficaVentasAsesorAxis(maximoEje);
@@ -2304,12 +2305,25 @@ function renderGraficaVentasPorAsesor(mes) {
       labels,
       datasets: [
         {
+          label: "Meta mensual",
+          data: metas,
+          backgroundColor: "#e5e7eb",
+          borderColor: "#cbd5e1",
+          borderWidth: 1,
+          barThickness: 30,
+          maxBarThickness: 30,
+          grouped: false,
+          order: 2
+        },
+        {
           label: "Venta mensual",
           data: valores,
           backgroundColor: labels.map((label, index) => obtenerColorGraficaVariado(index)),
           borderWidth: 1,
-          barThickness: 26,
-          maxBarThickness: 26
+          barThickness: 20,
+          maxBarThickness: 20,
+          grouped: false,
+          order: 1
         }
       ]
     },
@@ -2324,7 +2338,20 @@ function renderGraficaVentasPorAsesor(mes) {
         tooltip: {
           callbacks: {
             label: (context) => {
-              return `Venta: ${formatoMoneda(context.parsed.x)}`;
+              const index = context.dataIndex;
+              const venta = Number(valores[index] || 0);
+              const meta = Number(metas[index] || 0);
+              const cumplimiento = meta > 0 ? venta / meta : 0;
+        
+              if (context.dataset.label === "Venta mensual") {
+                return [
+                  `Venta: ${formatoMoneda(venta)}`,
+                  `Meta: ${meta > 0 ? formatoMoneda(meta) : "Sin meta"}`,
+                  `Cumplimiento: ${meta > 0 ? formatoPorcentaje(cumplimiento) : "—"}`
+                ];
+              }
+        
+              return `Meta: ${meta > 0 ? formatoMoneda(meta) : "Sin meta"}`;
             }
           }
         }
@@ -2454,6 +2481,17 @@ function obtenerNombreAsesorAgrupado(fila) {
     fila.vendedor ||
     fila.label
   ) || "Sin asesor";
+}
+
+function obtenerMetaAsesorAgrupado(fila) {
+  const meta = Number(
+    fila.metaMensual ||
+    fila.meta ||
+    fila.metaMensualAsesor ||
+    0
+  );
+
+  return Number.isFinite(meta) ? meta : 0;
 }
 
 function renderDetalleVentas(mes, totalVentas) {
