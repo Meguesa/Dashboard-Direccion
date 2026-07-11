@@ -2107,7 +2107,7 @@ body {
 /* Columna Contrato: más angosta */
 .detail-table-ventas-contratos th:nth-child(1),
 .detail-table-ventas-contratos td:nth-child(1) {
-  width: 30% !important;
+  width: 25% !important;
   text-align: left;
   white-space: normal !important;
   overflow-wrap: anywhere;
@@ -2116,7 +2116,7 @@ body {
 /* Columna Cliente: más amplia */
 .detail-table-ventas-contratos th:nth-child(2),
 .detail-table-ventas-contratos td:nth-child(2) {
-  width: 24% !important;
+  width: 29% !important;
   text-align: left;
   white-space: normal !important;
   overflow-wrap: anywhere;
