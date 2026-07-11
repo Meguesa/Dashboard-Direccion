@@ -1948,14 +1948,14 @@ body {
 /* Asesor */
 .detail-table-ventas-asesor th:nth-child(1),
 .detail-table-ventas-asesor td:nth-child(1) {
-  width: 13%;
+  width: 8%;
   text-align: left;
 }
 
 /* Registros */
 .detail-table-ventas-asesor th:nth-child(2),
 .detail-table-ventas-asesor td:nth-child(2) {
-  width: 8%;
+  width: 10%;
   text-align: right;
   white-space: nowrap;
 }
@@ -1971,7 +1971,7 @@ body {
 /* Total venta */
 .detail-table-ventas-asesor th:nth-child(4),
 .detail-table-ventas-asesor td:nth-child(4) {
-  width: 24%;
+  width: 26%;
   text-align: right;
   white-space: nowrap;
 }
@@ -1979,7 +1979,7 @@ body {
 /* Meta mensual */
 .detail-table-ventas-asesor th:nth-child(5),
 .detail-table-ventas-asesor td:nth-child(5) {
-  width: 24%;
+  width: 25%;
   text-align: right;
   white-space: nowrap;
 }
