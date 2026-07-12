@@ -550,6 +550,11 @@ function renderDashboard() {
 
   
   const registrosIngresos = contarRegistrosIngresos(mes);
+  const metaIngresos = sumarMetaCobranzaMensual(mes);
+  const porcentajeCumplimientoIngresos = metaIngresos > 0
+    ? totalIngresos / metaIngresos
+    : 0;
+  
   const registrosEgresos = contarRegistrosEgresos(mes);
   const totalPorPagar = calcularTotalPorPagar(mes);
   
@@ -566,6 +571,11 @@ function renderDashboard() {
   setText("kpiServicios", formatoNumero(totalServicios));
 
   setText("pageIngresosTotal", formatoMoneda(totalIngresos));
+  setText("pageIngresosMeta", formatoMoneda(metaIngresos));
+  setText(
+    "pageIngresosCumplimiento",
+    metaIngresos > 0 ? formatoPorcentaje(porcentajeCumplimientoIngresos) : "—"
+  );
   setText("pageIngresosRegistros", formatoNumero(registrosIngresos));
   setText("pageIngresosPromedio", formatoMoneda(promedioIngresos));
   
