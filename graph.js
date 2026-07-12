@@ -1,7 +1,11 @@
 async function graphGet(endpoint) {
   const token = await obtenerAccessToken();
 
-  const response = await fetch(`https://graph.microsoft.com/v1.0${endpoint}`, {
+  const url = endpoint.startsWith("http")
+    ? endpoint
+    : `https://graph.microsoft.com/v1.0${endpoint}`;
+
+  const response = await fetch(url, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -91,12 +95,29 @@ async function obtenerItemsLista(listId, top = 5000) {
   const site = await graphGet(`/sites/${hostname}:${sitePath}`);
   const siteId = site.id;
 
-  const endpoint =
+  let endpoint =
     `/sites/${siteId}/lists/${listId}/items?$expand=fields&$top=${top}`;
 
-  const resultado = await graphGet(endpoint);
+  const items = [];
+  let pagina = 1;
 
-  return resultado.value || [];
+  while (endpoint) {
+    const resultado = await graphGet(endpoint);
+    const paginaItems = resultado.value || [];
+
+    items.push(...paginaItems);
+
+    console.log(
+      `Lista ${listId} - página ${pagina}: ${paginaItems.length} registros`
+    );
+
+    endpoint = resultado["@odata.nextLink"] || null;
+    pagina += 1;
+  }
+
+  console.log(`Lista ${listId} - total leído: ${items.length} registros`);
+
+  return items;
 }
 
 async function obtenerIngresosSharePoint() {
