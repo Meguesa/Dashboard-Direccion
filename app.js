@@ -83,9 +83,12 @@ function obtenerAniosDashboard() {
   const anioActual = new Date().getFullYear();
   const anios = new Set();
 
-  anios.add("2026");
-  anios.add(String(anioActual));
-  anios.add(String(anioActual + 1));
+  const anioInicial = anioActual - 5;
+  const anioFinal = anioActual + 5;
+
+  for (let anio = anioInicial; anio <= anioFinal; anio++) {
+    anios.add(String(anio));
+  }
 
   if (state.anioSeleccionado) {
     anios.add(String(state.anioSeleccionado));
@@ -103,7 +106,7 @@ function obtenerAniosDashboard() {
   agregarAniosDesdeLista(anios, state.datos.servicios, ["mes", "fechaServicio", "fechaFin", "fuente"]);
 
   return Array.from(anios)
-    .filter((anio) => Number(anio) >= 2026)
+    .filter((anio) => Number.isFinite(Number(anio)))
     .sort((a, b) => Number(a) - Number(b));
 }
 
