@@ -631,6 +631,11 @@ function sumarIngresos(mes) {
     .reduce((total, item) => total + Number(item.importe || 0), 0);
 }
 
+function sumarMetaCobranzaMensual(mes) {
+  return obtenerMetasCobranzaMes(mes)
+    .reduce((total, meta) => total + Number(meta.metaMensual || 0), 0);
+}
+
 function sumarEgresos(mes) {
   return state.datos.egresos
     .filter((item) => {
@@ -1474,7 +1479,35 @@ function renderGraficaIngresosMensuales() {
   const meses = obtenerMesesDelAnioSeleccionado();
 
   const labels = meses.map((mes) => mes.nombre);
-  const valores = meses.map((mes) => sumarIngresos(mes.clave));
+  const valoresIngresos = meses.map((mes) => sumarIngresos(mes.clave));
+  const valoresMetas = meses.map((mes) => sumarMetaCobranzaMensual(mes.clave));
+
+  const datasets = [
+    {
+      label: "Ingreso total",
+      data: valoresIngresos,
+      tension: 0.3,
+      fill: false,
+      borderWidth: 3,
+      pointRadius: 4,
+      pointHoverRadius: 6
+    }
+  ];
+
+  const hayMetas = valoresMetas.some((valor) => Number(valor || 0) > 0);
+
+  if (hayMetas) {
+    datasets.push({
+      label: "Meta mensual total",
+      data: valoresMetas,
+      tension: 0.3,
+      fill: false,
+      borderWidth: 3,
+      borderDash: [6, 6],
+      pointRadius: 4,
+      pointHoverRadius: 6
+    });
+  }
 
   destruirGrafica("ingresosMensuales");
 
@@ -1482,17 +1515,7 @@ function renderGraficaIngresosMensuales() {
     type: "line",
     data: {
       labels,
-      datasets: [
-        {
-          label: "Ingresos",
-          data: valores,
-          tension: 0.3,
-          fill: false,
-          borderWidth: 3,
-          pointRadius: 4,
-          pointHoverRadius: 6
-        }
-      ]
+      datasets
     },
     options: {
       responsive: true,
@@ -1509,7 +1532,8 @@ function renderGraficaIngresosMensuales() {
         tooltip: {
           callbacks: {
             label: (context) => {
-              return `Ingresos: ${formatoMoneda(context.parsed.y)}`;
+              const etiqueta = context.dataset.label || "Monto";
+              return `${etiqueta}: ${formatoMoneda(context.parsed.y || 0)}`;
             }
           }
         }
