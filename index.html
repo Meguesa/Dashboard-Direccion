@@ -10,7 +10,7 @@
   
   <title>Centro de Control Dirección</title>
 
-  <link rel="stylesheet" href="styles.css?v=20260711-1" />
+  <link rel="stylesheet" href="styles.css?v=20260712-1" />
 </head>
 
 <body>
@@ -174,10 +174,20 @@
           </button>
         </div>
 
-        <div class="detail-kpi-grid">
+        <div class="detail-kpi-grid detail-kpi-grid-5">
           <div class="detail-kpi-card">
-            <span class="detail-kpi-label">Ingresos del mes</span>
+            <span class="detail-kpi-label">Ingreso del mes</span>
             <strong id="pageIngresosTotal">$0.00</strong>
+          </div>
+        
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Meta del mes</span>
+            <strong id="pageIngresosMeta">$0.00</strong>
+          </div>
+        
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">% Cumplimiento</span>
+            <strong id="pageIngresosCumplimiento">0.0%</strong>
           </div>
         
           <div class="detail-kpi-card">
@@ -190,7 +200,7 @@
             <strong id="pageIngresosPromedio">$0.00</strong>
           </div>
         </div>
-
+        
         <article class="detail-section-card chart-card chart-card-full">
           <div class="detail-section-header">
             <div>
@@ -832,9 +842,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="config.js?v=20260711-1"></script>
-  <script src="auth.js?v=20260711-1"></script>
-  <script src="graph.js?v=20260711-1"></script>
-  <script src="app.js?v=20260711-1"></script>
+  <script src="config.js?v=20260712-1"></script>
+  <script src="auth.js?v=20260712-1"></script>
+  <script src="graph.js?v=20260712-1"></script>
+  <script src="app.js?v=20260712-1"></script>
 </body>
 </html>
