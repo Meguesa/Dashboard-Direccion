@@ -9,7 +9,8 @@ async function graphGet(endpoint) {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
-      Accept: "application/json"
+      Accept: "application/json",
+      Prefer: "HonorNonIndexedQueriesWarningMayFailRandomly"
     }
   });
 
@@ -88,15 +89,30 @@ async function obtenerListasSharePoint() {
   }
 }
 
-async function obtenerItemsLista(listId, top = 5000) {
+let graphSiteIdCache = null;
+
+async function obtenerSiteIdSharePoint() {
+  if (graphSiteIdCache) {
+    return graphSiteIdCache;
+  }
+
   const hostname = CONFIG.sharepoint.siteHostname;
   const sitePath = CONFIG.sharepoint.sitePath;
-
   const site = await graphGet(`/sites/${hostname}:${sitePath}`);
-  const siteId = site.id;
+
+  graphSiteIdCache = site.id;
+  return graphSiteIdCache;
+}
+
+async function obtenerItemsLista(listId, top = 5000, opciones = {}) {
+  const siteId = await obtenerSiteIdSharePoint();
 
   let endpoint =
     `/sites/${siteId}/lists/${listId}/items?$expand=fields&$top=${top}`;
+
+  if (opciones.filtro) {
+    endpoint += `&$filter=${encodeURIComponent(opciones.filtro)}`;
+  }
 
   const items = [];
   let pagina = 1;
@@ -120,7 +136,78 @@ async function obtenerItemsLista(listId, top = 5000) {
   return items;
 }
 
-async function obtenerIngresosSharePoint() {
+function obtenerMesesRecargaReciente() {
+  const hoy = new Date();
+  const mesActual = crearClaveMesDesdeFecha(hoy);
+  const fechaMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+  const mesAnterior = crearClaveMesDesdeFecha(fechaMesAnterior);
+
+  return Array.from(new Set([mesActual, mesAnterior]));
+}
+
+function crearClaveMesDesdeFecha(fecha) {
+  const anio = fecha.getFullYear();
+  const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+
+  return `${anio}-${mes}`;
+}
+
+function crearFiltroMesesSharePoint(meses, opciones = {}) {
+  const incluirNombreMes = Boolean(opciones.incluirNombreMes);
+  const valoresFiltro = [];
+
+  (meses || []).forEach((mes) => {
+    const claveMes = limpiarTexto(mes);
+
+    if (!claveMes) {
+      return;
+    }
+
+    valoresFiltro.push(claveMes);
+
+    if (incluirNombreMes) {
+      const nombreMes = obtenerNombreMesDesdeClaveGraph(claveMes);
+
+      if (nombreMes) {
+        valoresFiltro.push(nombreMes);
+      }
+    }
+  });
+
+  const valoresUnicos = Array.from(new Set(valoresFiltro));
+
+  if (!valoresUnicos.length) {
+    return "";
+  }
+
+  return valoresUnicos
+    .map((valor) => `fields/Mes eq '${valor.replace(/'/g, "''")}'`)
+    .join(" or ");
+}
+
+function obtenerNombreMesDesdeClaveGraph(claveMes) {
+  const mapaMeses = {
+    "01": "ENERO",
+    "02": "FEBRERO",
+    "03": "MARZO",
+    "04": "ABRIL",
+    "05": "MAYO",
+    "06": "JUNIO",
+    "07": "JULIO",
+    "08": "AGOSTO",
+    "09": "SEPTIEMBRE",
+    "10": "OCTUBRE",
+    "11": "NOVIEMBRE",
+    "12": "DICIEMBRE"
+  };
+
+  const partes = limpiarTexto(claveMes).split("-");
+  const numeroMes = partes.length >= 2 ? partes[1] : "";
+
+  return mapaMeses[numeroMes] || "";
+}
+
+async function obtenerIngresosSharePoint(mesesFiltro = []) {
   try {
     setAuthStatus("Leyendo BI_Ingresos desde SharePoint...");
 
@@ -130,7 +217,10 @@ async function obtenerIngresosSharePoint() {
       throw new Error("No está configurado el listId de BI_Ingresos.");
     }
 
-    const items = await obtenerItemsLista(listId);
+    const filtroMeses = crearFiltroMesesSharePoint(mesesFiltro);
+    const items = await obtenerItemsLista(listId, 5000, {
+      filtro: filtroMeses
+    });
 
     const ingresos = items.map((item) => {
       const f = item.fields || {};
@@ -220,7 +310,7 @@ function convertirBooleano(valor) {
     texto === "1";
 }
 
-async function cargarDatosSharePoint() {
+async function cargarDatosSharePoint(opciones = {}) {
   try {
     setAuthStatus("Actualizando datos desde SharePoint...");
 
@@ -228,11 +318,21 @@ async function cargarDatosSharePoint() {
 
     const listas = await obtenerListasSharePoint();
 
-    const ingresos = await obtenerIngresosSharePoint();
-    const egresos = await obtenerEgresosSharePoint();
-    const ventas = await obtenerVentasSharePoint();
-    const servicios = await obtenerServiciosSharePoint();
-    const metasCobranza = await obtenerMetasCobranzaSharePoint();
+    const modoCarga = opciones.modoCarga || "incremental";
+    const mesesRecargados = modoCarga === "completa"
+      ? []
+      : obtenerMesesRecargaReciente();
+
+    const usarFiltroMeses = mesesRecargados.length > 0;
+
+    console.log("Modo carga dashboard:", modoCarga);
+    console.log("Meses a recargar:", mesesRecargados);
+
+    const ingresos = await obtenerIngresosSharePoint(usarFiltroMeses ? mesesRecargados : []);
+    const egresos = await obtenerEgresosSharePoint(usarFiltroMeses ? mesesRecargados : []);
+    const ventas = await obtenerVentasSharePoint(usarFiltroMeses ? mesesRecargados : []);
+    const servicios = await obtenerServiciosSharePoint(usarFiltroMeses ? mesesRecargados : []);
+    const metasCobranza = await obtenerMetasCobranzaSharePoint(usarFiltroMeses ? mesesRecargados : []);
 
     const datos = {
       listas,
@@ -240,7 +340,9 @@ async function cargarDatosSharePoint() {
       egresos,
       ventas,
       servicios,
-      metasCobranza
+      metasCobranza,
+      mesesRecargados,
+      modoCarga
     };
 
     console.log("Datos cargados desde SharePoint:", datos);
@@ -266,7 +368,7 @@ async function cargarDatosSharePoint() {
   }
 }
 
-async function obtenerEgresosSharePoint() {
+async function obtenerEgresosSharePoint(mesesFiltro = []) {
   try {
     setAuthStatus("Leyendo BI_Egresos desde SharePoint...");
 
@@ -276,7 +378,10 @@ async function obtenerEgresosSharePoint() {
       throw new Error("No está configurado el listId de BI_Egresos.");
     }
 
-    const items = await obtenerItemsLista(listId);
+    const filtroMeses = crearFiltroMesesSharePoint(mesesFiltro);
+    const items = await obtenerItemsLista(listId, 5000, {
+      filtro: filtroMeses
+    });
 
     const egresos = items.map((item) => {
       const f = item.fields || {};
@@ -308,7 +413,7 @@ async function obtenerEgresosSharePoint() {
   }
 }
 
-async function obtenerVentasSharePoint() {
+async function obtenerVentasSharePoint(mesesFiltro = []) {
   try {
     setAuthStatus("Leyendo BI_Ventas desde SharePoint...");
 
@@ -318,7 +423,12 @@ async function obtenerVentasSharePoint() {
       throw new Error("No está configurado el listId de BI_Ventas.");
     }
 
-    const items = await obtenerItemsLista(listId);
+    const filtroMeses = crearFiltroMesesSharePoint(mesesFiltro, {
+      incluirNombreMes: true
+    });
+    const items = await obtenerItemsLista(listId, 5000, {
+      filtro: filtroMeses
+    });
 
     const ventas = items.map((item) => {
       const f = item.fields || {};
@@ -366,7 +476,7 @@ async function obtenerVentasSharePoint() {
   }
 }
 
-async function obtenerServiciosSharePoint() {
+async function obtenerServiciosSharePoint(mesesFiltro = []) {
   try {
     setAuthStatus("Leyendo BI_Servicios desde SharePoint...");
 
@@ -376,7 +486,10 @@ async function obtenerServiciosSharePoint() {
       throw new Error("No está configurado el listId de BI_Servicios.");
     }
 
-    const items = await obtenerItemsLista(listId);
+    const filtroMeses = crearFiltroMesesSharePoint(mesesFiltro);
+    const items = await obtenerItemsLista(listId, 5000, {
+      filtro: filtroMeses
+    });
 
     const servicios = items.map((item) => {
       const f = item.fields || {};
@@ -427,7 +540,7 @@ async function obtenerServiciosSharePoint() {
   }
 }
 
-async function obtenerMetasCobranzaSharePoint() {
+async function obtenerMetasCobranzaSharePoint(mesesFiltro = []) {
   try {
     setAuthStatus("Leyendo BI_Metas_Cobranza desde SharePoint...");
 
@@ -437,7 +550,10 @@ async function obtenerMetasCobranzaSharePoint() {
       throw new Error("No está configurado el listId de BI_Metas_Cobranza.");
     }
 
-    const items = await obtenerItemsLista(listId);
+    const filtroMeses = crearFiltroMesesSharePoint(mesesFiltro);
+    const items = await obtenerItemsLista(listId, 5000, {
+      filtro: filtroMeses
+    });
 
     const metasCobranza = items.map((item) => {
       const f = item.fields || {};

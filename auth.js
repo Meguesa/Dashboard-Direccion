@@ -51,9 +51,9 @@ async function inicializarAuth() {
     mostrarUsuario(currentAccount.username);
   
     if (typeof window.actualizarDatosDashboard === "function") {
-      setAuthStatus("Sesión activa. Cargando información de SharePoint...");
-      await window.actualizarDatosDashboard();
-      setAuthStatus(`Sesión activa: ${currentAccount.username}`);
+      await window.actualizarDatosDashboard({
+        mensaje: "Cargando información inicial desde SharePoint..."
+      });
     }
   } else {
     currentAccount = null;
@@ -96,9 +96,9 @@ async function loginMicrosoft() {
     console.log("Login correcto:", currentAccount);
 
     if (typeof window.actualizarDatosDashboard === "function") {
-      setAuthStatus("Sesión activa. Cargando información de SharePoint...");
-      await window.actualizarDatosDashboard();
-      setAuthStatus(`Sesión activa: ${currentAccount.username}`);
+      await window.actualizarDatosDashboard({
+        mensaje: "Cargando información inicial desde SharePoint..."
+      });
     }
   } catch (error) {
     console.error("Error en login:", error);

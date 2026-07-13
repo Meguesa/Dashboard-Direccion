@@ -2,28 +2,10 @@ window.state = {
   anioSeleccionado: "2026",
   mesSeleccionado: "2026-07",
   datos: {
-    ingresos: [
-      { mes: "2026-06", importe: 7312120.30 },
-      { mes: "2026-07", importe: 894008.20 }
-    ],
-    egresos: [
-      { mes: "2026-06", pagado: 2100000.00 },
-      { mes: "2026-07", pagado: 733051.48 }
-    ],
-    ventas: [
-      { mes: "2026-06", monto: 1250000.00 },
-      { mes: "2026-07", monto: 780000.00 }
-    ],
-    contratos: [
-      { mes: "2026-06", total: 18 },
-      { mes: "2026-07", total: 11 }
-    ],
-    servicios: [
-      { mes: "2026-06", origen: "Capillas", total: 69 },
-      { mes: "2026-06", origen: "Parque", total: 52 },
-      { mes: "2026-07", origen: "Capillas", total: 8 },
-      { mes: "2026-07", origen: "Parque", total: 6 }
-    ],
+    ingresos: [],
+    egresos: [],
+    ventas: [],
+    servicios: [],
     metasCobranza: []
   }
 };
@@ -36,13 +18,15 @@ const DASHBOARD_REFRESH_MS = 60 * 60 * 1000;
 
 let intervaloActualizacionDashboard = null;
 let actualizacionEnCurso = false;
+let cacheCargadoDashboard = false;
+let statusPanelTimeoutId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   inicializarDashboard();
 });
 
 function inicializarDashboard() {
-  cargarDatosDesdeCache();
+  cacheCargadoDashboard = cargarDatosDesdeCache();
   sincronizarAnioConMesSeleccionado();
   cargarSelectorAnios();
   cargarSelectorMeses();
@@ -259,40 +243,135 @@ async function actualizarDatosDashboard(opciones = {}) {
   actualizacionEnCurso = true;
 
   const mensaje = opciones.mensaje || "Actualizando información desde SharePoint...";
+  const modoCargaSolicitado = opciones.modoCarga || (cacheCargadoDashboard ? "incremental" : "completa");
 
-  mostrarPanelEstado(mensaje);
+  mostrarPanelEstado(
+    mensaje,
+    modoCargaSolicitado === "incremental"
+      ? "Leyendo solo el mes actual y el mes anterior."
+      : "Leyendo información completa inicial desde SharePoint."
+  );
 
   try {
-    const datosSharePoint = await cargarDatosSharePoint();
+    const datosSharePoint = await cargarDatosSharePoint({
+      modoCarga: modoCargaSolicitado
+    });
 
     if (!datosSharePoint) {
+      mostrarPanelEstado(
+        "No se pudo actualizar la información.",
+        "SharePoint no devolvió datos para el dashboard."
+      );
       return;
     }
 
-    state.datos.ingresos = datosSharePoint.ingresos || [];
-    state.datos.egresos = datosSharePoint.egresos || [];
-    state.datos.ventas = datosSharePoint.ventas || [];
-    state.datos.servicios = datosSharePoint.servicios || [];
-    state.datos.metasCobranza = datosSharePoint.metasCobranza || [];
+    const mesesRecargados = datosSharePoint.mesesRecargados || [];
+
+    state.datos.ingresos = reemplazarRegistrosPorMes(
+      state.datos.ingresos,
+      datosSharePoint.ingresos || [],
+      mesesRecargados
+    );
+
+    state.datos.egresos = reemplazarRegistrosPorMes(
+      state.datos.egresos,
+      datosSharePoint.egresos || [],
+      mesesRecargados
+    );
+
+    state.datos.ventas = reemplazarRegistrosPorMes(
+      state.datos.ventas,
+      datosSharePoint.ventas || [],
+      mesesRecargados
+    );
+
+    state.datos.servicios = reemplazarRegistrosPorMes(
+      state.datos.servicios,
+      datosSharePoint.servicios || [],
+      mesesRecargados
+    );
+
+    state.datos.metasCobranza = reemplazarRegistrosPorMes(
+      state.datos.metasCobranza,
+      datosSharePoint.metasCobranza || [],
+      mesesRecargados
+    );
 
     cargarSelectorAnios();
     cargarSelectorMeses();
-    
+
     guardarDatosEnCache();
-    
+    cacheCargadoDashboard = true;
+
     renderDashboard();
 
-    setAuthStatus("Datos actualizados correctamente.");
+    const detalleFinal = mesesRecargados.length > 0
+      ? `Actualización incremental completada: ${mesesRecargados.join(", ")}.`
+      : "Carga completa inicial terminada correctamente.";
+
+    mostrarPanelEstado("Datos actualizados correctamente.", detalleFinal);
   } catch (error) {
     console.error("Error actualizando dashboard:", error);
-    setAuthStatus("No se pudo actualizar la información.");
+    mostrarPanelEstado(
+      "No se pudo actualizar la información.",
+      error.message || "Revisa la consola del navegador."
+    );
   } finally {
     actualizacionEnCurso = false;
 
-    setTimeout(() => {
-      ocultarPanelEstado();
-    }, 2500);
+    ocultarPanelEstadoConRetraso(12000);
   }
+}
+
+function reemplazarRegistrosPorMes(registrosActuales = [], registrosNuevos = [], mesesRecargados = []) {
+  const meses = (mesesRecargados || [])
+    .map((mes) => normalizarTexto(mes))
+    .filter(Boolean);
+
+  if (!meses.length) {
+    return registrosNuevos || [];
+  }
+
+  const registrosConservados = (registrosActuales || [])
+    .filter((item) => !registroPerteneceAMeses(item, meses));
+
+  return [
+    ...registrosConservados,
+    ...(registrosNuevos || [])
+  ];
+}
+
+function registroPerteneceAMeses(item, meses) {
+  const mesItem = normalizarTexto(item?.mes);
+
+  if (meses.includes(mesItem)) {
+    return true;
+  }
+
+  return meses.some((mes) => {
+    if (typeof coincidePeriodoVenta === "function" && coincidePeriodoVenta(item, mes)) {
+      return true;
+    }
+
+    return coincideMesGenerico(item, mes);
+  });
+}
+
+function coincideMesGenerico(item, mesSeleccionado) {
+  const mesItem = normalizarTexto(item?.mes).toUpperCase();
+  const mesSeleccionadoNormalizado = normalizarTexto(mesSeleccionado).toUpperCase();
+
+  if (!mesItem || !mesSeleccionadoNormalizado) {
+    return false;
+  }
+
+  if (mesItem === mesSeleccionadoNormalizado) {
+    return true;
+  }
+
+  const nombreMes = obtenerNombreMesDesdeClave(mesSeleccionadoNormalizado);
+
+  return mesItem === nombreMes;
 }
 
 function guardarDatosEnCache() {
@@ -321,13 +400,13 @@ function cargarDatosDesdeCache() {
     const cacheTexto = localStorage.getItem(DASHBOARD_CACHE_KEY);
 
     if (!cacheTexto) {
-      return;
+      return false;
     }
 
     const cache = JSON.parse(cacheTexto);
 
     if (!cache || !cache.datos) {
-      return;
+      return false;
     }
 
     state.datos.ingresos = cache.datos.ingresos || [];
@@ -345,9 +424,11 @@ function cargarDatosDesdeCache() {
     }
     
     sincronizarAnioConMesSeleccionado();
-    
+
+    return true;
   } catch (error) {
     console.warn("No se pudo cargar caché del dashboard:", error);
+    return false;
   }
 }
 
@@ -367,22 +448,46 @@ function iniciarActualizacionAutomatica() {
   }, DASHBOARD_REFRESH_MS);
 }
 
-function mostrarPanelEstado(mensaje) {
+function mostrarPanelEstado(mensaje, detalle = "") {
   const panel = document.getElementById("statusPanel");
+
+  if (statusPanelTimeoutId) {
+    clearTimeout(statusPanelTimeoutId);
+    statusPanelTimeoutId = null;
+  }
 
   if (panel) {
     panel.classList.remove("hidden");
   }
 
   setAuthStatus(mensaje);
+
+  if (detalle) {
+    setText("sharePointStatus", detalle);
+  }
 }
 
 function ocultarPanelEstado() {
   const panel = document.getElementById("statusPanel");
 
+  if (statusPanelTimeoutId) {
+    clearTimeout(statusPanelTimeoutId);
+    statusPanelTimeoutId = null;
+  }
+
   if (panel) {
     panel.classList.add("hidden");
   }
+}
+
+function ocultarPanelEstadoConRetraso(ms = 12000) {
+  if (statusPanelTimeoutId) {
+    clearTimeout(statusPanelTimeoutId);
+  }
+
+  statusPanelTimeoutId = setTimeout(() => {
+    ocultarPanelEstado();
+  }, ms);
 }
 
 function conectarFiltrosTablas() {
