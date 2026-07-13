@@ -2261,3 +2261,46 @@ body {
   width: 100%;
   table-layout: fixed;
 }
+
+/* ================================
+   Ventas por tipo de servicio - 5 columnas
+================================ */
+
+.detail-table-ventas-servicio {
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+
+.detail-table-ventas-servicio th:nth-child(1),
+.detail-table-ventas-servicio td:nth-child(1) {
+  width: 34% !important;
+  text-align: left !important;
+}
+
+.detail-table-ventas-servicio th:nth-child(2),
+.detail-table-ventas-servicio td:nth-child(2) {
+  width: 14% !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+.detail-table-ventas-servicio th:nth-child(3),
+.detail-table-ventas-servicio td:nth-child(3) {
+  width: 14% !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+.detail-table-ventas-servicio th:nth-child(4),
+.detail-table-ventas-servicio td:nth-child(4) {
+  width: 22% !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+.detail-table-ventas-servicio th:nth-child(5),
+.detail-table-ventas-servicio td:nth-child(5) {
+  width: 16% !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
