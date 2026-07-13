@@ -2851,7 +2851,7 @@ function renderTablaVentasTipoServicio(mes) {
   if (filas.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="4">Sin información para el mes seleccionado.</td>
+        <td colspan="5">Sin información para el mes seleccionado.</td>
       </tr>
     `;
     return;
@@ -2868,6 +2868,7 @@ function renderTablaVentasTipoServicio(mes) {
           <td>${escaparHtml(fila.nombre)}</td>
           <td>${formatoNumero(fila.registros)}</td>
           <td>${formatoNumero(fila.unidades)}</td>
+          <td>${formatoMoneda(fila.totalVenta)}</td>
           <td>${formatoPorcentaje(porcentaje)}</td>
         </tr>
       `;
@@ -2914,21 +2915,42 @@ function calcularTiposServicioDesdeVentas(ventasBase) {
 
   return tiposServicio
     .map((tipo) => {
-      const unidades = ventasBase
-        .reduce((total, item) => total + Number(item[tipo.campo] || 0), 0);
+      let unidades = 0;
+      let registros = 0;
+      let totalVenta = 0;
 
-      const registros = ventasBase
-        .filter((item) => Number(item[tipo.campo] || 0) > 0)
-        .length;
+      ventasBase.forEach((item) => {
+        const unidadesTipo = Number(item[tipo.campo] || 0);
+
+        if (unidadesTipo <= 0) {
+          return;
+        }
+
+        const montoVenta = obtenerMontoVenta(item);
+        const unidadesTotalesRegistro = obtenerUnidadesVenta(item);
+
+        unidades += unidadesTipo;
+        registros += 1;
+
+        /*
+          Si el registro tiene varias categorías, se distribuye el monto
+          proporcionalmente por unidades. Si solo tiene una categoría, toma
+          el monto completo.
+        */
+        if (unidadesTotalesRegistro > 0 && montoVenta > 0) {
+          totalVenta += montoVenta * (unidadesTipo / unidadesTotalesRegistro);
+        }
+      });
 
       return {
         nombre: tipo.nombre,
         registros,
-        unidades
+        unidades,
+        totalVenta: redondear2(totalVenta)
       };
     })
     .filter((fila) => fila.unidades > 0)
-    .sort((a, b) => b.unidades - a.unidades);
+    .sort((a, b) => b.totalVenta - a.totalVenta);
 }
 
 function renderTablaVentasContratos(mes) {
