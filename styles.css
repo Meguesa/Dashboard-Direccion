@@ -2146,3 +2146,21 @@ body {
   padding-left: 8px;
   padding-right: 8px;
 }
+
+/* ================================
+   Selectores superiores compactos
+================================ */
+
+.header-actions #yearSelector.select {
+  width: 115px;
+  min-width: 115px;
+  max-width: 115px;
+  flex: 0 0 115px;
+}
+
+.header-actions #monthSelector.select {
+  width: 145px;
+  min-width: 145px;
+  max-width: 145px;
+  flex: 0 0 145px;
+}
