@@ -587,6 +587,8 @@ function renderDashboard() {
   setText("pageEgresosPorPagar", formatoMoneda(totalPorPagar));
   setText("pageEgresosRegistros", formatoNumero(registrosEgresos));
   setText("pageEgresosPromedio", formatoMoneda(promedioEgresos));
+
+  const ticketsPromedioVentas = calcularTicketsPromedioVentasPorTipo(mes);
   
   setText("pageVentasTotal", formatoMoneda(totalVentas));
   setText("pageVentasMeta", formatoMoneda(metaVentas));
@@ -595,7 +597,16 @@ function renderDashboard() {
     metaVentas > 0 ? formatoPorcentaje(porcentajeCumplimientoVentas) : "—"
   );
   setText("pageVentasContratos", formatoNumero(totalContratos));
-  setText("pageVentasPromedio", formatoMoneda(promedioVentas));
+  
+  setText(
+    "pageVentasTicketPropiedades",
+    formatoMoneda(ticketsPromedioVentas.propiedades.ticketPromedio)
+  );
+  
+  setText(
+    "pageVentasTicketServicios",
+    formatoMoneda(ticketsPromedioVentas.servicios.ticketPromedio)
+  );
   
   setText("pageServiciosTotal", formatoNumero(totalServicios));
   setText("pageServiciosCapillas", formatoNumero(totalCapillas));
@@ -2618,6 +2629,117 @@ function renderTablaVentasAsesor(mes) {
 
   conectarDespliegueVentasAsesor(mes);
 }
+
+function calcularTicketsPromedioVentasPorTipo(mes) {
+  const contratos = obtenerContratosVentasMes(mes);
+
+  const acumulado = {
+    propiedades: {
+      monto: 0,
+      registros: 0
+    },
+    servicios: {
+      monto: 0,
+      registros: 0
+    }
+  };
+
+  contratos.forEach((item) => {
+    const monto = obtenerMontoContratoVenta(item);
+
+    if (monto <= 0) {
+      return;
+    }
+
+    const tipo = clasificarContratoParaTicketPromedio(item);
+
+    if (!tipo) {
+      return;
+    }
+
+    acumulado[tipo].monto += monto;
+    acumulado[tipo].registros += 1;
+  });
+
+  return {
+    propiedades: {
+      monto: redondear2(acumulado.propiedades.monto),
+      registros: acumulado.propiedades.registros,
+      ticketPromedio: acumulado.propiedades.registros > 0
+        ? redondear2(acumulado.propiedades.monto / acumulado.propiedades.registros)
+        : 0
+    },
+    servicios: {
+      monto: redondear2(acumulado.servicios.monto),
+      registros: acumulado.servicios.registros,
+      ticketPromedio: acumulado.servicios.registros > 0
+        ? redondear2(acumulado.servicios.monto / acumulado.servicios.registros)
+        : 0
+    }
+  };
+}
+
+function obtenerContratosVentasMes(mes) {
+  return (state.datos.ventas || [])
+    .filter((item) => coincideMesVenta(item, mes))
+    .filter((item) => {
+      const fuente = normalizarClaveComparacion(item.fuente);
+      const tipoRegistro = normalizarClaveComparacion(item.tipoRegistro);
+
+      return fuente === "CONTRATOS" || tipoRegistro === "CONTRATO";
+    });
+}
+
+function obtenerMontoContratoVenta(item) {
+  return Number(
+    item.total ||
+    item.montoVenta ||
+    item.monto_venta ||
+    item.importe ||
+    item.subtotal ||
+    0
+  );
+}
+
+function clasificarContratoParaTicketPromedio(item) {
+  const texto = normalizarClaveComparacion([
+    item.tipoServicio,
+    item.tipoContrato,
+    item.descripcionAtaud,
+    item.referencia,
+    item.numeroContrato,
+    item.cliente
+  ].join(" "));
+
+  if (
+    texto.includes("LOTE") ||
+    texto.includes("NICHO") ||
+    texto.includes("PROPIEDAD") ||
+    texto.includes("PANTEON") ||
+    texto.includes("PARQUE")
+  ) {
+    return "propiedades";
+  }
+
+  if (
+    texto.includes("SERVICIO") ||
+    texto.includes("CAPILLA") ||
+    texto.includes("CHURUBUSCO") ||
+    texto.includes("AGUA FRIA") ||
+    texto.includes("USO INMEDIATO") ||
+    texto.includes("PREVISION") ||
+    texto.includes("VELACION") ||
+    texto.includes("INHUMACION") ||
+    texto.includes("CREMACION") ||
+    texto.includes("TS") ||
+    texto.includes("TSC")
+  ) {
+    return "servicios";
+  }
+
+  return "";
+}
+
 
 function conectarDespliegueVentasAsesor(mes) {
   const filasAsesor = document.querySelectorAll("#tablaVentasAsesorBody .ventas-asesor-row");
