@@ -2653,41 +2653,23 @@ function calcularTicketsPromedioVentasPorTipo(mes) {
     }
 
     const unidadesPropiedades =
-      obtenerNumeroVentaCampo(item, [
-        "propiedades",
-        "Propiedades",
-        "PROPIEDADES"
-      ]) +
-      obtenerNumeroVentaCampo(item, [
-        "nichos",
-        "Nichos",
-        "NICHOS"
-      ]);
+      obtenerNumeroVentaCampo(item, ["propiedades", "Propiedades", "PROPIEDADES"]) +
+      obtenerNumeroVentaCampo(item, ["nichos", "Nichos", "NICHOS"]);
 
     const unidadesServicios =
-      obtenerNumeroVentaCampo(item, [
-        "serviciosAF",
-        "serviciosAf",
-        "Servicios_AF",
-        "Servicios AF",
-        "SERVICIOS_AF"
-      ]) +
-      obtenerNumeroVentaCampo(item, [
-        "serviciosCH",
-        "serviciosCh",
-        "Servicios_CH",
-        "Servicios CH",
-        "SERVICIOS_CH"
-      ]);
+      obtenerNumeroVentaCampo(item, ["serviciosAf", "serviciosAF", "Servicios_AF", "Servicios AF", "SERVICIOS_AF"]) +
+      obtenerNumeroVentaCampo(item, ["serviciosCh", "serviciosCH", "Servicios_CH", "Servicios CH", "SERVICIOS_CH"]);
 
     if (unidadesPropiedades > 0) {
       acumulado.propiedades.monto += montoContrato;
       acumulado.propiedades.unidades += unidadesPropiedades;
+      return;
     }
 
     if (unidadesServicios > 0) {
       acumulado.servicios.monto += montoContrato;
       acumulado.servicios.unidades += unidadesServicios;
+      return;
     }
   });
 
@@ -2741,53 +2723,9 @@ function obtenerMontoContratoVenta(item) {
 
 function obtenerContratosVentasMes(mes) {
   return (state.datos.ventas || [])
-    .filter((item) => coincideMesVenta(item, mes))
-    .filter((item) => {
-      const fuente = normalizarClaveComparacion(item.fuente);
-
-      return fuente === "CONTRATOS";
-    });
+    .filter((item) => coincidePeriodoVenta(item, mes))
+    .filter((item) => esFuenteContratos(item.fuente));
 }
-
-function clasificarContratoParaTicketPromedio(item) {
-  const texto = normalizarClaveComparacion([
-    item.tipoServicio,
-    item.tipoContrato,
-    item.descripcionAtaud,
-    item.referencia,
-    item.numeroContrato,
-    item.cliente
-  ].join(" "));
-
-  if (
-    texto.includes("LOTE") ||
-    texto.includes("NICHO") ||
-    texto.includes("PROPIEDAD") ||
-    texto.includes("PANTEON") ||
-    texto.includes("PARQUE")
-  ) {
-    return "propiedades";
-  }
-
-  if (
-    texto.includes("SERVICIO") ||
-    texto.includes("CAPILLA") ||
-    texto.includes("CHURUBUSCO") ||
-    texto.includes("AGUA FRIA") ||
-    texto.includes("USO INMEDIATO") ||
-    texto.includes("PREVISION") ||
-    texto.includes("VELACION") ||
-    texto.includes("INHUMACION") ||
-    texto.includes("CREMACION") ||
-    texto.includes("TS") ||
-    texto.includes("TSC")
-  ) {
-    return "servicios";
-  }
-
-  return "";
-}
-
 
 function conectarDespliegueVentasAsesor(mes) {
   const filasAsesor = document.querySelectorAll("#tablaVentasAsesorBody .ventas-asesor-row");
