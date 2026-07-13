@@ -1141,7 +1141,7 @@ body {
 
 /* ================================
    Servicios por tipo de servicio
-   Tabla específica de 5 columnas
+   Tabla específica de 4 columnas con detalle expandible
 ================================ */
 
 .detail-table-servicios-tipo {
@@ -1167,34 +1167,51 @@ body {
 
 .detail-table-servicios-tipo th:nth-child(1),
 .detail-table-servicios-tipo td:nth-child(1) {
-  width: 16%;
+  width: 18%;
   text-align: left;
 }
 
 .detail-table-servicios-tipo th:nth-child(2),
 .detail-table-servicios-tipo td:nth-child(2) {
-  width: 30%;
+  width: 50%;
   text-align: left;
 }
 
 .detail-table-servicios-tipo th:nth-child(3),
 .detail-table-servicios-tipo td:nth-child(3) {
-  width: 24%;
-  text-align: left;
-}
-
-.detail-table-servicios-tipo th:nth-child(4),
-.detail-table-servicios-tipo td:nth-child(4) {
   width: 14%;
   text-align: right;
   white-space: nowrap;
 }
 
-.detail-table-servicios-tipo th:nth-child(5),
-.detail-table-servicios-tipo td:nth-child(5) {
-  width: 16%;
+.detail-table-servicios-tipo th:nth-child(4),
+.detail-table-servicios-tipo td:nth-child(4) {
+  width: 18%;
   text-align: right;
   white-space: nowrap;
+}
+
+.servicios-tipo-row.is-clickable {
+  cursor: pointer;
+}
+
+.servicios-tipo-row.is-clickable:hover {
+  background: #f8fafc;
+}
+
+.servicios-tipo-row.is-expanded {
+  background: #eff6ff;
+}
+
+.servicios-tipo-detail-row {
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.servicios-detail-label {
+  padding-left: 28px !important;
+  font-weight: 700;
 }
 
 /* ================================
@@ -1844,7 +1861,7 @@ body {
   }
 
   .detail-table-servicios-tipo {
-    min-width: 780px;
+    min-width: 680px;
   }
 
   .detail-table-servicios-recientes {
@@ -2145,22 +2162,4 @@ body {
   font-size: 0.82rem;
   padding-left: 8px;
   padding-right: 8px;
-}
-
-/* ================================
-   Selectores superiores compactos
-================================ */
-
-.header-actions #yearSelector.select {
-  width: 115px;
-  min-width: 115px;
-  max-width: 115px;
-  flex: 0 0 115px;
-}
-
-.header-actions #monthSelector.select {
-  width: 145px;
-  min-width: 145px;
-  max-width: 145px;
-  flex: 0 0 145px;
 }
