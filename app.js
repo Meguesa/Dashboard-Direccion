@@ -541,6 +541,10 @@ function renderDashboard() {
   const totalEgresos = sumarEgresos(mes);
   const totalVentas = sumarVentas(mes);
   const totalContratos = contarContratos(mes);
+  const metaVentas = sumarMetaVentasMensual(mes);
+  const porcentajeCumplimientoVentas = metaVentas > 0
+    ? totalVentas / metaVentas
+    : 0;
 
   const totalCapillas = contarServiciosPorOrigen(mes, "CAPILLA");
   const totalCapillasUsoInmediato = contarServiciosCapillasPorTipoContrato(mes, "USO INMEDIATO");
@@ -585,6 +589,11 @@ function renderDashboard() {
   setText("pageEgresosPromedio", formatoMoneda(promedioEgresos));
   
   setText("pageVentasTotal", formatoMoneda(totalVentas));
+  setText("pageVentasMeta", formatoMoneda(metaVentas));
+  setText(
+    "pageVentasCumplimiento",
+    metaVentas > 0 ? formatoPorcentaje(porcentajeCumplimientoVentas) : "—"
+  );
   setText("pageVentasContratos", formatoNumero(totalContratos));
   setText("pageVentasPromedio", formatoMoneda(promedioVentas));
   
@@ -672,6 +681,11 @@ function sumarVentas(mes) {
 
   return obtenerVentasOperativas(mes)
     .reduce((total, item) => total + obtenerMontoVenta(item), 0);
+}
+
+function sumarMetaVentasMensual(mes) {
+  return agruparVentasPorAsesor(mes)
+    .reduce((total, fila) => total + Number(fila.metaMensual || 0), 0);
 }
 function contarRegistrosIngresos(mes) {
   return state.datos.ingresos
@@ -2258,7 +2272,35 @@ function renderGraficaVentasMensuales() {
   const meses = obtenerMesesDelAnioSeleccionado();
 
   const labels = meses.map((mes) => mes.nombre);
-  const valores = meses.map((mes) => sumarVentas(mes.clave));
+  const valoresVentas = meses.map((mes) => sumarVentas(mes.clave));
+  const valoresMetas = meses.map((mes) => sumarMetaVentasMensual(mes.clave));
+
+  const datasets = [
+    {
+      label: "Ventas",
+      data: valoresVentas,
+      tension: 0.3,
+      fill: false,
+      borderWidth: 3,
+      pointRadius: 4,
+      pointHoverRadius: 6
+    }
+  ];
+
+  const hayMetas = valoresMetas.some((valor) => Number(valor || 0) > 0);
+
+  if (hayMetas) {
+    datasets.push({
+      label: "Meta mensual acumulada",
+      data: valoresMetas,
+      tension: 0.3,
+      fill: false,
+      borderWidth: 3,
+      borderDash: [6, 6],
+      pointRadius: 4,
+      pointHoverRadius: 6
+    });
+  }
 
   destruirGrafica("ventasMensuales");
 
@@ -2266,17 +2308,7 @@ function renderGraficaVentasMensuales() {
     type: "line",
     data: {
       labels,
-      datasets: [
-        {
-          label: "Ventas",
-          data: valores,
-          tension: 0.3,
-          fill: false,
-          borderWidth: 3,
-          pointRadius: 4,
-          pointHoverRadius: 6
-        }
-      ]
+      datasets
     },
     options: {
       responsive: true,
@@ -2293,7 +2325,8 @@ function renderGraficaVentasMensuales() {
         tooltip: {
           callbacks: {
             label: (context) => {
-              return `Ventas: ${formatoMoneda(context.parsed.y)}`;
+              const etiqueta = context.dataset.label || "Monto";
+              return `${etiqueta}: ${formatoMoneda(context.parsed.y || 0)}`;
             }
           }
         }
