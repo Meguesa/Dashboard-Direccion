@@ -2163,3 +2163,66 @@ body {
   padding-left: 8px;
   padding-right: 8px;
 }
+
+/* ================================
+   Servicios por tipo de servicio
+   Ajuste definitivo de columnas
+================================ */
+
+.detail-table-servicios-tipo {
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+
+/* ORIGEN - más angosto */
+.detail-table-servicios-tipo th:nth-child(1),
+.detail-table-servicios-tipo td:nth-child(1) {
+  width: 14% !important;
+  max-width: 14% !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+}
+
+/* TIPO DE SERVICIO - más ancho y en un solo renglón */
+.detail-table-servicios-tipo th:nth-child(2),
+.detail-table-servicios-tipo td:nth-child(2) {
+  width: 58% !important;
+  max-width: 58% !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* REGISTROS - más angosto */
+.detail-table-servicios-tipo th:nth-child(3),
+.detail-table-servicios-tipo td:nth-child(3) {
+  width: 10% !important;
+  max-width: 10% !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+/* % SERVICIOS */
+.detail-table-servicios-tipo th:nth-child(4),
+.detail-table-servicios-tipo td:nth-child(4) {
+  width: 18% !important;
+  max-width: 18% !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+/* Filtros dentro del encabezado */
+.detail-table-servicios-tipo thead input {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Evita que el icono desplegable rompa línea */
+.detail-table-servicios-tipo .expand-toggle,
+.detail-table-servicios-tipo .servicio-expand-toggle {
+  display: inline-block !important;
+  margin-right: 6px !important;
+  vertical-align: middle !important;
+}
