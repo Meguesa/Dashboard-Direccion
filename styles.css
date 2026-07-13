@@ -2246,3 +2246,18 @@ body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ================================
+   Ventas - contratos del mes
+================================ */
+
+.table-scroll-ventas-contratos {
+  max-height: 640px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.detail-table-ventas-contratos {
+  width: 100%;
+  table-layout: fixed;
+}
