@@ -623,16 +623,7 @@ function renderDashboard() {
 
   setText("lastUpdate", obtenerFechaHoraActual());
 
-  renderTablaFlujoEfectivo(mes);({
-    totalIngresos,
-    totalEgresos,
-    flujoNeto,
-    totalVentas,
-    totalContratos,
-    totalCapillas,
-    totalParque,
-    totalServicios
-  });
+  renderTablaFlujoEfectivo(mes);
 
   renderAvanceMetasCobranza(mes);
   
@@ -767,6 +758,16 @@ function normalizarClaveComparacion(valor) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toUpperCase();
+}
+
+function redondear2(valor) {
+  const numero = Number(valor || 0);
+
+  if (!Number.isFinite(numero)) {
+    return 0;
+  }
+
+  return Math.round((numero + Number.EPSILON) * 100) / 100;
 }
 
 function renderTablaFlujoEfectivo(mes) {
