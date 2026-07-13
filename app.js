@@ -2646,9 +2646,9 @@ function calcularTicketsPromedioVentasPorTipo(mes) {
   };
 
   contratos.forEach((item) => {
-    const monto = obtenerMontoContratoVenta(item);
+    const montoContrato = obtenerMontoContratoVenta(item);
 
-    if (monto <= 0) {
+    if (montoContrato <= 0) {
       return;
     }
 
@@ -2681,15 +2681,13 @@ function calcularTicketsPromedioVentasPorTipo(mes) {
       ]);
 
     if (unidadesPropiedades > 0) {
-      acumulado.propiedades.monto += monto;
+      acumulado.propiedades.monto += montoContrato;
       acumulado.propiedades.unidades += unidadesPropiedades;
-      return;
     }
 
     if (unidadesServicios > 0) {
-      acumulado.servicios.monto += monto;
+      acumulado.servicios.monto += montoContrato;
       acumulado.servicios.unidades += unidadesServicios;
-      return;
     }
   });
 
@@ -2725,17 +2723,6 @@ function obtenerNumeroVentaCampo(item, nombresCampos) {
   return 0;
 }
 
-function obtenerContratosVentasMes(mes) {
-  return (state.datos.ventas || [])
-    .filter((item) => coincideMesVenta(item, mes))
-    .filter((item) => {
-      const fuente = normalizarClaveComparacion(item.fuente);
-      const tipoRegistro = normalizarClaveComparacion(item.tipoRegistro);
-
-      return fuente === "CONTRATOS" || tipoRegistro === "CONTRATO";
-    });
-}
-
 function obtenerMontoContratoVenta(item) {
   return obtenerNumeroVentaCampo(item, [
     "total",
@@ -2750,6 +2737,16 @@ function obtenerMontoContratoVenta(item) {
     "subtotal",
     "Subtotal"
   ]);
+}
+
+function obtenerContratosVentasMes(mes) {
+  return (state.datos.ventas || [])
+    .filter((item) => coincideMesVenta(item, mes))
+    .filter((item) => {
+      const fuente = normalizarClaveComparacion(item.fuente);
+
+      return fuente === "CONTRATOS";
+    });
 }
 
 function clasificarContratoParaTicketPromedio(item) {
