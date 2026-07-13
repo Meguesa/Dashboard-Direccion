@@ -2226,3 +2226,23 @@ body {
   margin-right: 6px !important;
   vertical-align: middle !important;
 }
+
+/* ================================
+   KPIs Ventas - 6 columnas
+================================ */
+
+.detail-kpi-grid-6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+@media (max-width: 1400px) {
+  .detail-kpi-grid-6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .detail-kpi-grid-6 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
