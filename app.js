@@ -3103,10 +3103,97 @@ function obtenerNombreClienteVenta(item) {
 }
 
 function renderDetalleServicios(mes, totalServicios) {
+  renderGraficasServicios();
   renderTablaServiciosUbicacion(mes, totalServicios);
   renderTablaServiciosTipoServicio(mes, totalServicios);
   renderTablaServiciosResponsable(mes, totalServicios);
   renderTablaServiciosRecientes(mes);
+}
+
+function renderGraficasServicios() {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  renderGraficaServiciosMensuales();
+}
+
+function renderGraficaServiciosMensuales() {
+  const canvas = document.getElementById("chartServiciosMensuales");
+
+  if (!canvas) {
+    return;
+  }
+
+  const meses = obtenerMesesDelAnioSeleccionado();
+
+  const labels = meses.map((mes) => mes.nombre);
+  const valoresCapillas = meses.map((mes) =>
+    contarServiciosPorOrigen(mes.clave, "CAPILLA")
+  );
+  const valoresParque = meses.map((mes) =>
+    contarServiciosPorOrigen(mes.clave, "PARQUE")
+  );
+
+  destruirGrafica("serviciosMensuales");
+
+  dashboardCharts.serviciosMensuales = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Servicios Capillas",
+          data: valoresCapillas,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        },
+        {
+          label: "Servicios Parque",
+          data: valoresParque,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom"
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const etiqueta = context.dataset.label || "Servicios";
+              return `${etiqueta}: ${formatoNumero(context.parsed.y || 0)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            precision: 0,
+            callback: (value) => formatoNumero(value)
+          }
+        }
+      }
+    }
+  });
 }
 
 function renderTablaServiciosUbicacion(mes, totalServicios) {
