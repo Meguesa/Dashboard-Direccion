@@ -2637,11 +2637,11 @@ function calcularTicketsPromedioVentasPorTipo(mes) {
   const acumulado = {
     propiedades: {
       monto: 0,
-      registros: 0
+      unidades: 0
     },
     servicios: {
       monto: 0,
-      registros: 0
+      unidades: 0
     }
   };
 
@@ -2652,32 +2652,77 @@ function calcularTicketsPromedioVentasPorTipo(mes) {
       return;
     }
 
-    const tipo = clasificarContratoParaTicketPromedio(item);
+    const unidadesPropiedades =
+      obtenerNumeroVentaCampo(item, [
+        "propiedades",
+        "Propiedades",
+        "PROPIEDADES"
+      ]) +
+      obtenerNumeroVentaCampo(item, [
+        "nichos",
+        "Nichos",
+        "NICHOS"
+      ]);
 
-    if (!tipo) {
+    const unidadesServicios =
+      obtenerNumeroVentaCampo(item, [
+        "serviciosAF",
+        "serviciosAf",
+        "Servicios_AF",
+        "Servicios AF",
+        "SERVICIOS_AF"
+      ]) +
+      obtenerNumeroVentaCampo(item, [
+        "serviciosCH",
+        "serviciosCh",
+        "Servicios_CH",
+        "Servicios CH",
+        "SERVICIOS_CH"
+      ]);
+
+    if (unidadesPropiedades > 0) {
+      acumulado.propiedades.monto += monto;
+      acumulado.propiedades.unidades += unidadesPropiedades;
       return;
     }
 
-    acumulado[tipo].monto += monto;
-    acumulado[tipo].registros += 1;
+    if (unidadesServicios > 0) {
+      acumulado.servicios.monto += monto;
+      acumulado.servicios.unidades += unidadesServicios;
+      return;
+    }
   });
 
   return {
     propiedades: {
       monto: redondear2(acumulado.propiedades.monto),
-      registros: acumulado.propiedades.registros,
-      ticketPromedio: acumulado.propiedades.registros > 0
-        ? redondear2(acumulado.propiedades.monto / acumulado.propiedades.registros)
+      unidades: acumulado.propiedades.unidades,
+      ticketPromedio: acumulado.propiedades.unidades > 0
+        ? redondear2(acumulado.propiedades.monto / acumulado.propiedades.unidades)
         : 0
     },
     servicios: {
       monto: redondear2(acumulado.servicios.monto),
-      registros: acumulado.servicios.registros,
-      ticketPromedio: acumulado.servicios.registros > 0
-        ? redondear2(acumulado.servicios.monto / acumulado.servicios.registros)
+      unidades: acumulado.servicios.unidades,
+      ticketPromedio: acumulado.servicios.unidades > 0
+        ? redondear2(acumulado.servicios.monto / acumulado.servicios.unidades)
         : 0
     }
   };
+}
+
+function obtenerNumeroVentaCampo(item, nombresCampos) {
+  for (const nombreCampo of nombresCampos) {
+    if (item && item[nombreCampo] !== undefined && item[nombreCampo] !== null) {
+      const valor = Number(item[nombreCampo]);
+
+      if (Number.isFinite(valor)) {
+        return valor;
+      }
+    }
+  }
+
+  return 0;
 }
 
 function obtenerContratosVentasMes(mes) {
@@ -2692,14 +2737,19 @@ function obtenerContratosVentasMes(mes) {
 }
 
 function obtenerMontoContratoVenta(item) {
-  return Number(
-    item.total ||
-    item.montoVenta ||
-    item.monto_venta ||
-    item.importe ||
-    item.subtotal ||
-    0
-  );
+  return obtenerNumeroVentaCampo(item, [
+    "total",
+    "Total",
+    "TOTAL",
+    "montoVenta",
+    "Monto_Venta",
+    "Monto Venta",
+    "monto_venta",
+    "importe",
+    "Importe",
+    "subtotal",
+    "Subtotal"
+  ]);
 }
 
 function clasificarContratoParaTicketPromedio(item) {
