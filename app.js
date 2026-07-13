@@ -3558,7 +3558,8 @@ function obtenerCatalogoTiposServicio() {
     { origen: "Capillas", tipoServicio: "Cremación Directa (con velación)", servicioParque: "—" },
     { origen: "Capillas", tipoServicio: "Cremación Directa (sin velación)", servicioParque: "—" },
     { origen: "Capillas", tipoServicio: "Inhumación", servicioParque: "—" },
-    { origen: "Capillas", tipoServicio: "Renta de Capillas", servicioParque: "—" }
+    { origen: "Capillas", tipoServicio: "Renta de Capillas", servicioParque: "—" },
+    { origen: "Capillas", tipoServicio: "Traslado", servicioParque: "—" }
   ];
 
   const tiposBaseParque = [
@@ -3616,6 +3617,10 @@ function obtenerTipoServicioNormalizado(item) {
   const tipoOriginal = normalizarTexto(item.tipoServicio) || "Sin tipo de servicio";
   const tipoComparacion = normalizarClaveComparacion(tipoOriginal);
 
+  if (origen === "Capillas") {
+    return obtenerTipoServicioCapillasNormalizado(tipoOriginal);
+  }
+
   if (origen === "Parque" && tipoComparacion === "DEPOSITO DE CENIZAS") {
     return "Depósito de Cenizas";
   }
@@ -3623,10 +3628,46 @@ function obtenerTipoServicioNormalizado(item) {
   return tipoOriginal;
 }
 
-function esTipoServicioCapillasExcluido(tipoServicio) {
-  const tipo = normalizarClaveComparacion(tipoServicio);
+function obtenerTipoServicioCapillasNormalizado(tipoServicio) {
+  const tipo = normalizarClaveComparacion(tipoServicio)
+    .replace(/[()]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
-  return tipo === "VELACION";
+  if (tipo === "INHUMACION") {
+    return "Inhumación";
+  }
+
+  if (tipo === "CREMACION") {
+    return "Cremación";
+  }
+
+  if (tipo === "CREMACION DIRECTA" || tipo === "CREMACION DIRECTA CON VELACION") {
+    return "Cremación Directa (con velación)";
+  }
+
+  if (tipo === "CREMACION DIRECTA SIN VELACION") {
+    return "Cremación Directa (sin velación)";
+  }
+
+  if (
+    tipo === "RENTA DE CAPILLAS" ||
+    tipo === "RENTA CAPILLAS" ||
+    tipo === "RENTA DE CAPILLA" ||
+    tipo === "RENTA CAPILLA"
+  ) {
+    return "Renta de Capillas";
+  }
+
+  if (tipo === "TRASLADO" || tipo === "TRASLADOS") {
+    return "Traslado";
+  }
+
+  return "";
+}
+
+function esTipoServicioCapillasExcluido(tipoServicio) {
+  return obtenerTipoServicioCapillasNormalizado(tipoServicio) === "";
 }
 
 function obtenerServicioParqueNormalizado(item) {
