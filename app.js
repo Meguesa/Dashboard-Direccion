@@ -3266,30 +3266,79 @@ function renderTablaServiciosTipoServicio(mes, totalServicios) {
 
   const serviciosMes = obtenerServiciosMes(mes);
   const tiposDisponibles = obtenerCatalogoTiposServicio();
+  const grupos = new Map();
 
-  const filas = tiposDisponibles
-    .map((tipoDisponible) => {
-      const registros = serviciosMes
-        .filter((item) => {
-          const origen = obtenerOrigenServicio(item);
-          const tipoServicio = obtenerTipoServicioNormalizado(item);
-          const servicioParque = obtenerServicioParqueNormalizado(item);
-      
-          if (origen === "Capillas" && esTipoServicioCapillasExcluido(tipoServicio)) {
-            return false;
+  const asegurarGrupo = (origen, tipoServicio) => {
+    const llave = `${origen}||${tipoServicio}`;
+
+    if (!grupos.has(llave)) {
+      grupos.set(llave, {
+        origen,
+        tipoServicio,
+        registros: 0,
+        detallesParque: new Map()
+      });
+    }
+
+    return grupos.get(llave);
+  };
+
+  tiposDisponibles.forEach((tipoDisponible) => {
+    if (tipoDisponible.origen === "Capillas" && esTipoServicioCapillasExcluido(tipoDisponible.tipoServicio)) {
+      return;
+    }
+
+    asegurarGrupo(tipoDisponible.origen, tipoDisponible.tipoServicio);
+  });
+
+  serviciosMes.forEach((item) => {
+    const origen = obtenerOrigenServicio(item);
+    const tipoServicio = obtenerTipoServicioNormalizado(item);
+    const servicioParque = obtenerServicioParqueNormalizado(item);
+
+    if (origen === "Capillas" && esTipoServicioCapillasExcluido(tipoServicio)) {
+      return;
+    }
+
+    const grupo = asegurarGrupo(origen, tipoServicio);
+    grupo.registros += 1;
+
+    if (origen === "Parque") {
+      if (!grupo.detallesParque.has(servicioParque)) {
+        grupo.detallesParque.set(servicioParque, {
+          servicioParque,
+          registros: 0
+        });
+      }
+
+      grupo.detallesParque.get(servicioParque).registros += 1;
+    }
+  });
+
+  const filas = Array.from(grupos.values())
+    .map((grupo) => {
+      const detallesParque = Array.from(grupo.detallesParque.values())
+        .filter((detalle) => detalle.registros > 0)
+        .sort((a, b) => {
+          const prioridadA = obtenerOrdenServicioParque(a.servicioParque);
+          const prioridadB = obtenerOrdenServicioParque(b.servicioParque);
+
+          if (prioridadA !== prioridadB) {
+            return prioridadA - prioridadB;
           }
-      
-          return origen === tipoDisponible.origen
-            && tipoServicio === tipoDisponible.tipoServicio
-            && servicioParque === tipoDisponible.servicioParque;
-        })
-        .length;
+
+          if (b.registros !== a.registros) {
+            return b.registros - a.registros;
+          }
+
+          return a.servicioParque.localeCompare(b.servicioParque, "es");
+        });
 
       return {
-        origen: tipoDisponible.origen,
-        tipoServicio: tipoDisponible.tipoServicio,
-        servicioParque: tipoDisponible.servicioParque,
-        registros
+        origen: grupo.origen,
+        tipoServicio: grupo.tipoServicio,
+        registros: grupo.registros,
+        detallesParque
       };
     })
     .sort((a, b) => {
@@ -3298,13 +3347,6 @@ function renderTablaServiciosTipoServicio(mes, totalServicios) {
 
       if (prioridadOrigenA !== prioridadOrigenB) {
         return prioridadOrigenA - prioridadOrigenB;
-      }
-
-      const prioridadParqueA = obtenerOrdenServicioParque(a.servicioParque);
-      const prioridadParqueB = obtenerOrdenServicioParque(b.servicioParque);
-
-      if (prioridadParqueA !== prioridadParqueB) {
-        return prioridadParqueA - prioridadParqueB;
       }
 
       if (b.registros !== a.registros) {
@@ -3317,7 +3359,7 @@ function renderTablaServiciosTipoServicio(mes, totalServicios) {
   if (filas.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5">Sin tipos de servicio disponibles.</td>
+        <td colspan="4">Sin tipos de servicio disponibles.</td>
       </tr>
     `;
     return;
@@ -3329,17 +3371,144 @@ function renderTablaServiciosTipoServicio(mes, totalServicios) {
         ? fila.registros / totalServicios
         : 0;
 
+      const detalleDisponible = fila.origen === "Parque" && fila.detallesParque.length > 0;
+      const icono = detalleDisponible ? "▸" : "";
+
       return `
-        <tr>
+        <tr class="servicios-tipo-row ${detalleDisponible ? "is-clickable" : ""}"
+            data-origen="${escaparAtributo(fila.origen)}"
+            data-tipo-servicio="${escaparAtributo(fila.tipoServicio)}">
           <td>${escaparHtml(fila.origen)}</td>
-          <td>${escaparHtml(fila.tipoServicio)}</td>
-          <td>${escaparHtml(fila.servicioParque)}</td>
+          <td>
+            <span class="expand-icon">${icono}</span>
+            ${escaparHtml(fila.tipoServicio)}
+          </td>
           <td>${formatoNumero(fila.registros)}</td>
           <td>${formatoPorcentaje(porcentaje)}</td>
         </tr>
       `;
     })
     .join("");
+
+  conectarDespliegueServiciosTipo(mes, totalServicios);
+}
+
+function conectarDespliegueServiciosTipo(mes, totalServicios) {
+  const filasTipo = document.querySelectorAll("#tablaServiciosTipoBody .servicios-tipo-row");
+
+  filasTipo.forEach((fila) => {
+    fila.addEventListener("click", () => {
+      if (!fila.classList.contains("is-clickable")) {
+        return;
+      }
+
+      const origen = fila.dataset.origen || "";
+      const tipoServicio = fila.dataset.tipoServicio || "";
+      const yaEstaAbierta = fila.classList.contains("is-expanded");
+
+      cerrarDetallesServiciosTipo();
+
+      if (!yaEstaAbierta) {
+        abrirDetalleServiciosTipo(fila, mes, origen, tipoServicio, totalServicios);
+      }
+    });
+  });
+}
+
+function cerrarDetallesServiciosTipo() {
+  document
+    .querySelectorAll(".servicios-tipo-detail-row")
+    .forEach((fila) => fila.remove());
+
+  document
+    .querySelectorAll(".servicios-tipo-row")
+    .forEach((fila) => {
+      fila.classList.remove("is-expanded");
+
+      const icono = fila.querySelector(".expand-icon");
+      if (icono && icono.textContent.trim() !== "") {
+        icono.textContent = "▸";
+      }
+    });
+}
+
+function abrirDetalleServiciosTipo(filaTipo, mes, origen, tipoServicio, totalServicios) {
+  const detalles = calcularDetalleServicioParquePorTipo(mes, origen, tipoServicio);
+
+  if (detalles.length === 0) {
+    return;
+  }
+
+  filaTipo.classList.add("is-expanded");
+
+  const icono = filaTipo.querySelector(".expand-icon");
+  if (icono) {
+    icono.textContent = "▾";
+  }
+
+  const filasDetalle = detalles
+    .map((detalle) => {
+      const porcentaje = totalServicios > 0
+        ? detalle.registros / totalServicios
+        : 0;
+
+      return `
+        <tr class="servicios-tipo-detail-row">
+          <td>—</td>
+          <td class="servicios-detail-label">↳ Servicio Parque: ${escaparHtml(detalle.servicioParque)}</td>
+          <td>${formatoNumero(detalle.registros)}</td>
+          <td>${formatoPorcentaje(porcentaje)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  filaTipo.insertAdjacentHTML("afterend", filasDetalle);
+
+  aplicarFiltrosTodasLasTablas();
+}
+
+function calcularDetalleServicioParquePorTipo(mes, origen, tipoServicio) {
+  if (origen !== "Parque") {
+    return [];
+  }
+
+  const grupos = new Map();
+
+  obtenerServiciosMes(mes)
+    .filter((item) => {
+      return obtenerOrigenServicio(item) === origen
+        && obtenerTipoServicioNormalizado(item) === tipoServicio;
+    })
+    .forEach((item) => {
+      const servicioParque = obtenerServicioParqueNormalizado(item);
+
+      if (!grupos.has(servicioParque)) {
+        grupos.set(servicioParque, {
+          servicioParque,
+          registros: 0
+        });
+      }
+
+      grupos.get(servicioParque).registros += 1;
+    });
+
+  return Array.from(grupos.values())
+    .filter((detalle) => detalle.registros > 0)
+    .sort((a, b) => {
+      const prioridadA = obtenerOrdenServicioParque(a.servicioParque);
+      const prioridadB = obtenerOrdenServicioParque(b.servicioParque);
+
+      if (prioridadA !== prioridadB) {
+        return prioridadA - prioridadB;
+      }
+
+      if (b.registros !== a.registros) {
+        return b.registros - a.registros;
+      }
+
+      return a.servicioParque.localeCompare(b.servicioParque, "es");
+    });
 }
 
 function obtenerOrdenOrigenServicio(origen) {
