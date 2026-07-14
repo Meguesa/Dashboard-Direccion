@@ -2650,3 +2650,77 @@ body {
     flex-direction: column;
   }
 }
+
+/* ================================
+   Servicios del día dentro de columna derecha
+================================ */
+
+.home-right-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  height: 100%;
+}
+
+.home-right-stack > .card {
+  width: 100%;
+  min-width: 0;
+}
+
+.home-right-stack .metas-cobranza-card {
+  min-height: auto;
+  flex: 1;
+}
+
+.servicios-resumen-card {
+  padding: 1.25rem;
+  min-height: auto;
+}
+
+.servicios-resumen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.servicios-resumen-header h2 {
+  margin: 0;
+}
+
+.servicios-resumen-header p {
+  margin: 0.35rem 0 0;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.servicios-resumen-hora {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.servicios-dia-resumen-top {
+  margin-bottom: 0;
+}
+
+.servicios-dia-detail-section {
+  margin-top: 1.5rem;
+}
+
+.servicios-dia-header-simple {
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 1100px) {
+  .home-right-stack {
+    height: auto;
+  }
+
+  .servicios-resumen-header {
+    flex-direction: column;
+  }
+}
