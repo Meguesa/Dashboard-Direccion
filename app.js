@@ -2030,38 +2030,70 @@ function clasificarAreaIngresoCobranza(item) {
 
   const categoria = normalizarClaveComparacion(item.categoria);
   const subcategoria = normalizarClaveComparacion(item.subcategoria);
-  const texto = `${categoria} ${subcategoria}`.replace(/\s+/g, " ").trim();
 
-  if (coincideCategoriaMetaCobranza(texto, [
-    "COB PROP",
-    "ENG PROP",
-    "PAGOS EX PROP"
-  ])) {
+  /*
+    Reglas de metas de cobranza:
+
+    Panteón:
+    - COB PROP.
+    - PAGOS EX PROP.
+
+    Servicios CH:
+    - COBRANZA SERVICIO CH
+    - COBANZA SERVICIO CH  // variante con typo en origen
+    - PAGOS EX CH
+
+    Servicios AF:
+    - COBRANZA AGUA FRIA
+    - PAGOS EX AF
+
+    Total Service:
+    - mensualidad TS
+    - TS + MENSUALIDAD
+    - PAGOS EX TS
+    - PAGOS EXT TS
+    - TSC
+    - PAGOS EX TSC
+    - PAGOS EXT TSC
+  */
+
+  if (
+    categoria === "COB PROP" ||
+    categoria === "COB PROP." ||
+    categoria === "PAGOS EX PROP" ||
+    categoria === "PAGOS EX PROP."
+  ) {
     return "Panteon";
   }
 
-  if (coincideCategoriaMetaCobranza(texto, [
-    "COBRANZA SERVICIO CH",
-    "ENG CH",
-    "PAGOS EX CH"
-  ])) {
+  if (
+    categoria === "COBRANZA SERVICIO CH" ||
+    categoria === "COBANZA SERVICIO CH" ||
+    categoria === "PAGOS EX CH"
+  ) {
     return "Servicios CH";
   }
 
-  if (coincideCategoriaMetaCobranza(texto, [
-    "COBRANZA AGUA FRIA",
-    "ENG AF",
-    "PAGOS EX AF"
-  ])) {
+  if (
+    categoria === "COBRANZA AGUA FRIA" ||
+    categoria === "PAGOS EX AF"
+  ) {
     return "Servicios AF";
   }
 
-  if (coincideCategoriaMetaCobranza(texto, [
-    "MENSUALIDAD TS",
-    "PAGOS EX TS",
-    "TSC",
-    "PAGOS EX TSC"
-  ])) {
+  if (
+    categoria === "MENSUALIDAD TS" ||
+    categoria === "TS" ||
+    categoria === "PAGOS EX TS" ||
+    categoria === "PAGOS EXT TS" ||
+    categoria === "TSC" ||
+    categoria === "PAGOS EX TSC" ||
+    categoria === "PAGOS EXT TSC"
+  ) {
+    if (categoria === "TS" && subcategoria !== "MENSUALIDAD" && subcategoria !== "MEN") {
+      return "Sin área";
+    }
+
     return "Total Service";
   }
 
@@ -2069,10 +2101,15 @@ function clasificarAreaIngresoCobranza(item) {
 }
 
 function esBancoValidoMetaCobranza(banco) {
-  return banco.includes("BANAMEX") ||
-    banco.includes("BANREGIO") ||
-    banco.includes("JDJP") ||
-    banco.includes("CAJA");
+  const bancoNormalizado = normalizarClaveComparacion(banco);
+
+  return [
+    "BANAMEX",
+    "BANREGIO",
+    "CAJA",
+    "JDJP",
+    "JDP"
+  ].includes(bancoNormalizado);
 }
 
 function coincideCategoriaMetaCobranza(texto, categoriasPermitidas) {
