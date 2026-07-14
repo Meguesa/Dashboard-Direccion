@@ -897,29 +897,49 @@ function renderServiciosDelDia() {
   ordenarServiciosPorInicio(parqueActivos);
   ordenarServiciosPorInicio(parqueProgramados);
 
-  const serviciosActivos = [
-    ...capillasActivos.map((item) => crearServicioAgendaDia(item, "activo", "Capillas")),
-    ...parqueActivos.map((item) => crearServicioAgendaDia(item, "activo", "Parque"))
-  ].sort((a, b) => a.timestampInicio - b.timestampInicio);
+  const serviciosCapillasActivos = capillasActivos
+    .map((item) => crearServicioAgendaDia(item, "activo", "Capillas"))
+    .sort((a, b) => a.timestampInicio - b.timestampInicio);
 
-  const serviciosProgramados = [
-    ...capillasProgramados.map((item) => crearServicioAgendaDia(item, "programado", "Capillas")),
-    ...parqueProgramados.map((item) => crearServicioAgendaDia(item, "programado", "Parque"))
-  ].sort((a, b) => a.timestampInicio - b.timestampInicio);
+  const serviciosCapillasProgramados = capillasProgramados
+    .map((item) => crearServicioAgendaDia(item, "programado", "Capillas"))
+    .sort((a, b) => a.timestampInicio - b.timestampInicio);
 
-  setText("serviciosDiaActivosTotal", formatoNumero(serviciosActivos.length));
-  setText("serviciosDiaProgramadosTotal", formatoNumero(serviciosProgramados.length));
+  const serviciosParqueActivos = parqueActivos
+    .map((item) => crearServicioAgendaDia(item, "activo", "Parque"))
+    .sort((a, b) => a.timestampInicio - b.timestampInicio);
+
+  const serviciosParqueProgramados = parqueProgramados
+    .map((item) => crearServicioAgendaDia(item, "programado", "Parque"))
+    .sort((a, b) => a.timestampInicio - b.timestampInicio);
+
+  setText("serviciosDiaCapillasActivosTotal", formatoNumero(serviciosCapillasActivos.length));
+  setText("serviciosDiaCapillasProgramadosTotal", formatoNumero(serviciosCapillasProgramados.length));
+  setText("serviciosDiaParqueActivosTotal", formatoNumero(serviciosParqueActivos.length));
+  setText("serviciosDiaParqueProgramadosTotal", formatoNumero(serviciosParqueProgramados.length));
 
   renderListaServiciosAgenda(
-    "serviciosDiaActivosBody",
-    serviciosActivos,
-    "Sin servicios activos actualmente."
+    "serviciosDiaCapillasActivosBody",
+    serviciosCapillasActivos,
+    "Sin servicios activos de Capillas actualmente."
   );
 
   renderListaServiciosAgenda(
-    "serviciosDiaProgramadosBody",
-    serviciosProgramados,
-    "Sin servicios programados para hoy."
+    "serviciosDiaCapillasProgramadosBody",
+    serviciosCapillasProgramados,
+    "Sin servicios programados de Capillas para hoy."
+  );
+
+  renderListaServiciosAgenda(
+    "serviciosDiaParqueActivosBody",
+    serviciosParqueActivos,
+    "Sin servicios activos de Parque actualmente."
+  );
+
+  renderListaServiciosAgenda(
+    "serviciosDiaParqueProgramadosBody",
+    serviciosParqueProgramados,
+    "Sin servicios programados de Parque para hoy."
   );
 
   setText(
@@ -929,10 +949,10 @@ function renderServiciosDelDia() {
 
   console.log("Servicios del día:", {
     ahora: ahora.toString(),
-    capillasActivos: capillasActivos.length,
-    capillasProgramados: capillasProgramados.length,
-    parqueActivos: parqueActivos.length,
-    parqueProgramados: parqueProgramados.length
+    capillasActivos: serviciosCapillasActivos.length,
+    capillasProgramados: serviciosCapillasProgramados.length,
+    parqueActivos: serviciosParqueActivos.length,
+    parqueProgramados: serviciosParqueProgramados.length
   });
 }
 
