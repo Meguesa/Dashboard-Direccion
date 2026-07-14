@@ -120,67 +120,78 @@
             </table>
           </div>
         </article>
-
-        <article class="card metas-cobranza-card">
-          <div class="metas-card-header">
-            <div>
-              <h2 class="section-title">Avance contra meta de cobranza</h2>
-              <p>Comparativo mensual del cobro real contra la meta definida por área.</p>
+      
+        <div class="home-right-stack">
+          <article class="card metas-cobranza-card">
+            <div class="metas-card-header">
+              <div>
+                <h2 class="section-title">Avance contra meta de cobranza</h2>
+                <p>Comparativo mensual del cobro real contra la meta definida por área.</p>
+              </div>
             </div>
-          </div>
-        
-          <div class="status-box metas-status-box">
-            Cumplimiento total:
-            <span id="metasCobranzaCumplimiento">0.0%</span>
-          </div>
-        
-          <div class="metas-table-scroll">
-            <table class="table metas-cobranza-table">
-              <thead>
-                <tr>
-                  <th>Área</th>
-                  <th>Real cobrado</th>
-                  <th>Meta mensual</th>
-                  <th>% cumplido</th>
-                  <th>Por cumplir</th>
-                </tr>
-              </thead>
-              <tbody id="tablaMetasCobranzaBody">
-                <tr>
-                  <td>Cargando...</td>
-                  <td>—</td>
-                  <td>—</td>
-                  <td>—</td>
-                  <td>—</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </article>
+          
+            <div class="status-box metas-status-box">
+              Cumplimiento total:
+              <span id="metasCobranzaCumplimiento">0.0%</span>
+            </div>
+          
+            <div class="metas-table-scroll">
+              <table class="table metas-cobranza-table">
+                <thead>
+                  <tr>
+                    <th>Área</th>
+                    <th>Real cobrado</th>
+                    <th>Meta mensual</th>
+                    <th>% cumplido</th>
+                    <th>Por cumplir</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaMetasCobranzaBody">
+                  <tr>
+                    <td>Cargando...</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+      
+          <article class="card servicios-resumen-card">
+            <div class="servicios-resumen-header">
+              <div>
+                <h2>Servicios del día</h2>
+                <p>Resumen de servicios activos y programados considerando la fecha y hora local actual.</p>
+              </div>
+      
+              <div class="servicios-resumen-hora">
+                <span id="serviciosDiaActualizado">Hora local: —</span>
+              </div>
+            </div>
+      
+            <div class="servicios-dia-resumen servicios-dia-resumen-top">
+              <div class="servicios-dia-resumen-item activo">
+                <span>Activos ahora</span>
+                <strong id="serviciosDiaActivosTotal">0</strong>
+              </div>
+      
+              <div class="servicios-dia-resumen-item programado">
+                <span>Programados hoy</span>
+                <strong id="serviciosDiaProgramadosTotal">0</strong>
+              </div>
+            </div>
+          </article>
+        </div>
       </section>
-
-      <section class="servicios-dia-section">
+      
+      <section class="servicios-dia-section servicios-dia-detail-section">
         <article class="card servicios-dia-card">
-          <div class="servicios-dia-header">
+          <div class="servicios-dia-header servicios-dia-header-simple">
             <div>
-              <h2>Servicios del día</h2>
+              <h2>Detalle de servicios del día</h2>
               <p>Servicios activos y programados considerando la fecha y hora local actual.</p>
-            </div>
-      
-            <div class="servicios-dia-hora">
-              <span id="serviciosDiaActualizado">Hora local: —</span>
-            </div>
-          </div>
-      
-          <div class="servicios-dia-resumen">
-            <div class="servicios-dia-resumen-item activo">
-              <span>Activos ahora</span>
-              <strong id="serviciosDiaActivosTotal">0</strong>
-            </div>
-      
-            <div class="servicios-dia-resumen-item programado">
-              <span>Programados hoy</span>
-              <strong id="serviciosDiaProgramadosTotal">0</strong>
             </div>
           </div>
       
@@ -213,8 +224,6 @@
           </div>
         </article>
       </section>
-    </section>
-
     <!-- Página de Ingresos -->
     <section id="pageIngresos" class="dashboard-page hidden">
       <article class="card">
