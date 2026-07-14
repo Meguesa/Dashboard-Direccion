@@ -165,22 +165,48 @@
                 <h2>Servicios del día</h2>
                 <p>Resumen de servicios activos y programados considerando la fecha y hora local actual.</p>
               </div>
-      
+          
               <div class="servicios-resumen-hora">
                 <span id="serviciosDiaActualizado">Hora local: —</span>
               </div>
             </div>
-      
-            <div class="servicios-dia-resumen servicios-dia-resumen-top">
-              <div class="servicios-dia-resumen-item activo">
-                <span>Activos ahora</span>
-                <strong id="serviciosDiaActivosTotal">0</strong>
-              </div>
-      
-              <div class="servicios-dia-resumen-item programado">
-                <span>Programados hoy</span>
-                <strong id="serviciosDiaProgramadosTotal">0</strong>
-              </div>
+          
+            <div class="servicios-resumen-groups">
+              <section class="servicios-resumen-group">
+                <div class="servicios-resumen-group-title">
+                  Capillas
+                </div>
+          
+                <div class="servicios-dia-resumen servicios-dia-resumen-top">
+                  <div class="servicios-dia-resumen-item activo">
+                    <span>Activos ahora</span>
+                    <strong id="serviciosDiaCapillasActivosTotal">0</strong>
+                  </div>
+          
+                  <div class="servicios-dia-resumen-item programado">
+                    <span>Programados hoy</span>
+                    <strong id="serviciosDiaCapillasProgramadosTotal">0</strong>
+                  </div>
+                </div>
+              </section>
+          
+              <section class="servicios-resumen-group">
+                <div class="servicios-resumen-group-title">
+                  Parque
+                </div>
+          
+                <div class="servicios-dia-resumen servicios-dia-resumen-top">
+                  <div class="servicios-dia-resumen-item activo">
+                    <span>Activos ahora</span>
+                    <strong id="serviciosDiaParqueActivosTotal">0</strong>
+                  </div>
+          
+                  <div class="servicios-dia-resumen-item programado">
+                    <span>Programados hoy</span>
+                    <strong id="serviciosDiaParqueProgramadosTotal">0</strong>
+                  </div>
+                </div>
+              </section>
             </div>
           </article>
         </div>
@@ -195,35 +221,77 @@
             </div>
           </div>
       
-          <div class="servicios-agenda-grid">
-            <section class="servicios-agenda-column">
-              <div class="servicios-agenda-column-header">
-                <div>
-                  <h3>Activos ahora</h3>
-                  <p>Servicios que ya iniciaron y aún no terminan.</p>
+          <section class="servicios-detalle-bloque">
+            <div class="servicios-detalle-titulo">
+              <h3>Capillas</h3>
+            </div>
+      
+            <div class="servicios-agenda-grid">
+              <section class="servicios-agenda-column">
+                <div class="servicios-agenda-column-header">
+                  <div>
+                    <h3>Activos ahora</h3>
+                    <p>Servicios de Capillas que ya iniciaron y aún no terminan.</p>
+                  </div>
                 </div>
-              </div>
       
-              <div id="serviciosDiaActivosBody" class="servicios-agenda-list">
-                <div class="servicios-agenda-empty">Sin servicios activos actualmente.</div>
-              </div>
-            </section>
-      
-            <section class="servicios-agenda-column">
-              <div class="servicios-agenda-column-header">
-                <div>
-                  <h3>Programados hoy</h3>
-                  <p>Servicios que inician más tarde durante el día.</p>
+                <div id="serviciosDiaCapillasActivosBody" class="servicios-agenda-list">
+                  <div class="servicios-agenda-empty">Sin servicios activos de Capillas actualmente.</div>
                 </div>
-              </div>
+              </section>
       
-              <div id="serviciosDiaProgramadosBody" class="servicios-agenda-list">
-                <div class="servicios-agenda-empty">Sin servicios programados para hoy.</div>
-              </div>
-            </section>
-          </div>
+              <section class="servicios-agenda-column">
+                <div class="servicios-agenda-column-header">
+                  <div>
+                    <h3>Programados hoy</h3>
+                    <p>Servicios de Capillas que inician más tarde durante el día.</p>
+                  </div>
+                </div>
+      
+                <div id="serviciosDiaCapillasProgramadosBody" class="servicios-agenda-list">
+                  <div class="servicios-agenda-empty">Sin servicios programados de Capillas para hoy.</div>
+                </div>
+              </section>
+            </div>
+          </section>
+      
+          <section class="servicios-detalle-bloque">
+            <div class="servicios-detalle-titulo">
+              <h3>Parque</h3>
+            </div>
+      
+            <div class="servicios-agenda-grid">
+              <section class="servicios-agenda-column">
+                <div class="servicios-agenda-column-header">
+                  <div>
+                    <h3>Activos ahora</h3>
+                    <p>Servicios de Parque que ya iniciaron y aún no terminan.</p>
+                  </div>
+                </div>
+      
+                <div id="serviciosDiaParqueActivosBody" class="servicios-agenda-list">
+                  <div class="servicios-agenda-empty">Sin servicios activos de Parque actualmente.</div>
+                </div>
+              </section>
+      
+              <section class="servicios-agenda-column">
+                <div class="servicios-agenda-column-header">
+                  <div>
+                    <h3>Programados hoy</h3>
+                    <p>Servicios de Parque que inician más tarde durante el día.</p>
+                  </div>
+                </div>
+      
+                <div id="serviciosDiaParqueProgramadosBody" class="servicios-agenda-list">
+                  <div class="servicios-agenda-empty">Sin servicios programados de Parque para hoy.</div>
+                </div>
+              </section>
+            </div>
+          </section>
         </article>
       </section>
+
+      
     <!-- Página de Ingresos -->
     <section id="pageIngresos" class="dashboard-page hidden">
       <article class="card">
