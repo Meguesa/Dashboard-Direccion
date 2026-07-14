@@ -660,9 +660,11 @@ function renderDashboard() {
 
   
   const registrosIngresos = contarRegistrosIngresos(mes);
+  const ingresoReal = sumarIngresoRealCobranza(mes);
   const metaIngresos = sumarMetaCobranzaMensual(mes);
+  
   const porcentajeCumplimientoIngresos = metaIngresos > 0
-    ? totalIngresos / metaIngresos
+    ? ingresoReal / metaIngresos
     : 0;
   
   const registrosEgresos = contarRegistrosEgresos(mes);
@@ -681,6 +683,7 @@ function renderDashboard() {
   setText("kpiServicios", formatoNumero(totalServicios));
 
   setText("pageIngresosTotal", formatoMoneda(totalIngresos));
+  setText("pageIngresosReal", formatoMoneda(ingresoReal));
   setText("pageIngresosMeta", formatoMoneda(metaIngresos));
   setText(
     "pageIngresosCumplimiento",
@@ -756,6 +759,24 @@ function sumarIngresos(mes) {
   return state.datos.ingresos
     .filter((item) => normalizarTexto(item.mes) === mes)
     .reduce((total, item) => total + Number(item.importe || 0), 0);
+}
+
+function sumarIngresoRealCobranza(mes) {
+  return state.datos.ingresos
+    .filter((item) => normalizarTexto(item.mes) === mes)
+    .filter((item) => esIngresoConsideradoMetaCobranza(item))
+    .reduce((total, item) => total + Number(item.importe || 0), 0);
+}
+
+function esIngresoConsideradoMetaCobranza(item) {
+  const area = clasificarAreaIngresoCobranza(item);
+
+  return [
+    "Panteon",
+    "Servicios CH",
+    "Servicios AF",
+    "Total Service"
+  ].includes(area);
 }
 
 function sumarMetaCobranzaMensual(mes) {
@@ -2237,12 +2258,12 @@ function renderGraficaIngresosMensuales() {
   const meses = obtenerMesesDelAnioSeleccionado();
 
   const labels = meses.map((mes) => mes.nombre);
-  const valoresIngresos = meses.map((mes) => sumarIngresos(mes.clave));
+  const valoresIngresos = meses.map((mes) => sumarIngresoRealCobranza(mes.clave));
   const valoresMetas = meses.map((mes) => sumarMetaCobranzaMensual(mes.clave));
 
   const datasets = [
     {
-      label: "Ingreso total",
+      label: "Ingreso real",
       data: valoresIngresos,
       tension: 0.3,
       fill: false,
