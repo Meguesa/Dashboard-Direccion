@@ -310,6 +310,21 @@ function convertirBooleano(valor) {
     texto === "1";
 }
 
+function obtenerCampoSharePoint(fields, nombres) {
+  for (const nombre of nombres) {
+    if (
+      fields &&
+      fields[nombre] !== undefined &&
+      fields[nombre] !== null &&
+      String(fields[nombre]).trim() !== ""
+    ) {
+      return fields[nombre];
+    }
+  }
+
+  return "";
+}
+
 async function cargarDatosSharePoint(opciones = {}) {
   try {
     setAuthStatus("Actualizando datos desde SharePoint...");
@@ -496,42 +511,199 @@ async function obtenerServiciosSharePoint(mesesFiltro = []) {
 
       return {
         id: item.id,
-        numeroServicio: limpiarTexto(f.Numero_Servicio || f.Numero_x005f_Servicio || f.NumeroServicio),
-        mes: limpiarTexto(f.Mes),
-        fechaServicio: limpiarTexto(f.Fecha_Servicio || f.Fecha_x005f_Servicio || f.FechaServicio),
-        fechaFin: limpiarTexto(f.Fecha_Fin || f.Fecha_x005f_Fin || f.FechaFin),
-        titular: limpiarTexto(f.Titular),
-        finado: limpiarTexto(f.Finado),
-        previsionUsoInmediato: limpiarTexto(f.Prevision_Uso_Inmediato || f.Prevision_x005f_Uso_x005f_Inmediato || f.PrevisionUsoInmediato),
-        sucursal: limpiarTexto(f.Sucursal),
-        origen: limpiarTexto(f.Origen),
-        tipoServicio: limpiarTexto(f.Tipo_Servicio || f.Tipo_x005f_Servicio || f.TipoServicio),
-        serviciosParque: limpiarTexto(f.Servicios_Parque || f.Servicios_x005f_Parque || f.ServiciosParque),
-        sala: limpiarTexto(f.Sala),
-        estatus: limpiarTexto(f.Estatus),
-        referenciaContrato: limpiarTexto(f.Referencia_Contrato || f.Referencia_x005f_Contrato || f.ReferenciaContrato),
-        responsable: limpiarTexto(f.Responsable),
-        fuente: limpiarTexto(f.Fuente),
-        tipoOrigen: limpiarTexto(f.Tipo_Origen || f.Tipo_x005f_Origen || f.TipoOrigen),
-        ubicacionServicio: limpiarTexto(f.Ubicacion_Servicio || f.Ubicacion_x005f_Servicio || f.UbicacionServicio),
-        seccion: limpiarTexto(f.Seccion),
-        manzana: limpiarTexto(f.Manzana),
-        numLoteNicho: limpiarTexto(f.NumLote_Nicho || f.NumLote_x005f_Nicho || f.NumLoteNicho),
-        loteNicho: limpiarTexto(f.Lote_Nicho || f.Lote_x005f_Nicho || f.LoteNicho),
-        asesor: limpiarTexto(f.Asesor),
-        embalsamador: limpiarTexto(f.Embalsamador),
-        estatusLiquidacion: limpiarTexto(f.Estatus_Liquidacion || f.Estatus_x005f_Liquidacion || f.EstatusLiquidacion),
-        precioVenta: convertirNumero(f.Precio_Venta || f.Precio_x005f_Venta || f.PrecioVenta),
-        precioTotalServicio: convertirNumero(f.Precio_Total_Servicio || f.Precio_x005f_Total_x005f_Servicio || f.PrecioTotalServicio),
-        tellmebyeEstatus: limpiarTexto(f.TellmebyeEstatus),
-        placaEstatus: limpiarTexto(f.PlacaEstatus),
-        observaciones: limpiarTexto(f.Observaciones)
+      
+        numeroServicio: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Numero_Servicio",
+          "Numero_x005f_Servicio",
+          "NumeroServicio",
+          "Numero_x0020_Servicio"
+        ])),
+      
+        numeroReferencia: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Numero_Referencia",
+          "Numero_x005f_Referencia",
+          "NumeroReferencia",
+          "Numero_x0020_de_x0020_Referencia",
+          "Numero_x0020_Referencia"
+        ])),
+      
+        mes: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Mes"
+        ])),
+      
+        fechaServicio: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Fecha_Servicio",
+          "Fecha_x005f_Servicio",
+          "FechaServicio",
+          "Fecha_x0020_Servicio"
+        ])),
+      
+        fechaFin: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Fecha_Fin",
+          "Fecha_x005f_Fin",
+          "FechaFin",
+          "Fecha_x0020_Fin"
+        ])),
+      
+        titular: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Titular"
+        ])),
+      
+        finado: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Finado"
+        ])),
+      
+        previsionUsoInmediato: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Prevision_Uso_Inmediato",
+          "Prevision_x005f_Uso_x005f_Inmediato",
+          "PrevisionUsoInmediato",
+          "Previsi_x00f3_n_x005f_Uso_x005f_Inmediato"
+        ])),
+      
+        sucursal: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Sucursal"
+        ])),
+      
+        origen: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Origen"
+        ])),
+      
+        tipoOrigen: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Tipo_Origen",
+          "Tipo_x005f_Origen",
+          "TipoOrigen",
+          "Tipo_x0020_Origen"
+        ])),
+      
+        ubicacionServicio: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Ubicacion_Servicio",
+          "Ubicacion_x005f_Servicio",
+          "UbicacionServicio",
+          "Ubicaci_x00f3_n_x005f_Servicio",
+          "Ubicaci_x00f3_n_Servicio"
+        ])),
+      
+        sala: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Sala"
+        ])),
+      
+        tipoServicio: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Tipo_Servicio",
+          "Tipo_x005f_Servicio",
+          "TipoServicio",
+          "Tipo_x0020_Servicio"
+        ])),
+      
+        serviciosParque: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Servicios_Parque",
+          "Servicios_x005f_Parque",
+          "ServiciosParque",
+          "Servicio_Parque",
+          "Servicio_x005f_Parque"
+        ])),
+      
+        loteNicho: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Lote_Nicho",
+          "Lote_x005f_Nicho",
+          "LoteNicho",
+          "NumLote_Nicho",
+          "NumLote_x005f_Nicho",
+          "NumLoteNicho"
+        ])),
+      
+        seccion: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Seccion",
+          "Sección"
+        ])),
+      
+        manzana: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Manzana"
+        ])),
+      
+        numLoteNicho: limpiarTexto(obtenerCampoSharePoint(f, [
+          "NumLote_Nicho",
+          "NumLote_x005f_Nicho",
+          "NumLoteNicho"
+        ])),
+      
+        estatus: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Estatus"
+        ])),
+      
+        referenciaContrato: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Referencia_Contrato",
+          "Referencia_x005f_Contrato",
+          "ReferenciaContrato"
+        ])),
+      
+        responsable: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Responsable"
+        ])),
+      
+        fuente: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Fuente"
+        ])),
+      
+        asesor: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Asesor"
+        ])),
+      
+        embalsamador: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Embalsamador"
+        ])),
+      
+        estatusLiquidacion: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Estatus_Liquidacion",
+          "Estatus_x005f_Liquidacion",
+          "EstatusLiquidacion"
+        ])),
+      
+        precioVenta: convertirNumero(obtenerCampoSharePoint(f, [
+          "Precio_Venta",
+          "Precio_x005f_Venta",
+          "PrecioVenta"
+        ])),
+      
+        precioTotalServicio: convertirNumero(obtenerCampoSharePoint(f, [
+          "Precio_Total_Servicio",
+          "Precio_x005f_Total_x005f_Servicio",
+          "PrecioTotalServicio"
+        ])),
+      
+        tellmebyeEstatus: limpiarTexto(obtenerCampoSharePoint(f, [
+          "TellmebyeEstatus"
+        ])),
+      
+        placaEstatus: limpiarTexto(obtenerCampoSharePoint(f, [
+          "PlacaEstatus"
+        ])),
+      
+        observaciones: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Observaciones"
+        ]))
       };
     });
 
     console.log("BI_Servicios leídos:", servicios);
     console.table(servicios.slice(0, 20));
 
+    console.table(
+      servicios
+        .filter((item) => item.tipoOrigen === "Capillas" || item.tipoOrigen === "Parque")
+        .slice(0, 30)
+        .map((item) => ({
+          mes: item.mes,
+          tipoOrigen: item.tipoOrigen,
+          finado: item.finado,
+          fechaServicio: item.fechaServicio,
+          fechaFin: item.fechaFin,
+          ubicacionServicio: item.ubicacionServicio,
+          sala: item.sala,
+          tipoServicio: item.tipoServicio,
+          loteNicho: item.loteNicho
+        }))
+    );
+    
     return servicios;
   } catch (error) {
     console.error("Error leyendo BI_Servicios:", error);
