@@ -161,96 +161,55 @@
 
       <section class="servicios-dia-section">
         <article class="card servicios-dia-card">
-          <div class="section-card-header">
+          <div class="servicios-dia-header">
             <div>
               <h2>Servicios del día</h2>
               <p>Servicios activos y programados considerando la fecha y hora local actual.</p>
             </div>
-            <span id="serviciosDiaActualizado" class="servicios-dia-timestamp">—</span>
+      
+            <div class="servicios-dia-hora">
+              <span id="serviciosDiaActualizado">Hora local: —</span>
+            </div>
           </div>
       
-          <div class="servicios-dia-grid">
-            <div class="servicios-dia-panel">
-              <h3>Servicios Capillas Activos</h3>
-              <div class="table-scroll servicios-dia-scroll">
-                <table class="table servicios-dia-table">
-                  <thead>
-                    <tr>
-                      <th>Fallecido</th>
-                      <th>Ubicación</th>
-                      <th>Sala</th>
-                      <th>Tipo de servicio</th>
-                      <th>Inicio</th>
-                      <th>Término</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tablaCapillasActivosBody">
-                    <tr><td colspan="6">Cargando...</td></tr>
-                  </tbody>
-                </table>
-              </div>
+          <div class="servicios-dia-resumen">
+            <div class="servicios-dia-resumen-item activo">
+              <span>Activos ahora</span>
+              <strong id="serviciosDiaActivosTotal">0</strong>
             </div>
       
-            <div class="servicios-dia-panel">
-              <h3>Servicios Capillas Programados</h3>
-              <div class="table-scroll servicios-dia-scroll">
-                <table class="table servicios-dia-table">
-                  <thead>
-                    <tr>
-                      <th>Fallecido</th>
-                      <th>Ubicación</th>
-                      <th>Sala</th>
-                      <th>Tipo de servicio</th>
-                      <th>Inicio</th>
-                      <th>Término</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tablaCapillasProgramadosBody">
-                    <tr><td colspan="6">Cargando...</td></tr>
-                  </tbody>
-                </table>
-              </div>
+            <div class="servicios-dia-resumen-item programado">
+              <span>Programados hoy</span>
+              <strong id="serviciosDiaProgramadosTotal">0</strong>
             </div>
+          </div>
       
-            <div class="servicios-dia-panel">
-              <h3>Servicios Parque Activos</h3>
-              <div class="table-scroll servicios-dia-scroll">
-                <table class="table servicios-dia-table">
-                  <thead>
-                    <tr>
-                      <th>Tipo de servicio</th>
-                      <th>Servicio</th>
-                      <th>Ubicación</th>
-                      <th>Fecha inicio</th>
-                      <th>Hora inicio</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tablaParqueActivosBody">
-                    <tr><td colspan="5">Cargando...</td></tr>
-                  </tbody>
-                </table>
+          <div class="servicios-agenda-grid">
+            <section class="servicios-agenda-column">
+              <div class="servicios-agenda-column-header">
+                <div>
+                  <h3>Activos ahora</h3>
+                  <p>Servicios que ya iniciaron y aún no terminan.</p>
+                </div>
               </div>
-            </div>
       
-            <div class="servicios-dia-panel">
-              <h3>Servicios Parque Programados</h3>
-              <div class="table-scroll servicios-dia-scroll">
-                <table class="table servicios-dia-table">
-                  <thead>
-                    <tr>
-                      <th>Tipo de servicio</th>
-                      <th>Servicio</th>
-                      <th>Ubicación</th>
-                      <th>Fecha inicio</th>
-                      <th>Hora inicio</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tablaParqueProgramadosBody">
-                    <tr><td colspan="5">Cargando...</td></tr>
-                  </tbody>
-                </table>
+              <div id="serviciosDiaActivosBody" class="servicios-agenda-list">
+                <div class="servicios-agenda-empty">Sin servicios activos actualmente.</div>
               </div>
-            </div>
+            </section>
+      
+            <section class="servicios-agenda-column">
+              <div class="servicios-agenda-column-header">
+                <div>
+                  <h3>Programados hoy</h3>
+                  <p>Servicios que inician más tarde durante el día.</p>
+                </div>
+              </div>
+      
+              <div id="serviciosDiaProgramadosBody" class="servicios-agenda-list">
+                <div class="servicios-agenda-empty">Sin servicios programados para hoy.</div>
+              </div>
+            </section>
           </div>
         </article>
       </section>
