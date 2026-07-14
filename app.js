@@ -897,10 +897,30 @@ function renderServiciosDelDia() {
   ordenarServiciosPorInicio(parqueActivos);
   ordenarServiciosPorInicio(parqueProgramados);
 
-  renderTablaServiciosCapillasDia("tablaCapillasActivosBody", capillasActivos);
-  renderTablaServiciosCapillasDia("tablaCapillasProgramadosBody", capillasProgramados);
-  renderTablaServiciosParqueDia("tablaParqueActivosBody", parqueActivos);
-  renderTablaServiciosParqueDia("tablaParqueProgramadosBody", parqueProgramados);
+  const serviciosActivos = [
+    ...capillasActivos.map((item) => crearServicioAgendaDia(item, "activo", "Capillas")),
+    ...parqueActivos.map((item) => crearServicioAgendaDia(item, "activo", "Parque"))
+  ].sort((a, b) => a.timestampInicio - b.timestampInicio);
+
+  const serviciosProgramados = [
+    ...capillasProgramados.map((item) => crearServicioAgendaDia(item, "programado", "Capillas")),
+    ...parqueProgramados.map((item) => crearServicioAgendaDia(item, "programado", "Parque"))
+  ].sort((a, b) => a.timestampInicio - b.timestampInicio);
+
+  setText("serviciosDiaActivosTotal", formatoNumero(serviciosActivos.length));
+  setText("serviciosDiaProgramadosTotal", formatoNumero(serviciosProgramados.length));
+
+  renderListaServiciosAgenda(
+    "serviciosDiaActivosBody",
+    serviciosActivos,
+    "Sin servicios activos actualmente."
+  );
+
+  renderListaServiciosAgenda(
+    "serviciosDiaProgramadosBody",
+    serviciosProgramados,
+    "Sin servicios programados para hoy."
+  );
 
   setText(
     "serviciosDiaActualizado",
@@ -914,6 +934,158 @@ function renderServiciosDelDia() {
     parqueActivos: parqueActivos.length,
     parqueProgramados: parqueProgramados.length
   });
+}
+
+function crearServicioAgendaDia(item, estado, origen) {
+  const fechaInicio = convertirFechaServicio(
+    obtenerCampoServicio(item, [
+      "fechaServicio",
+      "Fecha_Servicio",
+      "FechaServicio"
+    ])
+  );
+
+  const fechaFin = convertirFechaServicio(
+    obtenerCampoServicio(item, [
+      "fechaFin",
+      "Fecha_Fin",
+      "FechaFin"
+    ])
+  );
+
+  const tipoServicio = obtenerCampoServicio(item, [
+    "tipoServicio",
+    "Tipo_Servicio",
+    "TipoServicio",
+    "servicio",
+    "Servicio"
+  ]);
+
+  const finado = obtenerCampoServicio(item, [
+    "finado",
+    "Finado",
+    "nombreFallecido",
+    "Nombre_Fallecido"
+  ]);
+
+  if (origen === "Capillas") {
+    const ubicacion = obtenerCampoServicio(item, [
+      "ubicacionServicio",
+      "Ubicacion_Servicio",
+      "UbicacionServicio",
+      "sucursal",
+      "Sucursal"
+    ]);
+
+    const sala = obtenerCampoServicio(item, [
+      "sala",
+      "Sala"
+    ]);
+
+    return {
+      estado,
+      origen,
+      titulo: finado || "Sin finado",
+      subtitulo: [ubicacion, sala].filter(Boolean).join(" · "),
+      detalle: tipoServicio || "Sin tipo de servicio",
+      ubicacion: ubicacion || "Sin ubicación",
+      sala: sala || "",
+      inicio: fechaInicio,
+      fin: fechaFin,
+      timestampInicio: fechaInicio ? fechaInicio.getTime() : 0
+    };
+  }
+
+  const loteNicho = obtenerCampoServicio(item, [
+    "loteNicho",
+    "Lote_Nicho",
+    "LoteNicho",
+    "NumLote_Nicho",
+    "NumLoteNicho"
+  ]);
+
+  const servicioParque = obtenerCampoServicio(item, [
+    "serviciosParque",
+    "Servicios_Parque",
+    "ServiciosParque"
+  ]);
+
+  return {
+    estado,
+    origen,
+    titulo: finado || servicioParque || tipoServicio || "Servicio Parque",
+    subtitulo: loteNicho || "Sin lote/nicho",
+    detalle: [tipoServicio, servicioParque].filter(Boolean).join(" · "),
+    ubicacion: loteNicho || "Sin ubicación",
+    sala: "",
+    inicio: fechaInicio,
+    fin: fechaFin,
+    timestampInicio: fechaInicio ? fechaInicio.getTime() : 0
+  };
+}
+
+function renderListaServiciosAgenda(contenedorId, servicios, mensajeVacio) {
+  const contenedor = document.getElementById(contenedorId);
+
+  if (!contenedor) {
+    return;
+  }
+
+  if (!servicios.length) {
+    contenedor.innerHTML = `
+      <div class="servicios-agenda-empty">
+        ${escaparHtml(mensajeVacio)}
+      </div>
+    `;
+    return;
+  }
+
+  contenedor.innerHTML = servicios
+    .map((servicio) => renderTarjetaServicioAgenda(servicio))
+    .join("");
+}
+
+function renderTarjetaServicioAgenda(servicio) {
+  const claseEstado = servicio.estado === "activo" ? "is-activo" : "is-programado";
+  const textoEstado = servicio.estado === "activo" ? "Activo ahora" : "Programado";
+  const textoHorario = servicio.fin
+    ? `${formatearHoraCorta(servicio.inicio)} - ${formatearHoraCorta(servicio.fin)}`
+    : `${formatearHoraCorta(servicio.inicio)}`;
+
+  const claseOrigen = servicio.origen === "Capillas"
+    ? "origen-capillas"
+    : "origen-parque";
+
+  return `
+    <article class="servicio-agenda-card ${claseEstado}">
+      <div class="servicio-agenda-top">
+        <span class="servicio-agenda-badge ${claseEstado}">
+          ${escaparHtml(textoEstado)}
+        </span>
+
+        <span class="servicio-agenda-origin ${claseOrigen}">
+          ${escaparHtml(servicio.origen)}
+        </span>
+      </div>
+
+      <div class="servicio-agenda-body">
+        <h4>${escaparHtml(servicio.titulo)}</h4>
+
+        <div class="servicio-agenda-meta">
+          ${escaparHtml(servicio.subtitulo || "Sin ubicación")}
+        </div>
+
+        <div class="servicio-agenda-detail">
+          ${escaparHtml(servicio.detalle || "Sin tipo de servicio")}
+        </div>
+      </div>
+
+      <div class="servicio-agenda-footer">
+        <span>Horario</span>
+        <strong>${escaparHtml(textoHorario)}</strong>
+      </div>
+    </article>
+  `;
 }
 
 function renderServiciosDelDiaSeguro() {
