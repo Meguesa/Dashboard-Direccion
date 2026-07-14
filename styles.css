@@ -2404,3 +2404,249 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ================================
+   Servicios del día - Agenda
+================================ */
+
+.servicios-dia-section {
+  margin-top: 1.5rem;
+}
+
+.servicios-dia-card {
+  padding: 1.5rem;
+}
+
+.servicios-dia-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.servicios-dia-header h2 {
+  margin: 0;
+}
+
+.servicios-dia-header p {
+  margin: 0.35rem 0 0;
+  color: #475569;
+}
+
+.servicios-dia-hora {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.servicios-dia-resumen {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 220px));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.servicios-dia-resumen-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  background: #f8fafc;
+}
+
+.servicios-dia-resumen-item span {
+  display: block;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.servicios-dia-resumen-item strong {
+  display: block;
+  margin-top: 0.25rem;
+  color: #0f172a;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.servicios-dia-resumen-item.activo {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+}
+
+.servicios-dia-resumen-item.programado {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.servicios-agenda-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.servicios-agenda-column {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 1rem;
+  background: #ffffff;
+  min-width: 0;
+}
+
+.servicios-agenda-column-header {
+  margin-bottom: 0.85rem;
+}
+
+.servicios-agenda-column-header h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.servicios-agenda-column-header p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.servicios-agenda-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.servicios-agenda-empty {
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 1rem;
+  color: #64748b;
+  background: #f8fafc;
+  font-size: 0.9rem;
+}
+
+.servicio-agenda-card {
+  border: 1px solid #e2e8f0;
+  border-left: 5px solid #94a3b8;
+  border-radius: 16px;
+  padding: 1rem;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.servicio-agenda-card.is-activo {
+  border-left-color: #22c55e;
+}
+
+.servicio-agenda-card.is-programado {
+  border-left-color: #f59e0b;
+}
+
+.servicio-agenda-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.servicio-agenda-badge,
+.servicio-agenda-origin {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.servicio-agenda-badge.is-activo {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.servicio-agenda-badge.is-programado {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.servicio-agenda-origin.origen-capillas {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.servicio-agenda-origin.origen-parque {
+  color: #7c2d12;
+  background: #ffedd5;
+}
+
+.servicio-agenda-body h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.servicio-agenda-meta {
+  margin-top: 0.35rem;
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.servicio-agenda-detail {
+  margin-top: 0.25rem;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.servicio-agenda-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.servicio-agenda-footer span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.servicio-agenda-footer strong {
+  color: #0f172a;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 1100px) {
+  .servicios-agenda-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .servicios-dia-header {
+    flex-direction: column;
+  }
+
+  .servicios-dia-resumen {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .servicios-dia-resumen {
+    grid-template-columns: 1fr;
+  }
+
+  .servicio-agenda-top,
+  .servicio-agenda-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
