@@ -2304,3 +2304,103 @@ body {
   text-align: right !important;
   white-space: nowrap !important;
 }
+
+
+/* ================================
+   Página principal - Servicios del día
+================================ */
+
+.servicios-dia-section {
+  margin-top: 1.5rem;
+}
+
+.servicios-dia-card {
+  padding: 1.5rem;
+}
+
+.servicios-dia-timestamp {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.servicios-dia-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.servicios-dia-panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1rem;
+  background: #ffffff;
+  min-width: 0;
+}
+
+.servicios-dia-panel h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.servicios-dia-scroll {
+  max-height: 260px;
+  overflow: auto;
+}
+
+.servicios-dia-table {
+  width: 100%;
+  min-width: 760px;
+  table-layout: fixed;
+}
+
+.servicios-dia-table th,
+.servicios-dia-table td {
+  font-size: 0.82rem;
+  vertical-align: top;
+}
+
+.servicios-dia-table th {
+  white-space: nowrap;
+}
+
+.servicios-dia-table td {
+  white-space: normal;
+}
+
+.servicios-dia-table th:nth-child(1),
+.servicios-dia-table td:nth-child(1) {
+  width: 24%;
+}
+
+.servicios-dia-table th:nth-child(2),
+.servicios-dia-table td:nth-child(2) {
+  width: 18%;
+}
+
+.servicios-dia-table th:nth-child(3),
+.servicios-dia-table td:nth-child(3) {
+  width: 12%;
+}
+
+.servicios-dia-table th:nth-child(4),
+.servicios-dia-table td:nth-child(4) {
+  width: 22%;
+}
+
+.servicios-dia-table th:nth-child(5),
+.servicios-dia-table td:nth-child(5),
+.servicios-dia-table th:nth-child(6),
+.servicios-dia-table td:nth-child(6) {
+  width: 12%;
+  white-space: nowrap;
+}
+
+@media (max-width: 1200px) {
+  .servicios-dia-grid {
+    grid-template-columns: 1fr;
+  }
+}
