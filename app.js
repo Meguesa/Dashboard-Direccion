@@ -729,8 +729,8 @@ function renderDashboard() {
   setText("lastUpdate", obtenerFechaHoraActual());
 
   renderTablaFlujoEfectivo(mes);
-
   renderAvanceMetasCobranza(mes);
+  renderServiciosDelDia();
   
   renderDetalleIngresos(mes, totalIngresos);
   renderDetalleEgresos(mes, totalEgresos);
@@ -821,6 +821,355 @@ function calcularTotalPorPagar(mes) {
 function contarContratos(mes) {
   return obtenerContratosVentas(mes).length;
 }
+
+function renderServiciosDelDia() {
+  const servicios = state.datos.servicios || [];
+  const ahora = new Date();
+
+  const capillasActivos = [];
+  const capillasProgramados = [];
+  const parqueActivos = [];
+  const parqueProgramados = [];
+
+  servicios.forEach((item) => {
+    const origen = normalizarClaveComparacion(obtenerCampoServicio(item, [
+      "origen",
+      "Origen"
+    ]));
+
+    const fechaInicio = convertirFechaServicio(
+      obtenerCampoServicio(item, [
+        "fechaServicio",
+        "Fecha_Servicio",
+        "FechaServicio",
+        "fechaInicio",
+        "Fecha_Inicio"
+      ])
+    );
+
+    const fechaFin = convertirFechaServicio(
+      obtenerCampoServicio(item, [
+        "fechaFin",
+        "Fecha_Fin",
+        "FechaFin",
+        "fechaTermino",
+        "Fecha_Termino"
+      ])
+    );
+
+    if (!fechaInicio) {
+      return;
+    }
+
+    const esCapillas = origen.includes("CAPILLA");
+    const esParque = origen.includes("PARQUE");
+
+    if (esCapillas) {
+      if (fechaFin && fechaInicio <= ahora && ahora <= fechaFin) {
+        capillasActivos.push(item);
+        return;
+      }
+
+      if (esMismaFechaLocal(fechaInicio, ahora) && fechaInicio > ahora) {
+        capillasProgramados.push(item);
+      }
+
+      return;
+    }
+
+    if (esParque) {
+      if (fechaFin) {
+        if (fechaInicio <= ahora && ahora <= fechaFin) {
+          parqueActivos.push(item);
+          return;
+        }
+      } else if (esMismaFechaLocal(fechaInicio, ahora) && fechaInicio <= ahora) {
+        parqueActivos.push(item);
+        return;
+      }
+
+      if (esMismaFechaLocal(fechaInicio, ahora) && fechaInicio > ahora) {
+        parqueProgramados.push(item);
+      }
+    }
+  });
+
+  ordenarServiciosPorInicio(capillasActivos);
+  ordenarServiciosPorInicio(capillasProgramados);
+  ordenarServiciosPorInicio(parqueActivos);
+  ordenarServiciosPorInicio(parqueProgramados);
+
+  renderTablaServiciosCapillasDia("tablaCapillasActivosBody", capillasActivos);
+  renderTablaServiciosCapillasDia("tablaCapillasProgramadosBody", capillasProgramados);
+  renderTablaServiciosParqueDia("tablaParqueActivosBody", parqueActivos);
+  renderTablaServiciosParqueDia("tablaParqueProgramadosBody", parqueProgramados);
+
+  setText(
+    "serviciosDiaActualizado",
+    `Hora local: ${formatearFechaHoraCorta(ahora)}`
+  );
+}
+
+function renderTablaServiciosCapillasDia(tbodyId, filas) {
+  const tbody = document.getElementById(tbodyId);
+
+  if (!tbody) {
+    return;
+  }
+
+  if (!filas.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6">Sin servicios para mostrar.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filas.map((item) => {
+    const fechaInicio = convertirFechaServicio(
+      obtenerCampoServicio(item, ["fechaServicio", "Fecha_Servicio", "FechaServicio"])
+    );
+
+    const fechaFin = convertirFechaServicio(
+      obtenerCampoServicio(item, ["fechaFin", "Fecha_Fin", "FechaFin"])
+    );
+
+    const fallecido = obtenerCampoServicio(item, [
+      "finado",
+      "Finado",
+      "nombreFallecido",
+      "Nombre_Fallecido"
+    ]);
+
+    const ubicacion = obtenerCampoServicio(item, [
+      "sucursal",
+      "Sucursal",
+      "ubicacionServicio",
+      "Ubicacion_Servicio",
+      "ubicacion"
+    ]);
+
+    const sala = obtenerCampoServicio(item, [
+      "sala",
+      "Sala"
+    ]);
+
+    const tipoServicio = obtenerCampoServicio(item, [
+      "tipoServicio",
+      "Tipo_Servicio",
+      "servicio",
+      "Servicio"
+    ]);
+
+    return `
+      <tr>
+        <td>${escaparHtml(fallecido || "—")}</td>
+        <td>${escaparHtml(ubicacion || "—")}</td>
+        <td>${escaparHtml(sala || "—")}</td>
+        <td>${escaparHtml(tipoServicio || "—")}</td>
+        <td>${fechaInicio ? escaparHtml(formatearHoraCorta(fechaInicio)) : "—"}</td>
+        <td>${fechaFin ? escaparHtml(formatearHoraCorta(fechaFin)) : "—"}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderTablaServiciosParqueDia(tbodyId, filas) {
+  const tbody = document.getElementById(tbodyId);
+
+  if (!tbody) {
+    return;
+  }
+
+  if (!filas.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5">Sin servicios para mostrar.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filas.map((item) => {
+    const fechaInicio = convertirFechaServicio(
+      obtenerCampoServicio(item, ["fechaServicio", "Fecha_Servicio", "FechaServicio"])
+    );
+
+    const tipoServicio = obtenerCampoServicio(item, [
+      "tipoServicio",
+      "Tipo_Servicio",
+      "servicio",
+      "Servicio"
+    ]);
+
+    const servicioParque = obtenerCampoServicio(item, [
+      "serviciosParque",
+      "Servicios_Parque",
+      "ServiciosParque"
+    ]);
+
+    const ubicacion = obtenerUbicacionParqueServicio(item);
+
+    return `
+      <tr>
+        <td>${escaparHtml(tipoServicio || "—")}</td>
+        <td>${escaparHtml(servicioParque || "—")}</td>
+        <td>${escaparHtml(ubicacion || "—")}</td>
+        <td>${fechaInicio ? escaparHtml(formatearFechaCorta(fechaInicio)) : "—"}</td>
+        <td>${fechaInicio ? escaparHtml(formatearHoraCorta(fechaInicio)) : "—"}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function obtenerCampoServicio(item, nombres) {
+  for (const nombre of nombres) {
+    if (
+      item &&
+      item[nombre] !== undefined &&
+      item[nombre] !== null &&
+      String(item[nombre]).trim() !== ""
+    ) {
+      return String(item[nombre]).trim();
+    }
+  }
+
+  return "";
+}
+
+function obtenerUbicacionParqueServicio(item) {
+  const ubicacion = obtenerCampoServicio(item, [
+    "ubicacionServicio",
+    "Ubicacion_Servicio",
+    "ubicacion",
+    "Ubicacion"
+  ]);
+
+  if (ubicacion) {
+    return ubicacion;
+  }
+
+  const seccion = obtenerCampoServicio(item, ["seccion", "Seccion", "Sección"]);
+  const manzana = obtenerCampoServicio(item, ["manzana", "Manzana"]);
+  const lote = obtenerCampoServicio(item, [
+    "loteNicho",
+    "Lote_Nicho",
+    "NumLote_Nicho",
+    "numLoteNicho"
+  ]);
+
+  return [seccion, manzana, lote].filter(Boolean).join(" / ");
+}
+
+function convertirFechaServicio(valor) {
+  if (!valor) {
+    return null;
+  }
+
+  if (valor instanceof Date && !Number.isNaN(valor.getTime())) {
+    return valor;
+  }
+
+  if (typeof valor === "number") {
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    const fecha = new Date(excelEpoch.getTime() + valor * 86400000);
+    return Number.isNaN(fecha.getTime()) ? null : fecha;
+  }
+
+  const textoOriginal = String(valor).trim();
+
+  if (!textoOriginal) {
+    return null;
+  }
+
+  const texto = textoOriginal
+    .replace(/\s+a\.?\s*m\.?/i, " AM")
+    .replace(/\s+p\.?\s*m\.?/i, " PM")
+    .replace(/\s+a\.m\.?/i, " AM")
+    .replace(/\s+p\.m\.?/i, " PM");
+
+  const fechaDirecta = new Date(texto);
+
+  if (!Number.isNaN(fechaDirecta.getTime())) {
+    return fechaDirecta;
+  }
+
+  const match = texto.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?:\s*(AM|PM))?)?/i
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const dia = Number(match[1]);
+  const mes = Number(match[2]) - 1;
+  const anio = Number(match[3]);
+  let hora = Number(match[4] || 0);
+  const minuto = Number(match[5] || 0);
+  const periodo = String(match[6] || "").toUpperCase();
+
+  if (periodo === "PM" && hora < 12) {
+    hora += 12;
+  }
+
+  if (periodo === "AM" && hora === 12) {
+    hora = 0;
+  }
+
+  const fecha = new Date(anio, mes, dia, hora, minuto, 0);
+
+  return Number.isNaN(fecha.getTime()) ? null : fecha;
+}
+
+function esMismaFechaLocal(fechaA, fechaB) {
+  return (
+    fechaA.getFullYear() === fechaB.getFullYear() &&
+    fechaA.getMonth() === fechaB.getMonth() &&
+    fechaA.getDate() === fechaB.getDate()
+  );
+}
+
+function ordenarServiciosPorInicio(filas) {
+  filas.sort((a, b) => {
+    const fechaA = convertirFechaServicio(
+      obtenerCampoServicio(a, ["fechaServicio", "Fecha_Servicio", "FechaServicio"])
+    );
+
+    const fechaB = convertirFechaServicio(
+      obtenerCampoServicio(b, ["fechaServicio", "Fecha_Servicio", "FechaServicio"])
+    );
+
+    return (fechaA?.getTime() || 0) - (fechaB?.getTime() || 0);
+  });
+}
+
+function formatearFechaCorta(fecha) {
+  return fecha.toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  });
+}
+
+function formatearHoraCorta(fecha) {
+  return fecha.toLocaleTimeString("es-MX", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function formatearFechaHoraCorta(fecha) {
+  return fecha.toLocaleString("es-MX", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
 
 function contarServiciosPorOrigen(mes, origenBuscado) {
   return state.datos.servicios
