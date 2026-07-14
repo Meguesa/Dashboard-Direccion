@@ -302,8 +302,9 @@ async function actualizarDatosDashboard(opciones = {}) {
 
     guardarDatosEnCache();
     cacheCargadoDashboard = true;
-
+    
     renderDashboard();
+    renderServiciosDelDiaSeguro();
 
     const detalleFinal = mesesRecargados.length > 0
       ? `Actualización incremental completada: ${mesesRecargados.join(", ")}.`
@@ -730,7 +731,7 @@ function renderDashboard() {
 
   renderTablaFlujoEfectivo(mes);
   renderAvanceMetasCobranza(mes);
-  renderServiciosDelDia();
+  renderServiciosDelDiaSeguro();
   
   renderDetalleIngresos(mes, totalIngresos);
   renderDetalleEgresos(mes, totalEgresos);
@@ -915,6 +916,18 @@ function renderServiciosDelDia() {
   });
 }
 
+function renderServiciosDelDiaSeguro() {
+  if (typeof renderServiciosDelDia !== "function") {
+    return;
+  }
+
+  renderServiciosDelDia();
+
+  setTimeout(() => {
+    renderServiciosDelDia();
+  }, 500);
+}
+
 function normalizarValorServicioDia(valor) {
   return String(valor || "")
     .normalize("NFD")
@@ -1056,20 +1069,7 @@ function renderTablaServiciosParqueDia(tbodyId, filas) {
   }).join("");
 }
 
-function obtenerCampoServicio(item, nombres) {
-  for (const nombre of nombres) {
-    if (
-      item &&
-      item[nombre] !== undefined &&
-      item[nombre] !== null &&
-      String(item[nombre]).trim() !== ""
-    ) {
-      return String(item[nombre]).trim();
-    }
-  }
 
-  return "";
-}
 
 function obtenerUbicacionParqueServicio(item) {
   const ubicacion = obtenerCampoServicio(item, [
@@ -4599,12 +4599,30 @@ function obtenerAnioDesdeValor(valor) {
 }
 
   
-function obtenerCampoServicio(item, campo) {
-  if (campo === "ubicacionPrincipal") {
+function obtenerCampoServicio(item, campoONombres) {
+  if (!item) {
+    return "";
+  }
+
+  if (Array.isArray(campoONombres)) {
+    for (const nombre of campoONombres) {
+      if (
+        item[nombre] !== undefined &&
+        item[nombre] !== null &&
+        String(item[nombre]).trim() !== ""
+      ) {
+        return String(item[nombre]).trim();
+      }
+    }
+
+    return "";
+  }
+
+  if (campoONombres === "ubicacionPrincipal") {
     return obtenerUbicacionServicio(item);
   }
 
-  return normalizarTexto(item[campo]);
+  return normalizarTexto(item[campoONombres]);
 }
 
 function obtenerUbicacionServicio(item) {
