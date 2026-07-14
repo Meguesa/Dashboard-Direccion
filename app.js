@@ -832,18 +832,19 @@ function renderServiciosDelDia() {
   const parqueProgramados = [];
 
   servicios.forEach((item) => {
-    const origen = normalizarClaveComparacion(obtenerCampoServicio(item, [
-      "origen",
-      "Origen"
-    ]));
+    const tipoOrigen = normalizarValorServicioDia(
+      obtenerCampoServicio(item, [
+        "tipoOrigen",
+        "Tipo_Origen",
+        "TipoOrigen"
+      ])
+    );
 
     const fechaInicio = convertirFechaServicio(
       obtenerCampoServicio(item, [
         "fechaServicio",
         "Fecha_Servicio",
-        "FechaServicio",
-        "fechaInicio",
-        "Fecha_Inicio"
+        "FechaServicio"
       ])
     );
 
@@ -851,9 +852,7 @@ function renderServiciosDelDia() {
       obtenerCampoServicio(item, [
         "fechaFin",
         "Fecha_Fin",
-        "FechaFin",
-        "fechaTermino",
-        "Fecha_Termino"
+        "FechaFin"
       ])
     );
 
@@ -861,16 +860,19 @@ function renderServiciosDelDia() {
       return;
     }
 
-    const esCapillas = origen.includes("CAPILLA");
-    const esParque = origen.includes("PARQUE");
+    const esCapillas = tipoOrigen === "CAPILLAS";
+    const esParque = tipoOrigen === "PARQUE";
+
+    const activo = estaServicioActivo(fechaInicio, fechaFin, ahora);
+    const programado = estaServicioProgramadoHoy(fechaInicio, ahora);
 
     if (esCapillas) {
-      if (fechaFin && fechaInicio <= ahora && ahora <= fechaFin) {
+      if (activo) {
         capillasActivos.push(item);
         return;
       }
 
-      if (esMismaFechaLocal(fechaInicio, ahora) && fechaInicio > ahora) {
+      if (programado) {
         capillasProgramados.push(item);
       }
 
@@ -878,17 +880,12 @@ function renderServiciosDelDia() {
     }
 
     if (esParque) {
-      if (fechaFin) {
-        if (fechaInicio <= ahora && ahora <= fechaFin) {
-          parqueActivos.push(item);
-          return;
-        }
-      } else if (esMismaFechaLocal(fechaInicio, ahora) && fechaInicio <= ahora) {
+      if (activo) {
         parqueActivos.push(item);
         return;
       }
 
-      if (esMismaFechaLocal(fechaInicio, ahora) && fechaInicio > ahora) {
+      if (programado) {
         parqueProgramados.push(item);
       }
     }
@@ -908,6 +905,42 @@ function renderServiciosDelDia() {
     "serviciosDiaActualizado",
     `Hora local: ${formatearFechaHoraCorta(ahora)}`
   );
+
+  console.log("Servicios del día:", {
+    ahora: ahora.toString(),
+    capillasActivos: capillasActivos.length,
+    capillasProgramados: capillasProgramados.length,
+    parqueActivos: parqueActivos.length,
+    parqueProgramados: parqueProgramados.length
+  });
+}
+
+function normalizarValorServicioDia(valor) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase();
+}
+
+function estaServicioActivo(fechaInicio, fechaFin, ahora) {
+  if (!fechaInicio) {
+    return false;
+  }
+
+  if (fechaFin) {
+    return fechaInicio <= ahora && ahora <= fechaFin;
+  }
+
+  return esMismaFechaLocal(fechaInicio, ahora) && fechaInicio <= ahora;
+}
+
+function estaServicioProgramadoHoy(fechaInicio, ahora) {
+  if (!fechaInicio) {
+    return false;
+  }
+
+  return esMismaFechaLocal(fechaInicio, ahora) && fechaInicio > ahora;
 }
 
 function renderTablaServiciosCapillasDia(tbodyId, filas) {
@@ -1083,17 +1116,23 @@ function convertirFechaServicio(valor) {
     return null;
   }
 
+  /*
+    SharePoint Graph normalmente regresa fechas ISO:
+    2026-07-14T16:00:00Z
+
+    new Date() convierte automáticamente de UTC a la hora local del navegador.
+  */
+  const fechaIso = new Date(textoOriginal);
+
+  if (!Number.isNaN(fechaIso.getTime())) {
+    return fechaIso;
+  }
+
   const texto = textoOriginal
     .replace(/\s+a\.?\s*m\.?/i, " AM")
     .replace(/\s+p\.?\s*m\.?/i, " PM")
     .replace(/\s+a\.m\.?/i, " AM")
     .replace(/\s+p\.m\.?/i, " PM");
-
-  const fechaDirecta = new Date(texto);
-
-  if (!Number.isNaN(fechaDirecta.getTime())) {
-    return fechaDirecta;
-  }
 
   const match = texto.match(
     /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?:\s*(AM|PM))?)?/i
