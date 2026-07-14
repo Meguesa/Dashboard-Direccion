@@ -2724,3 +2724,82 @@ body {
     flex-direction: column;
   }
 }
+
+/* ================================
+   Servicios del día - Separado por Capillas / Parque
+================================ */
+
+.servicios-resumen-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.servicios-resumen-group {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1rem;
+  background: #ffffff;
+  min-width: 0;
+}
+
+.servicios-resumen-group-title {
+  margin-bottom: 0.75rem;
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.servicios-resumen-group .servicios-dia-resumen {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0;
+}
+
+.servicios-resumen-group .servicios-dia-resumen-item {
+  min-width: 0;
+  min-height: 78px;
+}
+
+.servicios-detalle-bloque {
+  margin-top: 1.25rem;
+}
+
+.servicios-detalle-bloque:first-of-type {
+  margin-top: 0;
+}
+
+.servicios-detalle-bloque + .servicios-detalle-bloque {
+  padding-top: 1.25rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.servicios-detalle-titulo {
+  margin-bottom: 0.85rem;
+}
+
+.servicios-detalle-titulo h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.servicios-detalle-bloque .servicios-agenda-grid {
+  margin-top: 0;
+}
+
+@media (max-width: 1300px) {
+  .servicios-resumen-groups {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .servicios-resumen-group .servicios-dia-resumen {
+    grid-template-columns: 1fr;
+  }
+}
