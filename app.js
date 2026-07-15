@@ -606,7 +606,8 @@ function mostrarPagina(nombrePagina) {
     ingresos: "pageIngresos",
     egresos: "pageEgresos",
     ventas: "pageVentas",
-    servicios: "pageServicios"
+    serviciosCapillas: "pageServiciosCapillas",
+    serviciosParque: "pageServiciosParque"
   };
 
   const paginaDestinoId = paginas[nombrePagina];
@@ -680,7 +681,8 @@ function renderDashboard() {
   setText("kpiEgresos", formatoMoneda(totalEgresos));
   setText("kpiFlujo", formatoMoneda(flujoNeto));
   setText("kpiVentas", formatoMoneda(totalVentas));
-  setText("kpiServicios", formatoNumero(totalServicios));
+  setText("kpiServiciosCapillas", formatoNumero(totalCapillas));
+  setText("kpiServiciosParque", formatoNumero(totalParque));
 
   setText("pageIngresosTotal", formatoMoneda(totalIngresos));
   setText("pageIngresosReal", formatoMoneda(ingresoReal));
