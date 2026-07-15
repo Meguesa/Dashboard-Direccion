@@ -6,7 +6,8 @@ window.state = {
     egresos: [],
     ventas: [],
     servicios: [],
-    metasCobranza: []
+    metasCobranza: [],
+    parquePropiedades: []
   }
 };
 
@@ -297,6 +298,8 @@ async function actualizarDatosDashboard(opciones = {}) {
       mesesRecargados
     );
 
+    state.datos.parquePropiedades = datosSharePoint.parquePropiedades || [];
+
     cargarSelectorAnios();
     cargarSelectorMeses();
 
@@ -385,7 +388,8 @@ function guardarDatosEnCache() {
         egresos: state.datos.egresos || [],
         ventas: state.datos.ventas || [],
         servicios: state.datos.servicios || [],
-        metasCobranza: state.datos.metasCobranza || []
+        metasCobranza: state.datos.metasCobranza || [],
+        parquePropiedades: state.datos.parquePropiedades || []
       }
   };
 
@@ -415,6 +419,7 @@ function cargarDatosDesdeCache() {
     state.datos.ventas = cache.datos.ventas || [];
     state.datos.servicios = cache.datos.servicios || [];
     state.datos.metasCobranza = cache.datos.metasCobranza || [];
+    state.datos.parquePropiedades = cache.datos.parquePropiedades || [];
 
     if (cache.anioSeleccionado) {
       state.anioSeleccionado = cache.anioSeleccionado;
@@ -1486,15 +1491,38 @@ function normalizarTexto(valor) {
 }
 
 function renderDetalleServiciosParque(mes, totalParque) {
-  setText("pageParqueServiciosTotal", formatoNumero(totalParque));
+  const resumenPropiedades = calcularResumenParquePropiedades();
 
-  // Pendiente: se conectarán después con PLANOS / CONTRATOS / BI_Servicios.
-  setText("pageParquePropiedadesVendidas", formatoNumero(0));
-  setText("pageParquePropiedadesOcupadas", formatoNumero(0));
-  setText("pageParquePropiedadesDisponibles", formatoNumero(0));
+  setText("pageParqueServiciosTotal", formatoNumero(totalParque));
+  setText("pageParquePropiedadesVendidas", formatoNumero(resumenPropiedades.vendidas));
+  setText("pageParquePropiedadesOcupadas", formatoNumero(resumenPropiedades.usadas));
+  setText("pageParquePropiedadesDisponibles", formatoNumero(resumenPropiedades.disponibles));
 
   renderGraficaServiciosParqueMensuales();
   renderTablaParquePropiedadesBase();
+}
+
+function calcularResumenParquePropiedades() {
+  const filas = state.datos.parquePropiedades || [];
+
+  return filas.reduce((acc, fila) => {
+    const construido = Number(fila.numeroConstruido || 0);
+    const vendido = Number(fila.numeroVendido || 0);
+    const usado = Number(fila.numeroUsado || 0);
+    const disponible = Number(fila.numeroDisponible || 0);
+
+    acc.construidas += construido;
+    acc.vendidas += vendido;
+    acc.usadas += usado;
+    acc.disponibles += disponible;
+
+    return acc;
+  }, {
+    construidas: 0,
+    vendidas: 0,
+    usadas: 0,
+    disponibles: 0
+  });
 }
 
 function renderGraficaServiciosParqueMensuales() {
@@ -1569,36 +1597,39 @@ function renderTablaParquePropiedadesBase() {
     return;
   }
 
-  const filasBase = [
-    {
-      tipo: "Lotes",
-      categoria: "General",
-      construido: 0,
-      vendido: 0,
-      usado: 0
-    },
-    {
-      tipo: "Nichos",
-      categoria: "General",
-      construido: 0,
-      vendido: 0,
-      usado: 0
-    }
-  ];
+  const filas = state.datos.parquePropiedades || [];
 
-  tbody.innerHTML = filasBase
+  if (!filas.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8">Sin información de propiedades de Parque.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filas
     .map((fila) => {
-      const disponible = Math.max(fila.construido - fila.vendido, 0);
-      const porcentajeVendido = fila.construido > 0 ? fila.vendido / fila.construido : 0;
-      const porcentajeUsado = fila.construido > 0 ? fila.usado / fila.construido : 0;
+      const construido = Number(fila.numeroConstruido || 0);
+      const vendido = Number(fila.numeroVendido || 0);
+      const usado = Number(fila.numeroUsado || 0);
+      const disponible = Number(fila.numeroDisponible || 0);
+
+      const porcentajeVendido = construido > 0
+        ? vendido / construido
+        : 0;
+
+      const porcentajeUsado = construido > 0
+        ? usado / construido
+        : 0;
 
       return `
         <tr>
-          <td>${escaparHtml(fila.tipo)}</td>
-          <td>${escaparHtml(fila.categoria)}</td>
-          <td>${formatoNumero(fila.construido)}</td>
-          <td>${formatoNumero(fila.vendido)}</td>
-          <td>${formatoNumero(fila.usado)}</td>
+          <td>${escaparHtml(fila.tipoPropiedad || "—")}</td>
+          <td>${escaparHtml(fila.categoria || fila.title || "—")}</td>
+          <td>${formatoNumero(construido)}</td>
+          <td>${formatoNumero(vendido)}</td>
+          <td>${formatoNumero(usado)}</td>
           <td>${formatoNumero(disponible)}</td>
           <td>${formatoPorcentaje(porcentajeVendido)}</td>
           <td>${formatoPorcentaje(porcentajeUsado)}</td>

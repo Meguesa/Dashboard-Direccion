@@ -41,6 +41,10 @@ const CONFIG = {
         nombre: "BI_Fuentes",
         listId: "c76a60b1-4755-42a4-ad4a-03cc58643153"
       },
+      parquePropiedades: {
+        nombre: "BI_Parque_Propiedades",
+        listId: "55279eb0-2396-4da7-8277-7901b3a0a704"
+      },
       logActualizaciones: {
         nombre: "BI_Log_Actualizaciones",
         listId: "b5823c31-4f7c-4439-a222-1a7a0d0d84a1"

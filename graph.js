@@ -348,6 +348,7 @@ async function cargarDatosSharePoint(opciones = {}) {
     const ventas = await obtenerVentasSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const servicios = await obtenerServiciosSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const metasCobranza = await obtenerMetasCobranzaSharePoint(usarFiltroMeses ? mesesRecargados : []);
+    const parquePropiedades = await obtenerParquePropiedadesSharePoint();
 
     const datos = {
       listas,
@@ -356,6 +357,7 @@ async function cargarDatosSharePoint(opciones = {}) {
       ventas,
       servicios,
       metasCobranza,
+      parquePropiedades,
       mesesRecargados,
       modoCarga
     };
@@ -364,7 +366,7 @@ async function cargarDatosSharePoint(opciones = {}) {
 
     setText(
       "sharePointStatus",
-      `Datos actualizados. Ingresos: ${ingresos.length}, Egresos: ${egresos.length}, Ventas: ${ventas.length}, Servicios: ${servicios.length}, Metas cobranza: ${metasCobranza.length}.`
+      `Datos actualizados. Ingresos: ${ingresos.length}, Egresos: ${egresos.length}, Ventas: ${ventas.length}, Servicios: ${servicios.length}, Metas cobranza: ${metasCobranza.length}, Propiedades parque: ${parquePropiedades.length}.`
     );
 
     setAuthStatus("Datos actualizados correctamente.");
@@ -756,6 +758,98 @@ async function obtenerMetasCobranzaSharePoint(mesesFiltro = []) {
       "Error al leer BI_Metas_Cobranza. Revisa la consola del navegador."
     );
 
+    return [];
+  }
+}
+
+async function obtenerParquePropiedadesSharePoint() {
+  try {
+    setAuthStatus("Leyendo BI_Parque_Propiedades desde SharePoint...");
+
+    const listId = CONFIG.sharepoint.lists.parquePropiedades.listId;
+
+    if (!listId) {
+      throw new Error("No está configurado el listId de BI_Parque_Propiedades.");
+    }
+
+    const items = await obtenerItemsLista(listId, 5000);
+
+    const parquePropiedades = items.map((item) => {
+      const f = item.fields || {};
+
+      return {
+        id: item.id,
+
+        title: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Title"
+        ])),
+
+        tipoPropiedad: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Tipo_Propiedad",
+          "Tipo_x005f_Propiedad",
+          "TipoPropiedad"
+        ])),
+
+        categoria: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Categoria",
+          "Categor_x00ed_a"
+        ])),
+
+        numeroConstruido: convertirNumero(obtenerCampoSharePoint(f, [
+          "Numero_Construido",
+          "Numero_x005f_Construido",
+          "NumeroConstruido"
+        ])),
+
+        numeroVendido: convertirNumero(obtenerCampoSharePoint(f, [
+          "Numero_Vendido",
+          "Numero_x005f_Vendido",
+          "NumeroVendido"
+        ])),
+
+        numeroUsado: convertirNumero(obtenerCampoSharePoint(f, [
+          "Numero_Usado",
+          "Numero_x005f_Usado",
+          "NumeroUsado"
+        ])),
+
+        numeroDisponible: convertirNumero(obtenerCampoSharePoint(f, [
+          "Numero_Disponible",
+          "Numero_x005f_Disponible",
+          "NumeroDisponible"
+        ])),
+
+        porcentajeVendido: convertirNumero(obtenerCampoSharePoint(f, [
+          "Porcentaje_Vendido",
+          "Porcentaje_x005f_Vendido",
+          "PorcentajeVendido"
+        ])),
+
+        porcentajeUsado: convertirNumero(obtenerCampoSharePoint(f, [
+          "Porcentaje_Usado",
+          "Porcentaje_x005f_Usado",
+          "PorcentajeUsado"
+        ])),
+
+        fuente: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Fuente"
+        ])),
+
+        fechaActualizacion: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Fecha_Actualizacion",
+          "Fecha_x005f_Actualizacion",
+          "FechaActualizacion"
+        ]))
+      };
+    });
+
+    console.log("BI_Parque_Propiedades leído:", parquePropiedades);
+    console.table(parquePropiedades);
+
+    return parquePropiedades;
+  } catch (error) {
+    console.error("Error leyendo BI_Parque_Propiedades:", error);
+    setAuthStatus("Error al leer BI_Parque_Propiedades.");
     return [];
   }
 }
