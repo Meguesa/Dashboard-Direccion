@@ -2803,3 +2803,49 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ================================
+   Servicios Capillas - Servicios recientes
+================================ */
+
+.tabla-servicios-recientes-capillas {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.tabla-servicios-recientes-capillas th:nth-child(1),
+.tabla-servicios-recientes-capillas td:nth-child(1) {
+  width: 10%;
+  min-width: 80px;
+  max-width: 90px;
+  white-space: nowrap;
+}
+
+.tabla-servicios-recientes-capillas th:nth-child(2),
+.tabla-servicios-recientes-capillas td:nth-child(2) {
+  width: 13%;
+  min-width: 105px;
+  white-space: nowrap;
+}
+
+.tabla-servicios-recientes-capillas th:nth-child(3),
+.tabla-servicios-recientes-capillas td:nth-child(3) {
+  width: 40%;
+  min-width: 260px;
+  white-space: nowrap;
+}
+
+.tabla-servicios-recientes-capillas th:nth-child(4),
+.tabla-servicios-recientes-capillas td:nth-child(4) {
+  width: 16%;
+  min-width: 120px;
+  white-space: nowrap;
+}
+
+.tabla-servicios-recientes-capillas th:nth-child(5),
+.tabla-servicios-recientes-capillas td:nth-child(5) {
+  width: 21%;
+  min-width: 180px;
+  white-space: normal;
+}

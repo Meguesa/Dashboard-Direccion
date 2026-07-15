@@ -1444,7 +1444,7 @@ function contarServiciosCapillasPorTipoContrato(mes, tipoBuscado) {
     .filter((item) => {
       const esMes = coincidePeriodoServicio(item, mes);
       const esCapillas = obtenerOrigenServicio(item) === "Capillas";
-      const tipoRegistro = normalizarClaveComparacion(item.previsionUsoInmediato);
+      const tipoRegistro = obtenerTipoContratoServicioCapillas(item);
 
       return esMes
         && esCapillas
@@ -4264,59 +4264,6 @@ function renderTablaServiciosUbicacionCapillas(mes, totalCapillas) {
           <td>${formatoNumero(fila.total)}</td>
           <td>${formatoNumero(fila.usoInmediato)}</td>
           <td>${formatoNumero(fila.prevision)}</td>
-          <td>${formatoPorcentaje(porcentaje)}</td>
-        </tr>
-      `;
-    })
-    .join("");
-}
-
-function renderTablaServiciosUbicacionCapillas(mes, totalCapillas) {
-  const tbody = document.getElementById("tablaServiciosUbicacionBody");
-
-  if (!tbody) {
-    return;
-  }
-
-  const grupos = new Map();
-
-  obtenerServiciosCapillasMes(mes).forEach((item) => {
-    const ubicacion = normalizarTexto(
-      item.ubicacionServicio ||
-      item.sucursal ||
-      "Sin ubicación"
-    );
-
-    if (!grupos.has(ubicacion)) {
-      grupos.set(ubicacion, {
-        nombre: ubicacion,
-        registros: 0
-      });
-    }
-
-    grupos.get(ubicacion).registros += 1;
-  });
-
-  const filas = Array.from(grupos.values())
-    .sort((a, b) => b.registros - a.registros);
-
-  if (filas.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="3">Sin información de Capillas para el mes seleccionado.</td>
-      </tr>
-    `;
-    return;
-  }
-
-  tbody.innerHTML = filas
-    .map((fila) => {
-      const porcentaje = totalCapillas > 0 ? fila.registros / totalCapillas : 0;
-
-      return `
-        <tr>
-          <td>${escaparHtml(fila.nombre)}</td>
-          <td>${formatoNumero(fila.registros)}</td>
           <td>${formatoPorcentaje(porcentaje)}</td>
         </tr>
       `;
