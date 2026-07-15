@@ -1453,6 +1453,29 @@ function contarServiciosCapillasPorTipoContrato(mes, tipoBuscado) {
     .length;
 }
 
+function obtenerTipoContratoServicioCapillas(item) {
+  return normalizarClaveComparacion(
+    item.previsionUsoInmediato ||
+    item.prevision_uso_inmediato ||
+    item.Prevision_Uso_Inmediato ||
+    ""
+  );
+}
+
+function esServicioCapillasUsoInmediato(item) {
+  const tipo = obtenerTipoContratoServicioCapillas(item);
+
+  return tipo.includes("USO INMEDIATO") ||
+    tipo === "UI";
+}
+
+function esServicioCapillasPrevision(item) {
+  const tipo = obtenerTipoContratoServicioCapillas(item);
+
+  return tipo.includes("PREVISION") ||
+    tipo.includes("PREVISIÓN");
+}
+
 function normalizarTexto(valor) {
   if (valor === null || valor === undefined) {
     return "";
@@ -4103,8 +4126,13 @@ function renderGraficaServiciosCapillasMensuales() {
   const meses = obtenerMesesDelAnioSeleccionado();
 
   const labels = meses.map((mes) => mes.nombre);
-  const valoresCapillas = meses.map((mes) =>
-    contarServiciosPorOrigen(mes.clave, "CAPILLA")
+
+  const valoresUsoInmediato = meses.map((mes) =>
+    contarServiciosCapillasPorTipoContrato(mes.clave, "USO INMEDIATO")
+  );
+
+  const valoresPrevision = meses.map((mes) =>
+    contarServiciosCapillasPorTipoContrato(mes.clave, "PREVISION")
   );
 
   destruirGrafica("serviciosMensuales");
@@ -4115,8 +4143,17 @@ function renderGraficaServiciosCapillasMensuales() {
       labels,
       datasets: [
         {
-          label: "Servicios Capillas",
-          data: valoresCapillas,
+          label: "Uso Inmediato",
+          data: valoresUsoInmediato,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        },
+        {
+          label: "Previsión",
+          data: valoresPrevision,
           tension: 0.3,
           fill: false,
           borderWidth: 3,
@@ -4140,7 +4177,8 @@ function renderGraficaServiciosCapillasMensuales() {
         tooltip: {
           callbacks: {
             label: (context) => {
-              return `Servicios Capillas: ${formatoNumero(context.parsed.y || 0)}`;
+              const etiqueta = context.dataset.label || "Servicios";
+              return `${etiqueta}: ${formatoNumero(context.parsed.y || 0)}`;
             }
           }
         }
@@ -4158,19 +4196,59 @@ function renderGraficaServiciosCapillasMensuales() {
   });
 }
 
-function renderTablaServiciosUbicacion(mes, totalServicios) {
+function renderTablaServiciosUbicacionCapillas(mes, totalCapillas) {
   const tbody = document.getElementById("tablaServiciosUbicacionBody");
 
   if (!tbody) {
     return;
   }
 
-  const filas = agruparServiciosPorUbicacion(mes);
+  const grupos = new Map();
+
+  obtenerServiciosCapillasMes(mes).forEach((item) => {
+    const ubicacion = normalizarTexto(
+      item.ubicacionServicio ||
+      item.sucursal ||
+      "Sin ubicación"
+    );
+
+    if (!grupos.has(ubicacion)) {
+      grupos.set(ubicacion, {
+        nombre: ubicacion,
+        total: 0,
+        usoInmediato: 0,
+        prevision: 0
+      });
+    }
+
+    const grupo = grupos.get(ubicacion);
+    grupo.total += 1;
+
+    if (esServicioCapillasUsoInmediato(item)) {
+      grupo.usoInmediato += 1;
+    }
+
+    if (esServicioCapillasPrevision(item)) {
+      grupo.prevision += 1;
+    }
+  });
+
+  const filas = Array.from(grupos.values())
+    .sort((a, b) => {
+      const ordenA = obtenerOrdenUbicacionServicio(a.nombre);
+      const ordenB = obtenerOrdenUbicacionServicio(b.nombre);
+
+      if (ordenA !== ordenB) {
+        return ordenA - ordenB;
+      }
+
+      return b.total - a.total;
+    });
 
   if (filas.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="3">Sin información para el mes seleccionado.</td>
+        <td colspan="5">Sin información de Capillas para el mes seleccionado.</td>
       </tr>
     `;
     return;
@@ -4178,14 +4256,14 @@ function renderTablaServiciosUbicacion(mes, totalServicios) {
 
   tbody.innerHTML = filas
     .map((fila) => {
-      const porcentaje = totalServicios > 0
-        ? fila.total / totalServicios
-        : 0;
+      const porcentaje = totalCapillas > 0 ? fila.total / totalCapillas : 0;
 
       return `
         <tr>
           <td>${escaparHtml(fila.nombre)}</td>
           <td>${formatoNumero(fila.total)}</td>
+          <td>${formatoNumero(fila.usoInmediato)}</td>
+          <td>${formatoNumero(fila.prevision)}</td>
           <td>${formatoPorcentaje(porcentaje)}</td>
         </tr>
       `;
@@ -5016,20 +5094,31 @@ function renderTablaServiciosResponsableCapillas(mes, totalCapillas) {
     if (!grupos.has(responsable)) {
       grupos.set(responsable, {
         nombre: responsable,
-        registros: 0
+        total: 0,
+        usoInmediato: 0,
+        prevision: 0
       });
     }
 
-    grupos.get(responsable).registros += 1;
+    const grupo = grupos.get(responsable);
+    grupo.total += 1;
+
+    if (esServicioCapillasUsoInmediato(item)) {
+      grupo.usoInmediato += 1;
+    }
+
+    if (esServicioCapillasPrevision(item)) {
+      grupo.prevision += 1;
+    }
   });
 
   const filas = Array.from(grupos.values())
-    .sort((a, b) => b.registros - a.registros);
+    .sort((a, b) => b.total - a.total);
 
   if (filas.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="3">Sin información de Capillas para el mes seleccionado.</td>
+        <td colspan="5">Sin información de Capillas para el mes seleccionado.</td>
       </tr>
     `;
     return;
@@ -5037,12 +5126,14 @@ function renderTablaServiciosResponsableCapillas(mes, totalCapillas) {
 
   tbody.innerHTML = filas
     .map((fila) => {
-      const porcentaje = totalCapillas > 0 ? fila.registros / totalCapillas : 0;
+      const porcentaje = totalCapillas > 0 ? fila.total / totalCapillas : 0;
 
       return `
         <tr>
           <td>${escaparHtml(fila.nombre)}</td>
-          <td>${formatoNumero(fila.registros)}</td>
+          <td>${formatoNumero(fila.total)}</td>
+          <td>${formatoNumero(fila.usoInmediato)}</td>
+          <td>${formatoNumero(fila.prevision)}</td>
           <td>${formatoPorcentaje(porcentaje)}</td>
         </tr>
       `;
@@ -5122,8 +5213,17 @@ function renderTablaServiciosRecientesCapillas(mes) {
 
   tbody.innerHTML = filas
     .map((item) => {
+      const numeroServicio = normalizarTexto(
+        item.numeroReferencia ||
+        item.numeroServicio ||
+        item.referenciaContrato ||
+        "—"
+      );
+
       const fecha = convertirFechaServicio(item.fechaServicio);
       const fechaTexto = fecha ? formatearFechaCorta(fecha) : "—";
+
+      const finado = normalizarTexto(item.finado || "Sin finado");
 
       const ubicacion = normalizarTexto(
         item.ubicacionServicio ||
@@ -5131,17 +5231,15 @@ function renderTablaServiciosRecientesCapillas(mes) {
         "Sin ubicación"
       );
 
-      const finado = normalizarTexto(item.finado || "Sin finado");
       const tipoServicio = normalizarTipoServicioCapillasDashboard(item.tipoServicio);
-      const estatus = normalizarTexto(item.estatus || "—");
 
       return `
         <tr>
+          <td>${escaparHtml(numeroServicio)}</td>
           <td>${escaparHtml(fechaTexto)}</td>
-          <td>${escaparHtml(ubicacion)}</td>
           <td>${escaparHtml(finado)}</td>
-          <td>${escaparHtml(tipoServicio)}</td>
-          <td>${escaparHtml(estatus)}</td>
+          <td>${escaparHtml(ubicacion)}</td>
+          <td>${escaparHtml(tipoServicio || "Sin tipo")}</td>
         </tr>
       `;
     })
