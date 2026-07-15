@@ -80,8 +80,8 @@ body {
 
 .grid-kpis {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 18px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1rem;
   margin-bottom: 24px;
 }
 
