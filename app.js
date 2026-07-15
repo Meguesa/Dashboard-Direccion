@@ -720,10 +720,10 @@ function renderDashboard() {
   );
   
   setText("pageServiciosTotal", formatoNumero(totalServicios));
-  setText("pageServiciosCapillas", formatoNumero(totalCapillas));
+  setText("pageServiciosCapillasTotal", formatoNumero(totalCapillas));
   setText("pageServiciosCapillasUsoInmediato", formatoNumero(totalCapillasUsoInmediato));
   setText("pageServiciosCapillasPrevision", formatoNumero(totalCapillasPrevision));
-  setText("pageServiciosParque", formatoNumero(totalParque));
+  setText("pageServiciosParqueTotal", formatoNumero(totalParque));
 
   
   aplicarClaseFlujo("kpiFlujo", flujoNeto);
