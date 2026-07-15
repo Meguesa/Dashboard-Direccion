@@ -2807,70 +2807,98 @@ body {
 
 /* ================================
    Servicios Capillas - Servicios recientes
-   Ajuste de columnas
+   Anchos exactos de columnas
 ================================ */
 
 .tabla-servicios-recientes-capillas {
-  table-layout: fixed !important;
   width: 100% !important;
+  table-layout: fixed !important;
 }
 
-/* Columna 1: No. Servicio */
+/* No. Servicio: recuadro rojo */
+.tabla-servicios-recientes-capillas .col-servicio-numero {
+  width: 115px !important;
+}
+
+/* Fecha: recuadro azul */
+.tabla-servicios-recientes-capillas .col-servicio-fecha {
+  width: 120px !important;
+}
+
+/* Finado: recuadro verde, ocupa el espacio restante */
+.tabla-servicios-recientes-capillas .col-servicio-finado {
+  width: auto !important;
+}
+
+/* Ubicación y Tipo se quedan compactas */
+.tabla-servicios-recientes-capillas .col-servicio-ubicacion {
+  width: 120px !important;
+}
+
+.tabla-servicios-recientes-capillas .col-servicio-tipo {
+  width: 160px !important;
+}
+
+/* Celdas */
+.tabla-servicios-recientes-capillas th,
+.tabla-servicios-recientes-capillas td {
+  box-sizing: border-box !important;
+}
+
+/* No. Servicio */
 .tabla-servicios-recientes-capillas th:nth-child(1),
 .tabla-servicios-recientes-capillas td:nth-child(1) {
-  width: 86px !important;
-  min-width: 86px !important;
-  max-width: 86px !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
 }
 
-/* Columna 2: Fecha */
+/* Fecha */
 .tabla-servicios-recientes-capillas th:nth-child(2),
 .tabla-servicios-recientes-capillas td:nth-child(2) {
-  width: 105px !important;
-  min-width: 105px !important;
-  max-width: 105px !important;
   white-space: nowrap !important;
+  text-align: center !important;
 }
 
-/* Columna 3: Finado */
+/* Finado */
 .tabla-servicios-recientes-capillas th:nth-child(3),
 .tabla-servicios-recientes-capillas td:nth-child(3) {
-  width: 44% !important;
-  min-width: 360px !important;
   white-space: nowrap !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
-/* Columna 4: Ubicación */
+/* Ubicación */
 .tabla-servicios-recientes-capillas th:nth-child(4),
 .tabla-servicios-recientes-capillas td:nth-child(4) {
-  width: 115px !important;
-  min-width: 115px !important;
-  max-width: 115px !important;
   white-space: nowrap !important;
+  text-align: center !important;
 }
 
-/* Columna 5: Tipo */
+/* Tipo */
 .tabla-servicios-recientes-capillas th:nth-child(5),
 .tabla-servicios-recientes-capillas td:nth-child(5) {
-  width: auto !important;
-  min-width: 170px !important;
   white-space: normal !important;
 }
 
-.tabla-servicios-recientes-capillas th:nth-child(1) .table-filter-input {
-  width: 72px !important;
-  min-width: 72px !important;
-  max-width: 72px !important;
-  padding-left: 0.4rem !important;
-  padding-right: 0.4rem !important;
-  font-size: 0.75rem !important;
+/* Filtros dentro de columnas */
+.tabla-servicios-recientes-capillas .table-filter-input {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
 
-.tabla-servicios-recientes-capillas th:nth-child(3) .table-filter-input {
-  width: 100% !important;
+/* Filtro de No. Servicio más compacto */
+.tabla-servicios-recientes-capillas th:nth-child(1) .table-filter-input {
+  font-size: 0.72rem !important;
+  padding-left: 0.35rem !important;
+  padding-right: 0.35rem !important;
+}
+
+/* Filtro de Fecha compacto */
+.tabla-servicios-recientes-capillas th:nth-child(2) .table-filter-input {
+  font-size: 0.75rem !important;
+  padding-left: 0.4rem !important;
+  padding-right: 0.4rem !important;
 }
