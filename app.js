@@ -741,7 +741,7 @@ function renderDashboard() {
   renderDetalleIngresos(mes, totalIngresos);
   renderDetalleEgresos(mes, totalEgresos);
   renderDetalleVentas(mes, totalVentas);
-  renderDetalleServicios(mes, totalServicios);
+  renderDetalleServiciosCapillas(mes, totalCapillas);
   aplicarFiltrosTodasLasTablas();
 }
 
@@ -3985,6 +3985,20 @@ function renderDetalleServicios(mes, totalServicios) {
   renderTablaServiciosRecientes(mes);
 }
 
+function renderDetalleServiciosCapillas(mes, totalCapillas) {
+  renderGraficasServiciosCapillas();
+  renderTablaServiciosUbicacionCapillas(mes, totalCapillas);
+  renderTablaServiciosTipoServicioCapillas(mes, totalCapillas);
+  renderTablaServiciosResponsableCapillas(mes, totalCapillas);
+  renderTablaServiciosRecientesCapillas(mes);
+}
+
+function obtenerServiciosCapillasMes(mes) {
+  return (state.datos.servicios || [])
+    .filter((item) => coincidePeriodoServicio(item, mes))
+    .filter((item) => obtenerOrigenServicio(item) === "Capillas");
+}
+
 function renderGraficasServicios() {
   if (typeof Chart === "undefined") {
     return;
@@ -4071,6 +4085,79 @@ function renderGraficaServiciosMensuales() {
   });
 }
 
+function renderGraficasServiciosCapillas() {
+  if (typeof Chart === "undefined") {
+    return;
+  }
+
+  renderGraficaServiciosCapillasMensuales();
+}
+
+function renderGraficaServiciosCapillasMensuales() {
+  const canvas = document.getElementById("chartServiciosMensuales");
+
+  if (!canvas) {
+    return;
+  }
+
+  const meses = obtenerMesesDelAnioSeleccionado();
+
+  const labels = meses.map((mes) => mes.nombre);
+  const valoresCapillas = meses.map((mes) =>
+    contarServiciosPorOrigen(mes.clave, "CAPILLA")
+  );
+
+  destruirGrafica("serviciosMensuales");
+
+  dashboardCharts.serviciosMensuales = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Servicios Capillas",
+          data: valoresCapillas,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom"
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              return `Servicios Capillas: ${formatoNumero(context.parsed.y || 0)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            precision: 0,
+            callback: (value) => formatoNumero(value)
+          }
+        }
+      }
+    }
+  });
+}
+
 function renderTablaServiciosUbicacion(mes, totalServicios) {
   const tbody = document.getElementById("tablaServiciosUbicacionBody");
 
@@ -4099,6 +4186,59 @@ function renderTablaServiciosUbicacion(mes, totalServicios) {
         <tr>
           <td>${escaparHtml(fila.nombre)}</td>
           <td>${formatoNumero(fila.total)}</td>
+          <td>${formatoPorcentaje(porcentaje)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function renderTablaServiciosUbicacionCapillas(mes, totalCapillas) {
+  const tbody = document.getElementById("tablaServiciosUbicacionBody");
+
+  if (!tbody) {
+    return;
+  }
+
+  const grupos = new Map();
+
+  obtenerServiciosCapillasMes(mes).forEach((item) => {
+    const ubicacion = normalizarTexto(
+      item.ubicacionServicio ||
+      item.sucursal ||
+      "Sin ubicación"
+    );
+
+    if (!grupos.has(ubicacion)) {
+      grupos.set(ubicacion, {
+        nombre: ubicacion,
+        registros: 0
+      });
+    }
+
+    grupos.get(ubicacion).registros += 1;
+  });
+
+  const filas = Array.from(grupos.values())
+    .sort((a, b) => b.registros - a.registros);
+
+  if (filas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="3">Sin información de Capillas para el mes seleccionado.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filas
+    .map((fila) => {
+      const porcentaje = totalCapillas > 0 ? fila.registros / totalCapillas : 0;
+
+      return `
+        <tr>
+          <td>${escaparHtml(fila.nombre)}</td>
+          <td>${formatoNumero(fila.registros)}</td>
           <td>${formatoPorcentaje(porcentaje)}</td>
         </tr>
       `;
@@ -4353,6 +4493,115 @@ function renderTablaServiciosTipoServicio(mes, totalServicios) {
     .join("");
 
   conectarDespliegueServiciosTipo(mes, totalServicios);
+}
+
+function renderTablaServiciosTipoServicioCapillas(mes, totalCapillas) {
+  const tbody = document.getElementById("tablaServiciosTipoBody");
+
+  if (!tbody) {
+    return;
+  }
+
+  const tiposPermitidos = [
+    "Inhumación",
+    "Cremación",
+    "Cremación Directa (con velación)",
+    "Cremación Directa (sin velación)",
+    "Renta de Capillas",
+    "Traslado"
+  ];
+
+  const grupos = new Map();
+
+  tiposPermitidos.forEach((tipo) => {
+    grupos.set(tipo, {
+      origen: "Capillas",
+      tipoServicio: tipo,
+      registros: 0
+    });
+  });
+
+  obtenerServiciosCapillasMes(mes).forEach((item) => {
+    const tipoServicio = normalizarTipoServicioCapillasDashboard(
+      item.tipoServicio
+    );
+
+    if (!grupos.has(tipoServicio)) {
+      grupos.set(tipoServicio, {
+        origen: "Capillas",
+        tipoServicio,
+        registros: 0
+      });
+    }
+
+    grupos.get(tipoServicio).registros += 1;
+  });
+
+  const filas = Array.from(grupos.values())
+    .sort((a, b) => {
+      const ordenA = tiposPermitidos.indexOf(a.tipoServicio);
+      const ordenB = tiposPermitidos.indexOf(b.tipoServicio);
+
+      return (ordenA === -1 ? 99 : ordenA) - (ordenB === -1 ? 99 : ordenB);
+    });
+
+  if (filas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4">Sin información de Capillas para el mes seleccionado.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filas
+    .map((fila) => {
+      const porcentaje = totalCapillas > 0 ? fila.registros / totalCapillas : 0;
+
+      return `
+        <tr>
+          <td>${escaparHtml(fila.origen)}</td>
+          <td>${escaparHtml(fila.tipoServicio)}</td>
+          <td>${formatoNumero(fila.registros)}</td>
+          <td>${formatoPorcentaje(porcentaje)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function normalizarTipoServicioCapillasDashboard(valor) {
+  const texto = normalizarClaveComparacion(valor);
+
+  if (texto === "CREMACION DIRECTA") {
+    return "Cremación Directa (con velación)";
+  }
+
+  if (texto.includes("CREMACION DIRECTA") && texto.includes("SIN")) {
+    return "Cremación Directa (sin velación)";
+  }
+
+  if (texto.includes("CREMACION DIRECTA")) {
+    return "Cremación Directa (con velación)";
+  }
+
+  if (texto.includes("INHUMACION")) {
+    return "Inhumación";
+  }
+
+  if (texto.includes("CREMACION")) {
+    return "Cremación";
+  }
+
+  if (texto.includes("RENTA")) {
+    return "Renta de Capillas";
+  }
+
+  if (texto.includes("TRASLADO")) {
+    return "Traslado";
+  }
+
+  return normalizarTexto(valor) || "Sin tipo de servicio";
 }
 
 function conectarDespliegueServiciosTipo(mes, totalServicios) {
@@ -4748,6 +4997,59 @@ function renderTablaServiciosResponsable(mes, totalServicios) {
     .join("");
 }
 
+function renderTablaServiciosResponsableCapillas(mes, totalCapillas) {
+  const tbody = document.getElementById("tablaServiciosResponsableBody");
+
+  if (!tbody) {
+    return;
+  }
+
+  const grupos = new Map();
+
+  obtenerServiciosCapillasMes(mes).forEach((item) => {
+    const responsable = normalizarTexto(
+      item.responsable ||
+      item.asesor ||
+      "Sin responsable"
+    );
+
+    if (!grupos.has(responsable)) {
+      grupos.set(responsable, {
+        nombre: responsable,
+        registros: 0
+      });
+    }
+
+    grupos.get(responsable).registros += 1;
+  });
+
+  const filas = Array.from(grupos.values())
+    .sort((a, b) => b.registros - a.registros);
+
+  if (filas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="3">Sin información de Capillas para el mes seleccionado.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filas
+    .map((fila) => {
+      const porcentaje = totalCapillas > 0 ? fila.registros / totalCapillas : 0;
+
+      return `
+        <tr>
+          <td>${escaparHtml(fila.nombre)}</td>
+          <td>${formatoNumero(fila.registros)}</td>
+          <td>${formatoPorcentaje(porcentaje)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
 function renderTablaServiciosRecientes(mes) {
   const tbody = document.getElementById("tablaServiciosRecientesBody");
 
@@ -4787,6 +5089,59 @@ function renderTablaServiciosRecientes(mes) {
           <td>${escaparHtml(finado)}</td>
           <td>${escaparHtml(ubicacion)}</td>
           <td>${escaparHtml(tipo)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function renderTablaServiciosRecientesCapillas(mes) {
+  const tbody = document.getElementById("tablaServiciosRecientesBody");
+
+  if (!tbody) {
+    return;
+  }
+
+  const filas = obtenerServiciosCapillasMes(mes)
+    .slice()
+    .sort((a, b) => {
+      const fechaA = convertirFechaServicio(a.fechaServicio);
+      const fechaB = convertirFechaServicio(b.fechaServicio);
+
+      return (fechaB?.getTime() || 0) - (fechaA?.getTime() || 0);
+    });
+
+  if (filas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5">Sin servicios de Capillas para el mes seleccionado.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filas
+    .map((item) => {
+      const fecha = convertirFechaServicio(item.fechaServicio);
+      const fechaTexto = fecha ? formatearFechaCorta(fecha) : "—";
+
+      const ubicacion = normalizarTexto(
+        item.ubicacionServicio ||
+        item.sucursal ||
+        "Sin ubicación"
+      );
+
+      const finado = normalizarTexto(item.finado || "Sin finado");
+      const tipoServicio = normalizarTipoServicioCapillasDashboard(item.tipoServicio);
+      const estatus = normalizarTexto(item.estatus || "—");
+
+      return `
+        <tr>
+          <td>${escaparHtml(fechaTexto)}</td>
+          <td>${escaparHtml(ubicacion)}</td>
+          <td>${escaparHtml(finado)}</td>
+          <td>${escaparHtml(tipoServicio)}</td>
+          <td>${escaparHtml(estatus)}</td>
         </tr>
       `;
     })
