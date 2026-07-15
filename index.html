@@ -1027,11 +1027,11 @@
     </section>
 
     <section id="pageServiciosParque" class="dashboard-page hidden">
-      <article class="card">
+      <article class="card page-card">
         <div class="page-header">
           <div>
             <h2 class="section-title">Servicios Parque</h2>
-            <p class="footer-note">Detalle de servicios de Parque del mes seleccionado.</p>
+            <p class="footer-note">Detalle operativo y resumen de propiedades del Parque.</p>
           </div>
 
           <button class="button button-secondary page-back-button" data-page="resumen">
@@ -1039,9 +1039,72 @@
           </button>
         </div>
 
-        <div class="empty-state">
-          Página en construcción.
+        <div class="detail-kpi-grid detail-kpi-grid-4">
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Servicios totales</span>
+            <strong id="pageParqueServiciosTotal">0</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Propiedades vendidas</span>
+            <strong id="pageParquePropiedadesVendidas">0</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Propiedades ocupadas</span>
+            <strong id="pageParquePropiedadesOcupadas">0</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Propiedades disponibles</span>
+            <strong id="pageParquePropiedadesDisponibles">0</strong>
+          </div>
         </div>
+
+        <section class="detail-section-card">
+          <div class="section-card-header">
+            <div>
+              <h3>Servicios Parque mensuales</h3>
+              <p>Comparativo mensual de servicios registrados en Parque.</p>
+            </div>
+          </div>
+
+          <div class="chart-container chart-container-line">
+            <canvas id="chartServiciosParqueMensuales"></canvas>
+          </div>
+        </section>
+
+        <section class="detail-section-card">
+          <div class="section-card-header">
+            <div>
+              <h3>Resumen de propiedades de Parque</h3>
+              <p>Resumen por tipo de propiedad, estatus construido, vendido y usado.</p>
+            </div>
+          </div>
+
+          <div class="table-scroll">
+            <table class="table detail-table tabla-parque-propiedades">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Sección / categoría</th>
+                  <th>Número construido</th>
+                  <th>Número vendido</th>
+                  <th>Número usado</th>
+                  <th>Disponible</th>
+                  <th>% vendido</th>
+                  <th>% usado</th>
+                </tr>
+              </thead>
+
+              <tbody id="tablaParquePropiedadesBody">
+                <tr>
+                  <td colspan="8">Información pendiente de integrar.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </article>
     </section>
 

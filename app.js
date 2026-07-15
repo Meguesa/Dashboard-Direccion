@@ -742,6 +742,7 @@ function renderDashboard() {
   renderDetalleEgresos(mes, totalEgresos);
   renderDetalleVentas(mes, totalVentas);
   renderDetalleServiciosCapillas(mes, totalCapillas);
+  renderDetalleServiciosParque(mes, totalParque);
   aplicarFiltrosTodasLasTablas();
 }
 
@@ -1483,6 +1484,130 @@ function normalizarTexto(valor) {
 
   return String(valor).trim();
 }
+
+function renderDetalleServiciosParque(mes, totalParque) {
+  setText("pageParqueServiciosTotal", formatoNumero(totalParque));
+
+  // Pendiente: se conectarán después con PLANOS / CONTRATOS / BI_Servicios.
+  setText("pageParquePropiedadesVendidas", formatoNumero(0));
+  setText("pageParquePropiedadesOcupadas", formatoNumero(0));
+  setText("pageParquePropiedadesDisponibles", formatoNumero(0));
+
+  renderGraficaServiciosParqueMensuales();
+  renderTablaParquePropiedadesBase();
+}
+
+function renderGraficaServiciosParqueMensuales() {
+  const canvas = document.getElementById("chartServiciosParqueMensuales");
+
+  if (!canvas || typeof Chart === "undefined") {
+    return;
+  }
+
+  const meses = obtenerMesesDelAnioSeleccionado();
+  const labels = meses.map((mes) => mes.nombre);
+
+  const valoresParque = meses.map((mes) =>
+    contarServiciosPorOrigen(mes.clave, "PARQUE")
+  );
+
+  destruirGrafica("serviciosParqueMensuales");
+
+  dashboardCharts.serviciosParqueMensuales = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Servicios Parque",
+          data: valoresParque,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom"
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              return `Servicios Parque: ${formatoNumero(context.parsed.y || 0)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            precision: 0,
+            callback: (value) => formatoNumero(value)
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderTablaParquePropiedadesBase() {
+  const tbody = document.getElementById("tablaParquePropiedadesBody");
+
+  if (!tbody) {
+    return;
+  }
+
+  const filasBase = [
+    {
+      tipo: "Lotes",
+      categoria: "General",
+      construido: 0,
+      vendido: 0,
+      usado: 0
+    },
+    {
+      tipo: "Nichos",
+      categoria: "General",
+      construido: 0,
+      vendido: 0,
+      usado: 0
+    }
+  ];
+
+  tbody.innerHTML = filasBase
+    .map((fila) => {
+      const disponible = Math.max(fila.construido - fila.vendido, 0);
+      const porcentajeVendido = fila.construido > 0 ? fila.vendido / fila.construido : 0;
+      const porcentajeUsado = fila.construido > 0 ? fila.usado / fila.construido : 0;
+
+      return `
+        <tr>
+          <td>${escaparHtml(fila.tipo)}</td>
+          <td>${escaparHtml(fila.categoria)}</td>
+          <td>${formatoNumero(fila.construido)}</td>
+          <td>${formatoNumero(fila.vendido)}</td>
+          <td>${formatoNumero(fila.usado)}</td>
+          <td>${formatoNumero(disponible)}</td>
+          <td>${formatoPorcentaje(porcentajeVendido)}</td>
+          <td>${formatoPorcentaje(porcentajeUsado)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
 
 function normalizarClaveComparacion(valor) {
   return normalizarTexto(valor)
