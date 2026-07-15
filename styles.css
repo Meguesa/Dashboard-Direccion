@@ -2807,45 +2807,70 @@ body {
 
 /* ================================
    Servicios Capillas - Servicios recientes
+   Ajuste de columnas
 ================================ */
 
 .tabla-servicios-recientes-capillas {
-  table-layout: fixed;
-  width: 100%;
+  table-layout: fixed !important;
+  width: 100% !important;
 }
 
+/* Columna 1: No. Servicio */
 .tabla-servicios-recientes-capillas th:nth-child(1),
 .tabla-servicios-recientes-capillas td:nth-child(1) {
-  width: 10%;
-  min-width: 80px;
-  max-width: 90px;
-  white-space: nowrap;
+  width: 86px !important;
+  min-width: 86px !important;
+  max-width: 86px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
+/* Columna 2: Fecha */
 .tabla-servicios-recientes-capillas th:nth-child(2),
 .tabla-servicios-recientes-capillas td:nth-child(2) {
-  width: 13%;
-  min-width: 105px;
-  white-space: nowrap;
+  width: 105px !important;
+  min-width: 105px !important;
+  max-width: 105px !important;
+  white-space: nowrap !important;
 }
 
+/* Columna 3: Finado */
 .tabla-servicios-recientes-capillas th:nth-child(3),
 .tabla-servicios-recientes-capillas td:nth-child(3) {
-  width: 40%;
-  min-width: 260px;
-  white-space: nowrap;
+  width: 44% !important;
+  min-width: 360px !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
 }
 
+/* Columna 4: Ubicación */
 .tabla-servicios-recientes-capillas th:nth-child(4),
 .tabla-servicios-recientes-capillas td:nth-child(4) {
-  width: 16%;
-  min-width: 120px;
-  white-space: nowrap;
+  width: 115px !important;
+  min-width: 115px !important;
+  max-width: 115px !important;
+  white-space: nowrap !important;
 }
 
+/* Columna 5: Tipo */
 .tabla-servicios-recientes-capillas th:nth-child(5),
 .tabla-servicios-recientes-capillas td:nth-child(5) {
-  width: 21%;
-  min-width: 180px;
-  white-space: normal;
+  width: auto !important;
+  min-width: 170px !important;
+  white-space: normal !important;
+}
+
+.tabla-servicios-recientes-capillas th:nth-child(1) .table-filter-input {
+  width: 72px !important;
+  min-width: 72px !important;
+  max-width: 72px !important;
+  padding-left: 0.4rem !important;
+  padding-right: 0.4rem !important;
+  font-size: 0.75rem !important;
+}
+
+.tabla-servicios-recientes-capillas th:nth-child(3) .table-filter-input {
+  width: 100% !important;
 }
