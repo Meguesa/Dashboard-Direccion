@@ -2948,3 +2948,42 @@ body {
   text-align: right;
   white-space: nowrap;
 }
+
+/* ================================
+   Servicios Parque - KPIs
+================================ */
+
+.parque-kpi-grid {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.parque-kpi-grid .detail-kpi-card {
+  min-height: 92px;
+}
+
+.parque-kpi-grid .detail-kpi-label {
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.parque-kpi-grid strong {
+  font-size: 1.45rem;
+}
+
+@media (max-width: 1400px) {
+  .parque-kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .parque-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .parque-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}

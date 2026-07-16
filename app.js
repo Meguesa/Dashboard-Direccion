@@ -1494,35 +1494,90 @@ function renderDetalleServiciosParque(mes, totalParque) {
   const resumenPropiedades = calcularResumenParquePropiedades();
 
   setText("pageParqueServiciosTotal", formatoNumero(totalParque));
-  setText("pageParquePropiedadesVendidas", formatoNumero(resumenPropiedades.vendidas));
-  setText("pageParquePropiedadesOcupadas", formatoNumero(resumenPropiedades.usadas));
-  setText("pageParquePropiedadesDisponibles", formatoNumero(resumenPropiedades.disponibles));
+
+  setText(
+    "pageParquePropiedadesConstruidas",
+    formatoNumero(resumenPropiedades.construidas)
+  );
+
+  setText(
+    "pageParqueConstruidasProyectadoPct",
+    resumenPropiedades.proyectadas > 0
+      ? formatoPorcentaje(resumenPropiedades.porcentajeConstruidasProyectado)
+      : "—"
+  );
+
+  setText(
+    "pageParquePropiedadesVendidas",
+    formatoNumero(resumenPropiedades.vendidas)
+  );
+
+  setText(
+    "pageParqueVendidasConstruidoPct",
+    resumenPropiedades.construidas > 0
+      ? formatoPorcentaje(resumenPropiedades.porcentajeVendidasConstruido)
+      : "—"
+  );
+
+  setText(
+    "pageParquePropiedadesUtilizadas",
+    formatoNumero(resumenPropiedades.usadas)
+  );
+
+  setText(
+    "pageParqueUtilizadasProyectadoPct",
+    resumenPropiedades.proyectadas > 0
+      ? formatoPorcentaje(resumenPropiedades.porcentajeUtilizadasProyectado)
+      : "—"
+  );
 
   renderGraficaServiciosParqueMensuales();
   renderTablaParquePropiedadesBase();
+
+  if (typeof renderTablaParqueConstruccion === "function") {
+    renderTablaParqueConstruccion();
+  }
 }
 
 function calcularResumenParquePropiedades() {
   const filas = state.datos.parquePropiedades || [];
 
-  return filas.reduce((acc, fila) => {
+  const resumen = filas.reduce((acc, fila) => {
     const construido = Number(fila.numeroConstruido || 0);
+    const noConstruido = Number(fila.numeroNoConstruido || 0);
     const vendido = Number(fila.numeroVendido || 0);
     const usado = Number(fila.numeroUsado || 0);
-    const disponible = Number(fila.numeroDisponible || 0);
 
     acc.construidas += construido;
+    acc.noConstruidas += noConstruido;
+    acc.proyectadas += construido + noConstruido;
     acc.vendidas += vendido;
     acc.usadas += usado;
-    acc.disponibles += disponible;
 
     return acc;
   }, {
     construidas: 0,
+    noConstruidas: 0,
+    proyectadas: 0,
     vendidas: 0,
-    usadas: 0,
-    disponibles: 0
+    usadas: 0
   });
+
+  return {
+    ...resumen,
+
+    porcentajeConstruidasProyectado: resumen.proyectadas > 0
+      ? resumen.construidas / resumen.proyectadas
+      : 0,
+
+    porcentajeVendidasConstruido: resumen.construidas > 0
+      ? resumen.vendidas / resumen.construidas
+      : 0,
+
+    porcentajeUtilizadasProyectado: resumen.proyectadas > 0
+      ? resumen.usadas / resumen.proyectadas
+      : 0
+  };
 }
 
 function renderGraficaServiciosParqueMensuales() {
