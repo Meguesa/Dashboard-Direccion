@@ -1579,9 +1579,7 @@ function calcularResumenParquePropiedades() {
       ? resumen.construidas / totalProyectado
       : 0,
 
-    porcentajeVendidasConstruido: resumen.construidas > 0
-      ? resumen.vendidas / resumen.construidas
-      : 0,
+    porcentajeVendidasConstruido: totalProyectado > 0 ? resumen.vendidas / totalProyectado : 0,
 
     porcentajeUtilizadasProyectado: totalProyectado > 0
       ? resumen.usadas / totalProyectado
