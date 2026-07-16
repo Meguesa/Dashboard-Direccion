@@ -794,12 +794,20 @@ async function obtenerParquePropiedadesSharePoint() {
           "Categoria",
           "Categor_x00ed_a"
         ])),
-
+        
+        
         numeroConstruido: convertirNumero(obtenerCampoSharePoint(f, [
           "Numero_Construido",
           "Numero_x005f_Construido",
           "NumeroConstruido"
         ])),
+
+        numeroProyectado: convertirNumero(obtenerCampoSharePoint(f, [
+          "Numero_Proyectado",
+          "Numero_x005f_Proyectado",
+          "NumeroProyectado"
+        ])),
+
 
         numeroVendido: convertirNumero(obtenerCampoSharePoint(f, [
           "Numero_Vendido",

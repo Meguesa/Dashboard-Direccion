@@ -1543,39 +1543,48 @@ function calcularResumenParquePropiedades() {
   const filas = state.datos.parquePropiedades || [];
 
   const resumen = filas.reduce((acc, fila) => {
+    const proyectado = Number(fila.numeroProyectado || 0);
     const construido = Number(fila.numeroConstruido || 0);
     const noConstruido = Number(fila.numeroNoConstruido || 0);
     const vendido = Number(fila.numeroVendido || 0);
     const usado = Number(fila.numeroUsado || 0);
+    const disponible = Number(fila.numeroDisponible || 0);
 
+    acc.proyectadas += proyectado;
     acc.construidas += construido;
     acc.noConstruidas += noConstruido;
-    acc.proyectadas += construido + noConstruido;
     acc.vendidas += vendido;
     acc.usadas += usado;
+    acc.disponibles += disponible;
 
     return acc;
   }, {
+    proyectadas: 0,
     construidas: 0,
     noConstruidas: 0,
-    proyectadas: 0,
     vendidas: 0,
-    usadas: 0
+    usadas: 0,
+    disponibles: 0
   });
+
+  const totalProyectado = resumen.proyectadas > 0
+    ? resumen.proyectadas
+    : resumen.construidas + resumen.noConstruidas;
 
   return {
     ...resumen,
+    proyectadas: totalProyectado,
 
-    porcentajeConstruidasProyectado: resumen.proyectadas > 0
-      ? resumen.construidas / resumen.proyectadas
+    porcentajeConstruidasProyectado: totalProyectado > 0
+      ? resumen.construidas / totalProyectado
       : 0,
 
     porcentajeVendidasConstruido: resumen.construidas > 0
       ? resumen.vendidas / resumen.construidas
       : 0,
 
-    porcentajeUtilizadasProyectado: resumen.proyectadas > 0
-      ? resumen.usadas / resumen.proyectadas
+    porcentajeUtilizadasProyectado: totalProyectado > 0
+      ? resumen.usadas / totalProyectado
       : 0
   };
 }
