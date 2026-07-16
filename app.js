@@ -1653,52 +1653,134 @@ function renderGraficaServiciosParqueMensuales() {
 }
 
 function renderTablaParquePropiedadesBase() {
-  const tbody = document.getElementById("tablaParquePropiedadesBody");
+  const contenedor = document.getElementById("tablaParquePropiedadesBase");
 
-  if (!tbody) {
+  if (!contenedor) {
     return;
   }
 
-  const filas = state.datos.parquePropiedades || [];
+  const filas = obtenerFilasParquePropiedadesOrdenadas();
 
   if (!filas.length) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8">Sin información de propiedades de Parque.</td>
-      </tr>
+    contenedor.innerHTML = `
+      <div class="empty-state">
+        No hay información de propiedades de Parque para mostrar.
+      </div>
     `;
     return;
   }
 
-  tbody.innerHTML = filas
-    .map((fila) => {
-      const construido = Number(fila.numeroConstruido || 0);
-      const vendido = Number(fila.numeroVendido || 0);
-      const usado = Number(fila.numeroUsado || 0);
-      const disponible = Number(fila.numeroDisponible || 0);
+  const totalProyectado = filas.reduce((acc, fila) => acc + Number(fila.numeroProyectado || 0), 0);
+  const totalConstruido = filas.reduce((acc, fila) => acc + Number(fila.numeroConstruido || 0), 0);
+  const totalNoConstruido = filas.reduce((acc, fila) => acc + Number(fila.numeroNoConstruido || 0), 0);
+  const totalVendido = filas.reduce((acc, fila) => acc + Number(fila.numeroVendido || 0), 0);
+  const totalUsado = filas.reduce((acc, fila) => acc + Number(fila.numeroUsado || 0), 0);
+  const totalDisponible = filas.reduce((acc, fila) => acc + Number(fila.numeroDisponible || 0), 0);
+  const totalSeparado = filas.reduce((acc, fila) => acc + Number(fila.numeroSeparado || 0), 0);
+  const totalSuspendido = filas.reduce((acc, fila) => acc + Number(fila.numeroSuspendido || 0), 0);
 
-      const porcentajeVendido = construido > 0
-        ? vendido / construido
-        : 0;
+  const htmlFilas = filas.map((fila) => {
+    const proyectado = Number(fila.numeroProyectado || 0);
+    const construido = Number(fila.numeroConstruido || 0);
+    const noConstruido = Number(fila.numeroNoConstruido || 0);
+    const vendido = Number(fila.numeroVendido || 0);
+    const usado = Number(fila.numeroUsado || 0);
+    const disponible = Number(fila.numeroDisponible || 0);
+    const separado = Number(fila.numeroSeparado || 0);
+    const suspendido = Number(fila.numeroSuspendido || 0);
 
-      const porcentajeUsado = construido > 0
-        ? usado / construido
-        : 0;
+    const porcentajeVendido = proyectado > 0 ? vendido / proyectado : 0;
+    const porcentajeUsado = proyectado > 0 ? usado / proyectado : 0;
 
-      return `
-        <tr>
-          <td>${escaparHtml(fila.tipoPropiedad || "—")}</td>
-          <td>${escaparHtml(fila.categoria || fila.title || "—")}</td>
-          <td>${formatoNumero(construido)}</td>
-          <td>${formatoNumero(vendido)}</td>
-          <td>${formatoNumero(usado)}</td>
-          <td>${formatoNumero(disponible)}</td>
-          <td>${formatoPorcentaje(porcentajeVendido)}</td>
-          <td>${formatoPorcentaje(porcentajeUsado)}</td>
-        </tr>
-      `;
-    })
-    .join("");
+    return `
+      <tr>
+        <td>${escaparHtml(fila.categoria || "Sin categoría")}</td>
+        <td>${escaparHtml(fila.tipoPropiedad || "")}</td>
+        <td class="numeric">${formatoNumero(proyectado)}</td>
+        <td class="numeric">${formatoNumero(construido)}</td>
+        <td class="numeric">${formatoNumero(noConstruido)}</td>
+        <td class="numeric">${formatoNumero(vendido)}</td>
+        <td class="numeric">${formatoNumero(usado)}</td>
+        <td class="numeric">${formatoNumero(disponible)}</td>
+        <td class="numeric">${formatoNumero(separado)}</td>
+        <td class="numeric">${formatoNumero(suspendido)}</td>
+        <td class="numeric">${formatoPorcentaje(porcentajeVendido)}</td>
+        <td class="numeric">${formatoPorcentaje(porcentajeUsado)}</td>
+      </tr>
+    `;
+  }).join("");
+
+  const porcentajeTotalVendido = totalProyectado > 0 ? totalVendido / totalProyectado : 0;
+  const porcentajeTotalUsado = totalProyectado > 0 ? totalUsado / totalProyectado : 0;
+
+  contenedor.innerHTML = `
+    <div class="table-scroll parque-propiedades-scroll">
+      <table class="data-table tabla-parque-propiedades">
+        <thead>
+          <tr>
+            <th>Categoría</th>
+            <th>Tipo</th>
+            <th>Proyectado</th>
+            <th>Construido</th>
+            <th>No construido</th>
+            <th>Vendido</th>
+            <th>Ocupado</th>
+            <th>Disponible</th>
+            <th>Separado</th>
+            <th>Suspendido</th>
+            <th>% vendido</th>
+            <th>% ocupado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${htmlFilas}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th>Total</th>
+            <th></th>
+            <th class="numeric">${formatoNumero(totalProyectado)}</th>
+            <th class="numeric">${formatoNumero(totalConstruido)}</th>
+            <th class="numeric">${formatoNumero(totalNoConstruido)}</th>
+            <th class="numeric">${formatoNumero(totalVendido)}</th>
+            <th class="numeric">${formatoNumero(totalUsado)}</th>
+            <th class="numeric">${formatoNumero(totalDisponible)}</th>
+            <th class="numeric">${formatoNumero(totalSeparado)}</th>
+            <th class="numeric">${formatoNumero(totalSuspendido)}</th>
+            <th class="numeric">${formatoPorcentaje(porcentajeTotalVendido)}</th>
+            <th class="numeric">${formatoPorcentaje(porcentajeTotalUsado)}</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  `;
+}
+
+function obtenerFilasParquePropiedadesOrdenadas() {
+  const filas = state.datos.parquePropiedades || [];
+
+  return [...filas].sort((a, b) => {
+    const ordenA = obtenerOrdenCategoriaParque(a.categoria);
+    const ordenB = obtenerOrdenCategoriaParque(b.categoria);
+
+    return ordenA - ordenB;
+  });
+}
+
+function obtenerOrdenCategoriaParque(categoria) {
+  const clave = normalizarClaveComparacion(categoria);
+
+  const orden = {
+    bronce: 1,
+    plata: 2,
+    oro: 3,
+    platino: 4,
+    vip: 5,
+    nichos: 6,
+    nicho: 6
+  };
+
+  return orden[clave] || 99;
 }
 
 

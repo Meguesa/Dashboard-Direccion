@@ -2987,3 +2987,31 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+.parque-propiedades-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tabla-parque-propiedades {
+  min-width: 1120px;
+}
+
+.tabla-parque-propiedades th,
+.tabla-parque-propiedades td {
+  white-space: nowrap;
+}
+
+.tabla-parque-propiedades th:first-child,
+.tabla-parque-propiedades td:first-child {
+  min-width: 120px;
+}
+
+.tabla-parque-propiedades tfoot th {
+  font-weight: 700;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.tabla-parque-propiedades .numeric {
+  text-align: right;
+}
