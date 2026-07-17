@@ -2968,3 +2968,202 @@ body {
   font-weight: 700;
   background: rgba(15, 23, 42, 0.04);
 }
+
+/* ================================
+   Servicios Parque - corrección final
+   KPIs en una fila + tabla compacta
+================================ */
+
+/* KPIs de Parque en una sola fila en escritorio */
+#pageServiciosParque .parque-kpi-grid {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+}
+
+#pageServiciosParque .parque-kpi-grid .detail-kpi-card {
+  min-width: 0 !important;
+  min-height: 86px !important;
+  padding: 14px 16px !important;
+}
+
+#pageServiciosParque .parque-kpi-grid .detail-kpi-label {
+  font-size: 0.68rem !important;
+  line-height: 1.15 !important;
+  margin-bottom: 8px !important;
+}
+
+#pageServiciosParque .parque-kpi-grid strong {
+  font-size: 1.35rem !important;
+  line-height: 1.1 !important;
+}
+
+/* En pantallas chicas sí puede partirse */
+@media (max-width: 1200px) {
+  #pageServiciosParque .parque-kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 800px) {
+  #pageServiciosParque .parque-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 560px) {
+  #pageServiciosParque .parque-kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Contenedor de tabla Parque: sin scroll horizontal en escritorio */
+#pageServiciosParque .parque-propiedades-scroll {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+/* Tabla Parque: mismo estilo base, pero compacta para 12 columnas */
+#pageServiciosParque .tabla-parque-propiedades {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+}
+
+/* Encabezados y celdas compactas */
+#pageServiciosParque .tabla-parque-propiedades th,
+#pageServiciosParque .tabla-parque-propiedades td {
+  padding: 9px 6px !important;
+  font-size: 0.76rem !important;
+  line-height: 1.15 !important;
+  vertical-align: middle !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Encabezados pueden partirse en 2 líneas */
+#pageServiciosParque .tabla-parque-propiedades th {
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  text-align: right !important;
+}
+
+/* Datos en una sola línea */
+#pageServiciosParque .tabla-parque-propiedades td {
+  white-space: nowrap !important;
+}
+
+/* Columna 1: Categoría */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(1),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(1) {
+  width: 10% !important;
+  text-align: left !important;
+}
+
+/* Columna 2: Tipo */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(2),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(2) {
+  width: 7% !important;
+  text-align: left !important;
+}
+
+/* Columna 3: Proyectado */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(3),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(3) {
+  width: 9% !important;
+  text-align: right !important;
+}
+
+/* Columna 4: Construido */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(4),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(4) {
+  width: 9% !important;
+  text-align: right !important;
+}
+
+/* Columna 5: No construido */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(5),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(5) {
+  width: 10% !important;
+  text-align: right !important;
+}
+
+/* Columna 6: Vendido */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(6),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(6) {
+  width: 8.5% !important;
+  text-align: right !important;
+}
+
+/* Columna 7: Ocupado */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(7),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(7) {
+  width: 8.5% !important;
+  text-align: right !important;
+}
+
+/* Columna 8: Disponible */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(8),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(8) {
+  width: 9% !important;
+  text-align: right !important;
+}
+
+/* Columna 9: Separado */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(9),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(9) {
+  width: 7.5% !important;
+  text-align: right !important;
+}
+
+/* Columna 10: Suspendido */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(10),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(10) {
+  width: 8.5% !important;
+  text-align: right !important;
+}
+
+/* Columna 11: % vendido */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(11),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(11) {
+  width: 6.5% !important;
+  text-align: right !important;
+}
+
+/* Columna 12: % ocupado */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(12),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(12) {
+  width: 6.5% !important;
+  text-align: right !important;
+}
+
+/* Fila de filtros igual que las demás, pero compacta */
+#pageServiciosParque .tabla-parque-propiedades .table-filter-row th {
+  padding: 6px 4px 8px !important;
+  background: #f8fafc !important;
+}
+
+#pageServiciosParque .tabla-parque-propiedades .table-filter-input {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  padding: 6px 5px !important;
+  font-size: 0.68rem !important;
+  border-radius: 7px !important;
+  box-sizing: border-box !important;
+}
+
+/* Fila total */
+#pageServiciosParque .tabla-parque-propiedades tfoot th,
+#pageServiciosParque .tabla-parque-propiedades tfoot td {
+  font-weight: 800 !important;
+  background: rgba(15, 23, 42, 0.04) !important;
+}
+
+#pageServiciosParque .tabla-parque-propiedades tfoot th:first-child {
+  text-align: left !important;
+}

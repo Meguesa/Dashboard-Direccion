@@ -1754,6 +1754,8 @@ function renderTablaParquePropiedadesBase() {
       </table>
     </div>
   `;
+
+  conectarFiltrosTablas();
 }
 
 function obtenerFilasParquePropiedadesOrdenadas() {
