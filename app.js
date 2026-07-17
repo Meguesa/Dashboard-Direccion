@@ -1715,7 +1715,7 @@ function renderTablaParquePropiedadesBase() {
 
   contenedor.innerHTML = `
     <div class="table-scroll parque-propiedades-scroll">
-      <table class="data-table tabla-parque-propiedades">
+      <table class="table detail-table tabla-parque-propiedades">
         <thead>
           <tr>
             <th>Categoría</th>

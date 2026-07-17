@@ -2904,27 +2904,36 @@ body {
 }
 
 /* ================================
-   Servicios Parque
+   Tabla de propiedades de Parque
 ================================ */
+
+.parque-propiedades-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
 
 .tabla-parque-propiedades {
   width: 100%;
-  table-layout: fixed;
+  min-width: 1450px;
+  table-layout: auto;
+  border-collapse: collapse;
 }
 
 .tabla-parque-propiedades th,
 .tabla-parque-propiedades td {
+  white-space: nowrap;
   font-size: 0.84rem;
+  vertical-align: middle;
 }
 
 .tabla-parque-propiedades th:nth-child(1),
 .tabla-parque-propiedades td:nth-child(1) {
-  width: 12%;
+  min-width: 140px;
 }
 
 .tabla-parque-propiedades th:nth-child(2),
 .tabla-parque-propiedades td:nth-child(2) {
-  width: 22%;
+  min-width: 110px;
 }
 
 .tabla-parque-propiedades th:nth-child(3),
@@ -2934,84 +2943,28 @@ body {
 .tabla-parque-propiedades th:nth-child(5),
 .tabla-parque-propiedades td:nth-child(5),
 .tabla-parque-propiedades th:nth-child(6),
-.tabla-parque-propiedades td:nth-child(6) {
-  width: 11%;
-  text-align: right;
-  white-space: nowrap;
-}
-
+.tabla-parque-propiedades td:nth-child(6),
 .tabla-parque-propiedades th:nth-child(7),
 .tabla-parque-propiedades td:nth-child(7),
 .tabla-parque-propiedades th:nth-child(8),
-.tabla-parque-propiedades td:nth-child(8) {
-  width: 11%;
-  text-align: right;
-  white-space: nowrap;
-}
-
-/* ================================
-   Servicios Parque - KPIs
-================================ */
-
-.parque-kpi-grid {
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-}
-
-.parque-kpi-grid .detail-kpi-card {
-  min-height: 92px;
-}
-
-.parque-kpi-grid .detail-kpi-label {
-  font-size: 0.72rem;
-  line-height: 1.25;
-}
-
-.parque-kpi-grid strong {
-  font-size: 1.45rem;
-}
-
-@media (max-width: 1400px) {
-  .parque-kpi-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 900px) {
-  .parque-kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 560px) {
-  .parque-kpi-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.parque-propiedades-scroll {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.tabla-parque-propiedades {
-  min-width: 1120px;
-}
-
-.tabla-parque-propiedades th,
-.tabla-parque-propiedades td {
-  white-space: nowrap;
-}
-
-.tabla-parque-propiedades th:first-child,
-.tabla-parque-propiedades td:first-child {
-  min-width: 120px;
-}
-
-.tabla-parque-propiedades tfoot th {
-  font-weight: 700;
-  background: rgba(15, 23, 42, 0.04);
+.tabla-parque-propiedades td:nth-child(8),
+.tabla-parque-propiedades th:nth-child(9),
+.tabla-parque-propiedades td:nth-child(9),
+.tabla-parque-propiedades th:nth-child(10),
+.tabla-parque-propiedades td:nth-child(10),
+.tabla-parque-propiedades th:nth-child(11),
+.tabla-parque-propiedades td:nth-child(11),
+.tabla-parque-propiedades th:nth-child(12),
+.tabla-parque-propiedades td:nth-child(12) {
+  min-width: 110px;
 }
 
 .tabla-parque-propiedades .numeric {
   text-align: right;
+}
+
+.tabla-parque-propiedades tfoot th,
+.tabla-parque-propiedades tfoot td {
+  font-weight: 700;
+  background: rgba(15, 23, 42, 0.04);
 }
