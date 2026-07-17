@@ -314,8 +314,8 @@
 
         <div class="detail-kpi-grid detail-kpi-grid-6">
           <div class="detail-kpi-card">
-            <span class="detail-kpi-label">% vendidas vs proyectado</span>
-            <strong id="pageParqueVendidasConstruidoPct">0.0%</strong>
+            <span class="detail-kpi-label">Ingresos del mes</span>
+            <strong id="pageIngresosTotal">$0.00</strong>
           </div>
         
           <div class="detail-kpi-card">
@@ -1061,7 +1061,7 @@
           </div>
 
           <div class="detail-kpi-card">
-            <span class="detail-kpi-label">% vendidas vs construido</span>
+            <span class="detail-kpi-label">% vendidas vs proyectado</span>
             <strong id="pageParqueVendidasConstruidoPct">0.0%</strong>
           </div>
 
@@ -1097,27 +1097,10 @@
             </div>
           </div>
 
-          <div class="table-scroll">
-            <table class="table detail-table tabla-parque-propiedades">
-              <thead>
-                <tr>
-                  <th>Tipo</th>
-                  <th>Sección / categoría</th>
-                  <th>Número construido</th>
-                  <th>Número vendido</th>
-                  <th>Número usado</th>
-                  <th>Disponible</th>
-                  <th>% vendido</th>
-                  <th>% usado</th>
-                </tr>
-              </thead>
-
-              <tbody id="tablaParquePropiedadesBody">
-                <tr>
-                  <td colspan="8">Información pendiente de integrar.</td>
-                </tr>
-              </tbody>
-            </table>
+          <div id="tablaParquePropiedadesBase">
+            <div class="empty-state">
+              Cargando información de propiedades de Parque...
+            </div>
           </div>
         </section>
       </article>

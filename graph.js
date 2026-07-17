@@ -795,13 +795,21 @@ async function obtenerParquePropiedadesSharePoint() {
           "Categor_x00ed_a"
         ])),
         
-        
+
         numeroConstruido: convertirNumero(obtenerCampoSharePoint(f, [
           "Numero_Construido",
           "Numero_x005f_Construido",
           "NumeroConstruido"
         ])),
 
+
+        numeroNoConstruido: convertirNumero(obtenerCampoSharePoint(f, [
+          "Numero_No_Construido",
+          "Numero_x005f_No_x005f_Construido",
+          "NumeroNoConstruido"
+        ])),
+
+        
         numeroProyectado: convertirNumero(obtenerCampoSharePoint(f, [
           "Numero_Proyectado",
           "Numero_x005f_Proyectado",
@@ -827,6 +835,20 @@ async function obtenerParquePropiedadesSharePoint() {
           "NumeroDisponible"
         ])),
 
+
+        numeroSeparado: convertirNumero(obtenerCampoSharePoint(f, [
+          "Numero_Separado",
+          "Numero_x005f_Separado",
+          "NumeroSeparado"
+        ])),
+
+        numeroSuspendido: convertirNumero(obtenerCampoSharePoint(f, [
+          "Numero_Suspendido",
+          "Numero_x005f_Suspendido",
+          "NumeroSuspendido"
+        ])),
+
+        
         porcentajeVendido: convertirNumero(obtenerCampoSharePoint(f, [
           "Porcentaje_Vendido",
           "Porcentaje_x005f_Vendido",

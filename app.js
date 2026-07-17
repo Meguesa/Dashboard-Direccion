@@ -1514,7 +1514,7 @@ function renderDetalleServiciosParque(mes, totalParque) {
 
   setText(
     "pageParqueVendidasConstruidoPct",
-    resumenPropiedades.construidas > 0
+    resumenPropiedades.proyectadas > 0
       ? formatoPorcentaje(resumenPropiedades.porcentajeVendidasConstruido)
       : "—"
   );
@@ -1771,13 +1771,13 @@ function obtenerOrdenCategoriaParque(categoria) {
   const clave = normalizarClaveComparacion(categoria);
 
   const orden = {
-    bronce: 1,
-    plata: 2,
-    oro: 3,
-    platino: 4,
-    vip: 5,
-    nichos: 6,
-    nicho: 6
+    BRONCE: 1,
+    PLATA: 2,
+    ORO: 3,
+    PLATINO: 4,
+    VIP: 5,
+    NICHOS: 6,
+    NICHO: 6
   };
 
   return orden[clave] || 99;
