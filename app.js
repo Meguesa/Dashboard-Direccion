@@ -4106,8 +4106,9 @@ function renderTablaVentasUiResponsable(mes) {
   }
 
   const filas = calcularVentasUiPorResponsable(mes);
-  const totalUi = filas.reduce((suma, fila) => {
-    return suma + Number(fila.montoUiCapillas || 0) + Number(fila.montoUiParque || 0);
+
+  const totalServiciosUi = filas.reduce((suma, fila) => {
+    return suma + Number(fila.ventasUiCapillas || 0) + Number(fila.ventasUiParque || 0);
   }, 0);
 
   if (filas.length === 0) {
@@ -4121,11 +4122,11 @@ function renderTablaVentasUiResponsable(mes) {
 
   tbody.innerHTML = filas
     .map((fila) => {
-      const montoTotalResponsable =
-        Number(fila.montoUiCapillas || 0) + Number(fila.montoUiParque || 0);
+      const serviciosResponsable =
+        Number(fila.ventasUiCapillas || 0) + Number(fila.ventasUiParque || 0);
 
-      const porcentajeServicios = totalUi > 0
-        ? montoTotalResponsable / totalUi
+      const porcentajeServicios = totalServiciosUi > 0
+        ? serviciosResponsable / totalServiciosUi
         : 0;
 
       return `
@@ -4143,22 +4144,17 @@ function renderTablaVentasUiResponsable(mes) {
 }
 
 function calcularVentasUiPorResponsable(mes) {
-  const contratos = obtenerContratosVentas(mes);
+  const ventasBase = obtenerVentasPorAsesorBase(mes);
   const grupos = new Map();
 
-  contratos.forEach((contrato) => {
-    if (!esContratoUsoInmediato(contrato)) {
+  ventasBase.forEach((venta) => {
+    const distribucion = calcularDistribucionUiVenta(venta);
+
+    if (distribucion.unidadesUi <= 0) {
       return;
     }
 
-    const clasificacion = clasificarContratoUiCapillasParque(contrato);
-
-    if (!clasificacion.esUiCapillas && !clasificacion.esUiParque) {
-      return;
-    }
-
-    const responsable = obtenerResponsableVentaUi(contrato);
-    const montoContrato = obtenerMontoContratoVenta(contrato);
+    const responsable = normalizarTexto(venta.asesor) || "Sin responsable";
 
     if (!grupos.has(responsable)) {
       grupos.set(responsable, {
@@ -4172,31 +4168,11 @@ function calcularVentasUiPorResponsable(mes) {
 
     const grupo = grupos.get(responsable);
 
-    const unidadesCapillas = clasificacion.unidadesCapillas;
-    const unidadesParque = clasificacion.unidadesParque;
-    const unidadesTotales = unidadesCapillas + unidadesParque;
+    grupo.ventasUiCapillas += distribucion.unidadesCapillas;
+    grupo.montoUiCapillas += distribucion.montoCapillas;
 
-    let montoCapillas = 0;
-    let montoParque = 0;
-
-    if (clasificacion.esUiCapillas && clasificacion.esUiParque && unidadesTotales > 0) {
-      montoCapillas = montoContrato * (unidadesCapillas / unidadesTotales);
-      montoParque = montoContrato * (unidadesParque / unidadesTotales);
-    } else if (clasificacion.esUiCapillas) {
-      montoCapillas = montoContrato;
-    } else if (clasificacion.esUiParque) {
-      montoParque = montoContrato;
-    }
-
-    if (clasificacion.esUiCapillas) {
-      grupo.ventasUiCapillas += Math.max(unidadesCapillas, 1);
-      grupo.montoUiCapillas += montoCapillas;
-    }
-
-    if (clasificacion.esUiParque) {
-      grupo.ventasUiParque += Math.max(unidadesParque, 1);
-      grupo.montoUiParque += montoParque;
-    }
+    grupo.ventasUiParque += distribucion.unidadesParque;
+    grupo.montoUiParque += distribucion.montoParque;
   });
 
   return Array.from(grupos.values())
@@ -4207,12 +4183,79 @@ function calcularVentasUiPorResponsable(mes) {
         montoUiParque: redondear2(fila.montoUiParque)
       };
     })
+    .filter((fila) => {
+      return Number(fila.ventasUiCapillas || 0) > 0 ||
+        Number(fila.ventasUiParque || 0) > 0 ||
+        Number(fila.montoUiCapillas || 0) > 0 ||
+        Number(fila.montoUiParque || 0) > 0;
+    })
     .sort((a, b) => {
       const totalA = Number(a.montoUiCapillas || 0) + Number(a.montoUiParque || 0);
       const totalB = Number(b.montoUiCapillas || 0) + Number(b.montoUiParque || 0);
 
       return totalB - totalA;
     });
+}
+
+function calcularDistribucionUiVenta(venta) {
+  const unidadesCapillas =
+    obtenerNumeroVentaCampo(venta, [
+      "serviciosAf",
+      "serviciosAF",
+      "Servicios_AF",
+      "Servicios AF",
+      "SERVICIOS_AF"
+    ]) +
+    obtenerNumeroVentaCampo(venta, [
+      "serviciosCh",
+      "serviciosCH",
+      "Servicios_CH",
+      "Servicios CH",
+      "SERVICIOS_CH"
+    ]) +
+    obtenerNumeroVentaCampo(venta, [
+      "tsTsc",
+      "ts_tsc",
+      "TS_TSC",
+      "TS / TSC",
+      "ts",
+      "TS",
+      "tsc",
+      "TSC"
+    ]);
+
+  const unidadesParque =
+    obtenerNumeroVentaCampo(venta, [
+      "propiedades",
+      "Propiedades",
+      "PROPIEDADES"
+    ]) +
+    obtenerNumeroVentaCampo(venta, [
+      "nichos",
+      "Nichos",
+      "NICHOS"
+    ]);
+
+  const unidadesUi = unidadesCapillas + unidadesParque;
+  const montoVenta = obtenerMontoVenta(venta);
+
+  if (unidadesUi <= 0 || montoVenta <= 0) {
+    return {
+      unidadesCapillas,
+      unidadesParque,
+      unidadesUi,
+      montoCapillas: 0,
+      montoParque: 0
+    };
+  }
+
+  return {
+    unidadesCapillas,
+    unidadesParque,
+    unidadesUi,
+    montoCapillas: montoVenta * (unidadesCapillas / unidadesUi),
+    montoParque: montoVenta * (unidadesParque / unidadesUi)
+  };
 }
 
 function obtenerResponsableVentaUi(contrato) {
