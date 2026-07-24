@@ -187,6 +187,101 @@ function obtenerNumeroMesDesdeClave(claveMes) {
 }
 
 function sincronizarAnioConMesSeleccionado() {
+  const mesBase = state.mesFinSeleccionado || state.mesSeleccionado || "2026-07";
+  const anioDesdeMes = obtenerAnioDesdeClaveMes(mesBase);
+
+  if (!state.anioSeleccionado && anioDesdeMes) {
+    state.anioSeleccionado = anioDesdeMes;
+  }
+
+  if (!state.anioSeleccionado) {
+    state.anioSeleccionado = "2026";
+  }
+
+  const numeroMesSeleccionado = obtenerNumeroMesDesdeClave(state.mesSeleccionado) || "01";
+  const numeroMesInicio = obtenerNumeroMesDesdeClave(state.mesInicioSeleccionado) || numeroMesSeleccionado;
+  const numeroMesFin = obtenerNumeroMesDesdeClave(state.mesFinSeleccionado) || numeroMesSeleccionado;
+
+  state.mesSeleccionado = crearClaveMes(state.anioSeleccionado, numeroMesFin);
+  state.mesInicioSeleccionado = crearClaveMes(state.anioSeleccionado, numeroMesInicio);
+  state.mesFinSeleccionado = crearClaveMes(state.anioSeleccionado, numeroMesFin);
+
+  normalizarRangoMesesSeleccionado();
+}
+
+function normalizarRangoMesesSeleccionado() {
+  const numeroInicio = Number(obtenerNumeroMesDesdeClave(state.mesInicioSeleccionado) || 1);
+  const numeroFin = Number(obtenerNumeroMesDesdeClave(state.mesFinSeleccionado) || numeroInicio);
+
+  if (numeroInicio > numeroFin) {
+    state.mesFinSeleccionado = state.mesInicioSeleccionado;
+    state.mesSeleccionado = state.mesFinSeleccionado;
+  }
+}
+
+function obtenerMesesRangoSeleccionado() {
+  const meses = obtenerMesesDelAnioSeleccionado();
+  const numeroInicio = Number(obtenerNumeroMesDesdeClave(state.mesInicioSeleccionado) || 1);
+  const numeroFin = Number(obtenerNumeroMesDesdeClave(state.mesFinSeleccionado) || numeroInicio);
+
+  return meses
+    .filter((mes) => {
+      const numeroMes = Number(obtenerNumeroMesDesdeClave(mes.clave) || 0);
+      return numeroMes >= numeroInicio && numeroMes <= numeroFin;
+    })
+    .map((mes) => mes.clave);
+}
+
+function normalizarPeriodoDashboard(periodo) {
+  if (Array.isArray(periodo)) {
+    return periodo
+      .map((mes) => normalizarTexto(mes))
+      .filter(Boolean);
+  }
+
+  const mes = normalizarTexto(periodo);
+
+  return mes ? [mes] : [];
+}
+
+function obtenerMesBasePeriodo(periodo) {
+  const meses = normalizarPeriodoDashboard(periodo);
+
+  return meses[0] || state.mesSeleccionado;
+}
+
+function coincideMesValor(mesRegistro, periodo) {
+  const mesRegistroNormalizado = normalizarTexto(mesRegistro).toUpperCase();
+
+  if (!mesRegistroNormalizado) {
+    return false;
+  }
+
+  return normalizarPeriodoDashboard(periodo).some((mes) => {
+    const mesSeleccionadoNormalizado = normalizarTexto(mes).toUpperCase();
+
+    if (mesRegistroNormalizado === mesSeleccionadoNormalizado) {
+      return true;
+    }
+
+    const nombreMes = obtenerNombreMesDesdeClave(mesSeleccionadoNormalizado);
+
+    return mesRegistroNormalizado === normalizarTexto(nombreMes).toUpperCase();
+  });
+}
+
+function obtenerEtiquetaPeriodoSeleccionado() {
+  const meses = normalizarPeriodoDashboard(obtenerMesesRangoSeleccionado());
+
+  if (meses.length <= 1) {
+    return obtenerNombreMesDesdeClave(meses[0] || state.mesSeleccionado);
+  }
+
+  const mesInicio = obtenerNombreMesDesdeClave(meses[0]);
+  const mesFin = obtenerNombreMesDesdeClave(meses[meses.length - 1]);
+
+  return `${mesInicio} - ${mesFin}`;
+}
 
 
 function conectarEventos() {
