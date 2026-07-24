@@ -3301,3 +3301,55 @@ body {
     min-height: 320px;
   }
 }
+
+/* ================================
+   Modal ventas asesor: KPIs
+================================ */
+
+.ventas-asesor-modal-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.ventas-asesor-modal-kpi {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  min-width: 0;
+}
+
+.ventas-asesor-modal-kpi span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.ventas-asesor-modal-kpi strong {
+  display: block;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1000px) {
+  .ventas-asesor-modal-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .ventas-asesor-modal-kpis {
+    grid-template-columns: 1fr;
+  }
+}

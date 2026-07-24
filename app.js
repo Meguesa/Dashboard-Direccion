@@ -3807,8 +3807,56 @@ function obtenerHistoricoVentasAsesor(nombreAsesor) {
   });
 }
 
+function calcularResumenHistoricoVentasAsesor(nombreAsesor) {
+  const historico = obtenerHistoricoVentasAsesor(nombreAsesor);
+
+  const totalVenta = historico.reduce((suma, fila) => {
+    return suma + Number(fila.venta || 0);
+  }, 0);
+
+  const totalMeta = historico.reduce((suma, fila) => {
+    return suma + Number(fila.meta || 0);
+  }, 0);
+
+  const totalUnidades = historico.reduce((suma, fila) => {
+    return suma + Number(fila.unidades || 0);
+  }, 0);
+
+  const mejorMes = historico.reduce((mejor, fila) => {
+    if (!mejor || Number(fila.venta || 0) > Number(mejor.venta || 0)) {
+      return fila;
+    }
+
+    return mejor;
+  }, null);
+
+  return {
+    totalVenta,
+    totalMeta,
+    totalUnidades,
+    porcentajeCumplimiento: totalMeta > 0 ? totalVenta / totalMeta : 0,
+    mejorMesNombre: mejorMes && Number(mejorMes.venta || 0) > 0
+      ? mejorMes.nombreMes
+      : "Sin venta"
+  };
+}
+
+function renderResumenHistoricoVentasAsesor(nombreAsesor) {
+  const resumen = calcularResumenHistoricoVentasAsesor(nombreAsesor);
+
+  setText("ventasAsesorHistoricoTotal", formatoMoneda(resumen.totalVenta));
+  setText("ventasAsesorHistoricoMeta", resumen.totalMeta > 0 ? formatoMoneda(resumen.totalMeta) : "Sin meta");
+  setText(
+    "ventasAsesorHistoricoCumplimiento",
+    resumen.totalMeta > 0 ? formatoPorcentaje(resumen.porcentajeCumplimiento) : "—"
+  );
+  setText("ventasAsesorHistoricoMejorMes", resumen.mejorMesNombre);
+  setText("ventasAsesorHistoricoUnidades", formatoNumero(resumen.totalUnidades));
+}
+
 function abrirModalVentasAsesor(nombreAsesor) {
   abrirModalVentasAsesorBase(nombreAsesor);
+  renderResumenHistoricoVentasAsesor(nombreAsesor);
   renderGraficaHistoricoVentasAsesor(nombreAsesor);
 }
 
@@ -3928,7 +3976,7 @@ function abrirModalVentasAsesorBase(nombreAsesor) {
   }
 
   conectarModalVentasAsesor();
-  
+
   if (title) {
     title.textContent = `Histórico de ventas - ${nombreAsesor || "Asesor"}`;
   }
