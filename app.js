@@ -4105,11 +4105,213 @@ function renderTablaVentasUiResponsable(mes) {
     return;
   }
 
-  tbody.innerHTML = `
-    <tr>
-      <td colspan="6">Configuración pendiente de cálculo.</td>
-    </tr>
-  `;
+  const filas = calcularVentasUiPorResponsable(mes);
+  const totalUi = filas.reduce((suma, fila) => {
+    return suma + Number(fila.montoUiCapillas || 0) + Number(fila.montoUiParque || 0);
+  }, 0);
+
+  if (filas.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6">Sin ventas de Uso Inmediato para el periodo seleccionado.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filas
+    .map((fila) => {
+      const montoTotalResponsable =
+        Number(fila.montoUiCapillas || 0) + Number(fila.montoUiParque || 0);
+
+      const porcentajeServicios = totalUi > 0
+        ? montoTotalResponsable / totalUi
+        : 0;
+
+      return `
+        <tr>
+          <td>${escaparHtml(fila.responsable)}</td>
+          <td>${formatoNumero(fila.ventasUiCapillas)}</td>
+          <td>${formatoMoneda(fila.montoUiCapillas)}</td>
+          <td>${formatoNumero(fila.ventasUiParque)}</td>
+          <td>${formatoMoneda(fila.montoUiParque)}</td>
+          <td>${formatoPorcentaje(porcentajeServicios)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function calcularVentasUiPorResponsable(mes) {
+  const contratos = obtenerContratosVentas(mes);
+  const grupos = new Map();
+
+  contratos.forEach((contrato) => {
+    if (!esContratoUsoInmediato(contrato)) {
+      return;
+    }
+
+    const clasificacion = clasificarContratoUiCapillasParque(contrato);
+
+    if (!clasificacion.esUiCapillas && !clasificacion.esUiParque) {
+      return;
+    }
+
+    const responsable = obtenerResponsableVentaUi(contrato);
+    const montoContrato = obtenerMontoContratoVenta(contrato);
+
+    if (!grupos.has(responsable)) {
+      grupos.set(responsable, {
+        responsable,
+        ventasUiCapillas: 0,
+        montoUiCapillas: 0,
+        ventasUiParque: 0,
+        montoUiParque: 0
+      });
+    }
+
+    const grupo = grupos.get(responsable);
+
+    const unidadesCapillas = clasificacion.unidadesCapillas;
+    const unidadesParque = clasificacion.unidadesParque;
+    const unidadesTotales = unidadesCapillas + unidadesParque;
+
+    let montoCapillas = 0;
+    let montoParque = 0;
+
+    if (clasificacion.esUiCapillas && clasificacion.esUiParque && unidadesTotales > 0) {
+      montoCapillas = montoContrato * (unidadesCapillas / unidadesTotales);
+      montoParque = montoContrato * (unidadesParque / unidadesTotales);
+    } else if (clasificacion.esUiCapillas) {
+      montoCapillas = montoContrato;
+    } else if (clasificacion.esUiParque) {
+      montoParque = montoContrato;
+    }
+
+    if (clasificacion.esUiCapillas) {
+      grupo.ventasUiCapillas += Math.max(unidadesCapillas, 1);
+      grupo.montoUiCapillas += montoCapillas;
+    }
+
+    if (clasificacion.esUiParque) {
+      grupo.ventasUiParque += Math.max(unidadesParque, 1);
+      grupo.montoUiParque += montoParque;
+    }
+  });
+
+  return Array.from(grupos.values())
+    .map((fila) => {
+      return {
+        ...fila,
+        montoUiCapillas: redondear2(fila.montoUiCapillas),
+        montoUiParque: redondear2(fila.montoUiParque)
+      };
+    })
+    .sort((a, b) => {
+      const totalA = Number(a.montoUiCapillas || 0) + Number(a.montoUiParque || 0);
+      const totalB = Number(b.montoUiCapillas || 0) + Number(b.montoUiParque || 0);
+
+      return totalB - totalA;
+    });
+}
+
+function obtenerResponsableVentaUi(contrato) {
+  return normalizarTexto(
+    contrato.asesor ||
+    contrato.responsable ||
+    contrato.vendedor ||
+    contrato.nombreAsesor ||
+    "Sin responsable"
+  );
+}
+
+function esContratoUsoInmediato(contrato) {
+  const texto = normalizarClaveComparacion([
+    contrato.tipoContrato,
+    contrato.tipoServicio,
+    contrato.tipoRegistro,
+    contrato.fuente,
+    contrato.hojaOrigen
+  ].join(" "));
+
+  return texto.includes("USO INMEDIATO") ||
+    texto.includes("USO INM") ||
+    texto.includes("INMEDIATO") ||
+    texto.includes(" UI ") ||
+    texto.endsWith(" UI") ||
+    texto.startsWith("UI ");
+}
+
+function clasificarContratoUiCapillasParque(contrato) {
+  const unidadesCapillas =
+    obtenerNumeroVentaCampo(contrato, [
+      "serviciosAf",
+      "serviciosAF",
+      "Servicios_AF",
+      "Servicios AF",
+      "SERVICIOS_AF"
+    ]) +
+    obtenerNumeroVentaCampo(contrato, [
+      "serviciosCh",
+      "serviciosCH",
+      "Servicios_CH",
+      "Servicios CH",
+      "SERVICIOS_CH"
+    ]);
+
+  const unidadesParque =
+    obtenerNumeroVentaCampo(contrato, [
+      "propiedades",
+      "Propiedades",
+      "PROPIEDADES"
+    ]) +
+    obtenerNumeroVentaCampo(contrato, [
+      "nichos",
+      "Nichos",
+      "NICHOS"
+    ]);
+
+  const texto = normalizarClaveComparacion([
+    contrato.tipoContrato,
+    contrato.tipoServicio,
+    contrato.tipoRegistro,
+    contrato.sucursal,
+    contrato.fuente,
+    contrato.hojaOrigen
+  ].join(" "));
+
+  const textoCapillas = texto.includes("CAPILLA") ||
+    texto.includes("CHURUBUSCO") ||
+    texto.includes("APODACA") ||
+    texto.includes("AGUA FRIA") ||
+    texto.includes("SERVICIO CH") ||
+    texto.includes("SERVICIOS CH") ||
+    texto.includes("SERVICIO AF") ||
+    texto.includes("SERVICIOS AF") ||
+    texto.includes("CREMACION") ||
+    texto.includes("VELACION");
+
+  const textoParque = texto.includes("PARQUE") ||
+    texto.includes("PANTEON") ||
+    texto.includes("PANTEON") ||
+    texto.includes("PROPIEDAD") ||
+    texto.includes("PROPIEDADES") ||
+    texto.includes("NICHO") ||
+    texto.includes("NICHOS") ||
+    texto.includes("LOTE") ||
+    texto.includes("LOTES") ||
+    texto.includes("INHUMACION") ||
+    texto.includes("DEPOSITO");
+
+  const esUiCapillas = unidadesCapillas > 0 || textoCapillas;
+  const esUiParque = unidadesParque > 0 || textoParque;
+
+  return {
+    esUiCapillas,
+    esUiParque,
+    unidadesCapillas,
+    unidadesParque
+  };
 }
 
 function renderTablaVentasAsesor(mes) {
