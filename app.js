@@ -4108,7 +4108,9 @@ function renderTablaVentasUiResponsable(mes) {
   const filas = calcularVentasUiPorResponsable(mes);
 
   const totalServiciosUi = filas.reduce((suma, fila) => {
-    return suma + Number(fila.ventasUiCapillas || 0) + Number(fila.ventasUiParque || 0);
+    return suma
+      + Number(fila.ventasUiCapillas || 0)
+      + Number(fila.ventasUiParque || 0);
   }, 0);
 
   if (filas.length === 0) {
@@ -4122,11 +4124,11 @@ function renderTablaVentasUiResponsable(mes) {
 
   tbody.innerHTML = filas
     .map((fila) => {
-      const serviciosResponsable =
+      const totalServiciosResponsable =
         Number(fila.ventasUiCapillas || 0) + Number(fila.ventasUiParque || 0);
 
       const porcentajeServicios = totalServiciosUi > 0
-        ? serviciosResponsable / totalServiciosUi
+        ? totalServiciosResponsable / totalServiciosUi
         : 0;
 
       return `
@@ -4144,17 +4146,12 @@ function renderTablaVentasUiResponsable(mes) {
 }
 
 function calcularVentasUiPorResponsable(mes) {
-  const ventasBase = obtenerVentasPorAsesorBase(mes);
   const grupos = new Map();
 
-  ventasBase.forEach((venta) => {
-    const distribucion = calcularDistribucionUiVenta(venta);
-
-    if (distribucion.unidadesUi <= 0) {
-      return;
-    }
-
-    const responsable = normalizarTexto(venta.asesor) || "Sin responsable";
+  obtenerServiciosUsoInmediatoBiServicios(mes).forEach((servicio) => {
+    const responsable = obtenerAsesorServicioUi(servicio);
+    const origen = obtenerOrigenServicio(servicio);
+    const monto = obtenerMontoServicioUi(servicio);
 
     if (!grupos.has(responsable)) {
       grupos.set(responsable, {
@@ -4168,11 +4165,16 @@ function calcularVentasUiPorResponsable(mes) {
 
     const grupo = grupos.get(responsable);
 
-    grupo.ventasUiCapillas += distribucion.unidadesCapillas;
-    grupo.montoUiCapillas += distribucion.montoCapillas;
+    if (origen === "Capillas") {
+      grupo.ventasUiCapillas += 1;
+      grupo.montoUiCapillas += monto;
+      return;
+    }
 
-    grupo.ventasUiParque += distribucion.unidadesParque;
-    grupo.montoUiParque += distribucion.montoParque;
+    if (origen === "Parque") {
+      grupo.ventasUiParque += 1;
+      grupo.montoUiParque += monto;
+    }
   });
 
   return Array.from(grupos.values())
@@ -4195,6 +4197,87 @@ function calcularVentasUiPorResponsable(mes) {
 
       return totalB - totalA;
     });
+}
+
+function obtenerServiciosUsoInmediatoBiServicios(mes) {
+  return (state.datos.servicios || [])
+    .filter((servicio) => coincidePeriodoServicio(servicio, mes))
+    .filter((servicio) => esServicioUsoInmediatoBiServicios(servicio));
+}
+
+function esServicioUsoInmediatoBiServicios(servicio) {
+  const valor = obtenerCampoFlexible(servicio, [
+    "previsionUsoInmediato",
+    "prevision_uso_inmediato",
+    "Prevision_Uso_Inmediato",
+    "Prevision Uso Inmediato",
+    "PREVISION_USO_INMEDIATO"
+  ]);
+
+  return normalizarClaveComparacion(valor) === "USO INMEDIATO";
+}
+
+function obtenerAsesorServicioUi(servicio) {
+  return normalizarTexto(
+    obtenerCampoFlexible(servicio, [
+      "asesor",
+      "Asesor",
+      "ASESOR",
+      "responsable",
+      "Responsable",
+      "vendedor",
+      "Vendedor"
+    ])
+  ) || "Sin asesor";
+}
+
+function obtenerMontoServicioUi(servicio) {
+  return obtenerNumeroCampoFlexible(servicio, [
+    "precioTotalServicio",
+    "precio_total_servicio",
+    "Precio_Total_Servicio",
+    "Precio Total Servicio",
+    "PRECIO_TOTAL_SERVICIO",
+    "totalServicio",
+    "Total_Servicio",
+    "importe",
+    "Importe",
+    "monto",
+    "Monto",
+    "total",
+    "Total"
+  ]);
+}
+
+function obtenerCampoFlexible(item, campos) {
+  for (const campo of campos) {
+    if (
+      item &&
+      item[campo] !== undefined &&
+      item[campo] !== null &&
+      String(item[campo]).trim() !== ""
+    ) {
+      return item[campo];
+    }
+  }
+
+  return "";
+}
+
+function obtenerNumeroCampoFlexible(item, campos) {
+  const valor = obtenerCampoFlexible(item, campos);
+
+  if (typeof valor === "number") {
+    return Number.isFinite(valor) ? valor : 0;
+  }
+
+  const texto = normalizarTexto(valor)
+    .replace(/\$/g, "")
+    .replace(/,/g, "");
+
+  const numero = Number(texto);
+
+  return Number.isFinite(numero) ? numero : 0;
 }
 
 function calcularDistribucionUiVenta(venta) {
