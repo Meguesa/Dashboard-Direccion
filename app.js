@@ -3927,6 +3927,8 @@ function abrirModalVentasAsesorBase(nombreAsesor) {
     return;
   }
 
+  conectarModalVentasAsesor();
+  
   if (title) {
     title.textContent = `Histórico de ventas - ${nombreAsesor || "Asesor"}`;
   }
@@ -3950,12 +3952,22 @@ function cerrarModalVentasAsesor() {
   destruirGrafica("ventasAsesorHistorico");
 }
 
+let modalVentasAsesorConectado = false;
+
 function conectarModalVentasAsesor() {
+  if (modalVentasAsesorConectado) {
+    return;
+  }
+
   const modal = document.getElementById("ventasAsesorModal");
   const closeButton = document.getElementById("ventasAsesorModalClose");
 
   if (closeButton) {
-    closeButton.addEventListener("click", cerrarModalVentasAsesor);
+    closeButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      cerrarModalVentasAsesor();
+    });
   }
 
   if (modal) {
@@ -3971,6 +3983,8 @@ function conectarModalVentasAsesor() {
       cerrarModalVentasAsesor();
     }
   });
+
+  modalVentasAsesorConectado = true;
 }
 
 function calcularMaximoEjeVentasAsesor(valores) {
