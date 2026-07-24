@@ -36,7 +36,6 @@ function inicializarDashboard() {
   conectarEventos();
   conectarNavegacionInterna();
   conectarFiltrosTablas();
-  conectarModalVentasAsesor();
   renderDashboard();
   mostrarPagina("resumen");
   ocultarPanelEstado();
@@ -3654,6 +3653,30 @@ function renderGraficaVentasPorAsesor(mes) {
       indexAxis: "y",
       responsive: true,
       maintainAspectRatio: false,
+      onClick: (event, elementos) => {
+        if (!elementos || elementos.length === 0) {
+          return;
+        }
+
+        const elemento = elementos[0];
+        const index = elemento.index;
+        const asesor = labels[index];
+
+        if (!asesor) {
+          return;
+        }
+
+        abrirModalVentasAsesor(asesor);
+      },
+      onHover: (event, elementos) => {
+        const canvas = event?.native?.target;
+
+        if (canvas) {
+          canvas.style.cursor = elementos && elementos.length > 0
+            ? "pointer"
+            : "default";
+        }
+      },
       plugins: {
         legend: {
           display: false
@@ -3763,6 +3786,138 @@ function renderGraficaVentasAsesorAxis(maximoEje) {
   });
 }
 
+function obtenerHistoricoVentasAsesor(nombreAsesor) {
+  const asesorBuscado = normalizarTexto(nombreAsesor).toUpperCase();
+  const meses = obtenerMesesDelAnioSeleccionado();
+
+  return meses.map((mes) => {
+    const filasAsesorMes = agruparVentasPorAsesor(mes.clave);
+    const filaAsesor = filasAsesorMes.find((fila) => {
+      return normalizarTexto(fila.nombre).toUpperCase() === asesorBuscado;
+    });
+
+    return {
+      mes: mes.clave,
+      nombreMes: mes.nombre,
+      venta: filaAsesor ? Number(filaAsesor.total || 0) : 0,
+      meta: filaAsesor ? Number(filaAsesor.metaMensual || 0) : 0,
+      unidades: filaAsesor ? Number(filaAsesor.unidades || 0) : 0,
+      registros: filaAsesor ? Number(filaAsesor.registros || 0) : 0
+    };
+  });
+}
+
+function abrirModalVentasAsesor(nombreAsesor) {
+  abrirModalVentasAsesorBase(nombreAsesor);
+  renderGraficaHistoricoVentasAsesor(nombreAsesor);
+}
+
+function renderGraficaHistoricoVentasAsesor(nombreAsesor) {
+  const canvas = document.getElementById("chartVentasAsesorHistorico");
+
+  if (!canvas || typeof Chart === "undefined") {
+    return;
+  }
+
+  const historico = obtenerHistoricoVentasAsesor(nombreAsesor);
+
+  const labels = historico.map((fila) => fila.nombreMes);
+  const ventas = historico.map((fila) => fila.venta);
+  const metas = historico.map((fila) => fila.meta);
+
+  const hayMetas = metas.some((valor) => Number(valor || 0) > 0);
+
+  const datasets = [
+    {
+      label: "Venta mensual",
+      data: ventas,
+      tension: 0.3,
+      fill: false,
+      borderWidth: 3,
+      pointRadius: 4,
+      pointHoverRadius: 6
+    }
+  ];
+
+  if (hayMetas) {
+    datasets.push({
+      label: "Meta mensual",
+      data: metas,
+      tension: 0.3,
+      fill: false,
+      borderWidth: 3,
+      borderDash: [6, 6],
+      pointRadius: 4,
+      pointHoverRadius: 6
+    });
+  }
+
+  destruirGrafica("ventasAsesorHistorico");
+
+  dashboardCharts.ventasAsesorHistorico = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom"
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const valor = Number(context.parsed.y || 0);
+              const etiqueta = context.dataset.label || "Monto";
+
+              return `${etiqueta}: ${formatoMoneda(valor)}`;
+            },
+            afterBody: (items) => {
+              if (!items || !items.length) {
+                return "";
+              }
+
+              const index = items[0].dataIndex;
+              const fila = historico[index];
+
+              if (!fila) {
+                return "";
+              }
+
+              const cumplimiento = fila.meta > 0
+                ? fila.venta / fila.meta
+                : 0;
+
+              return [
+                `Unidades: ${formatoNumero(fila.unidades)}`,
+                `Registros: ${formatoNumero(fila.registros)}`,
+                `Cumplimiento: ${fila.meta > 0 ? formatoPorcentaje(cumplimiento) : "—"}`
+              ];
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => formatoMoneda(value)
+          }
+        }
+      }
+    }
+  });
+}
+
+
 function abrirModalVentasAsesorBase(nombreAsesor) {
   const modal = document.getElementById("ventasAsesorModal");
   const title = document.getElementById("ventasAsesorModalTitle");
@@ -3777,7 +3932,7 @@ function abrirModalVentasAsesorBase(nombreAsesor) {
   }
 
   if (subtitle) {
-    subtitle.textContent = `Ventas mensuales durante ${state.anioSeleccionado || "el año seleccionado"}.`;
+    subtitle.textContent = `Venta mensual vs meta mensual durante ${state.anioSeleccionado || "el año seleccionado"}.`;
   }
 
   modal.classList.remove("hidden");
