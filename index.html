@@ -1118,6 +1118,28 @@
       </article>
     </section>
 
+    <!-- Modal: histórico de ventas por asesor -->
+    <div id="ventasAsesorModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+      <section class="modal-card ventas-asesor-modal-card">
+        <div class="modal-header">
+          <div>
+            <h2 id="ventasAsesorModalTitle">Histórico de ventas</h2>
+            <p id="ventasAsesorModalSubtitle">
+              Ventas mensuales del asesor durante el año seleccionado.
+            </p>
+          </div>
+
+          <button id="ventasAsesorModalClose" class="modal-close-button" type="button">
+            ×
+          </button>
+        </div>
+
+        <div class="chart-container chart-container-line ventas-asesor-modal-chart">
+          <canvas id="chartVentasAsesorHistorico"></canvas>
+        </div>
+      </section>
+    </div>
+
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>

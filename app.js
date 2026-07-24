@@ -36,6 +36,7 @@ function inicializarDashboard() {
   conectarEventos();
   conectarNavegacionInterna();
   conectarFiltrosTablas();
+  conectarModalVentasAsesor();
   renderDashboard();
   mostrarPagina("resumen");
   ocultarPanelEstado();
@@ -3758,6 +3759,61 @@ function renderGraficaVentasAsesorAxis(maximoEje) {
           display: false
         }
       }
+    }
+  });
+}
+
+function abrirModalVentasAsesorBase(nombreAsesor) {
+  const modal = document.getElementById("ventasAsesorModal");
+  const title = document.getElementById("ventasAsesorModalTitle");
+  const subtitle = document.getElementById("ventasAsesorModalSubtitle");
+
+  if (!modal) {
+    return;
+  }
+
+  if (title) {
+    title.textContent = `Histórico de ventas - ${nombreAsesor || "Asesor"}`;
+  }
+
+  if (subtitle) {
+    subtitle.textContent = `Ventas mensuales durante ${state.anioSeleccionado || "el año seleccionado"}.`;
+  }
+
+  modal.classList.remove("hidden");
+}
+
+function cerrarModalVentasAsesor() {
+  const modal = document.getElementById("ventasAsesorModal");
+
+  if (!modal) {
+    return;
+  }
+
+  modal.classList.add("hidden");
+
+  destruirGrafica("ventasAsesorHistorico");
+}
+
+function conectarModalVentasAsesor() {
+  const modal = document.getElementById("ventasAsesorModal");
+  const closeButton = document.getElementById("ventasAsesorModalClose");
+
+  if (closeButton) {
+    closeButton.addEventListener("click", cerrarModalVentasAsesor);
+  }
+
+  if (modal) {
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) {
+        cerrarModalVentasAsesor();
+      }
+    });
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      cerrarModalVentasAsesor();
     }
   });
 }
