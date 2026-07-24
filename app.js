@@ -187,19 +187,7 @@ function obtenerNumeroMesDesdeClave(claveMes) {
 }
 
 function sincronizarAnioConMesSeleccionado() {
-  const anioDesdeMes = obtenerAnioDesdeClaveMes(state.mesSeleccionado);
-  const numeroMes = obtenerNumeroMesDesdeClave(state.mesSeleccionado) || "01";
 
-  if (!state.anioSeleccionado && anioDesdeMes) {
-    state.anioSeleccionado = anioDesdeMes;
-  }
-
-  if (!state.anioSeleccionado) {
-    state.anioSeleccionado = "2026";
-  }
-
-  state.mesSeleccionado = crearClaveMes(state.anioSeleccionado, numeroMes);
-}
 
 function conectarEventos() {
   const yearSelector = document.getElementById("yearSelector");
@@ -729,7 +717,8 @@ function mostrarPagina(nombrePagina) {
 }
 
 function renderDashboard() {
-  const mes = state.mesSeleccionado;
+  const mesesPeriodo = obtenerMesesRangoSeleccionado();
+  const mes = mesesPeriodo.length ? mesesPeriodo : [state.mesSeleccionado];
 
   const totalIngresos = sumarIngresos(mes);
   const totalEgresos = sumarEgresos(mes);
@@ -835,25 +824,25 @@ function renderDashboard() {
 
 function sumarPorMes(lista, mes, campo) {
   return lista
-    .filter((item) => item.mes === mes)
+    .filter((item) => coincideMesValor(item.mes, mes))
     .reduce((total, item) => total + Number(item[campo] || 0), 0);
 }
 
 function sumarServicios(mes, origen) {
   return state.datos.servicios
-    .filter((item) => item.mes === mes && item.origen === origen)
+    .filter((item) => coincidePeriodoServicio(item, mes) && item.origen === origen)
     .reduce((total, item) => total + Number(item.total || 0), 0);
 }
 
 function sumarIngresos(mes) {
   return state.datos.ingresos
-    .filter((item) => normalizarTexto(item.mes) === mes)
+    .filter((item) => coincideMesValor(item.mes, mes))
     .reduce((total, item) => total + Number(item.importe || 0), 0);
 }
 
 function sumarIngresoRealCobranza(mes) {
   return state.datos.ingresos
-    .filter((item) => normalizarTexto(item.mes) === mes)
+    .filter((item) => coincideMesValor(item.mes, mes))
     .filter((item) => esIngresoConsideradoMetaCobranza(item))
     .reduce((total, item) => total + Number(item.importe || 0), 0);
 }
@@ -878,7 +867,7 @@ function sumarEgresos(mes) {
   return state.datos.egresos
     .filter((item) => {
       const mesEgreso = normalizarTexto(item.mesHoja || item.mes);
-      return mesEgreso === mes;
+      return coincideMesValor(mesEgreso, mes);
     })
     .reduce((total, item) => total + Number(item.pagado || 0), 0);
 }
@@ -906,9 +895,10 @@ function sumarMetaVentasMensual(mes) {
   return agruparVentasPorAsesor(mes)
     .reduce((total, fila) => total + Number(fila.metaMensual || 0), 0);
 }
+
 function contarRegistrosIngresos(mes) {
   return state.datos.ingresos
-    .filter((item) => normalizarTexto(item.mes) === mes)
+    .filter((item) => coincideMesValor(item.mes, mes))
     .length;
 }
 
@@ -916,7 +906,7 @@ function contarRegistrosEgresos(mes) {
   return state.datos.egresos
     .filter((item) => {
       const mesEgreso = normalizarTexto(item.mesHoja || item.mes);
-      return mesEgreso === mes;
+      return coincideMesValor(mesEgreso, mes);
     })
     .length;
 }
@@ -925,7 +915,7 @@ function calcularTotalPorPagar(mes) {
   return state.datos.egresos
     .filter((item) => {
       const mesEgreso = normalizarTexto(item.mesHoja || item.mes);
-      return mesEgreso === mes;
+      return coincideMesValor(mesEgreso, mes);
     })
     .reduce((total, item) => total + Number(item.porPagar || 0), 0);
 }
@@ -2119,7 +2109,7 @@ function obtenerDetalleIngresosFlujo(mes) {
   const grupos = new Map();
 
   state.datos.ingresos
-    .filter((item) => normalizarTexto(item.mes) === mes)
+    .filter((item) => coincideMesValor(item.mes, mes))
     .forEach((item) => {
       const nombre = obtenerSubgrupoIngresoFlujo(item);
       const importe = Number(item.importe || 0);
@@ -2141,7 +2131,10 @@ function obtenerDetalleEgresosFlujo(mes, grupoBuscado) {
   const grupos = new Map();
 
   state.datos.egresos
-    .filter((item) => normalizarTexto(item.mes) === mes)
+    .filter((item) => {
+      const mesEgreso = normalizarTexto(item.mesHoja || item.mes);
+      return coincideMesValor(mesEgreso, mes);
+    })
     .filter((item) => obtenerGrupoEgresoFlujo(item) === grupoBuscado)
     .forEach((item) => {
       const nombre = obtenerSubgrupoEgresoFlujo(item);
@@ -2406,7 +2399,7 @@ function renderFilaMetaCobranza(fila, esTotal) {
 function obtenerMetasCobranzaMes(mes) {
   return (state.datos.metasCobranza || [])
     .filter((meta) => {
-      const esMes = normalizarTexto(meta.mes) === mes;
+      const esMes = coincideMesValor(meta.mes, mes);
       const estaActivo = meta.activo !== false;
 
       return esMes && estaActivo;
@@ -2446,7 +2439,7 @@ function calcularRealCobranzaArea(mes, areaBuscada) {
   const areaNormalizada = normalizarAreaMetaCobranza(areaBuscada);
 
   return (state.datos.ingresos || [])
-    .filter((item) => normalizarTexto(item.mes) === mes)
+    .filter((item) => coincideMesValor(item.mes, mes))
     .filter((item) => clasificarAreaIngresoCobranza(item) === areaNormalizada)
     .reduce((suma, item) => suma + Number(item.importe || 0), 0);
 }
@@ -3073,7 +3066,7 @@ function agruparIngresosPorCampo(mes, campo, etiquetaVacia) {
   const grupos = new Map();
 
   state.datos.ingresos
-    .filter((item) => normalizarTexto(item.mes) === mes)
+    .filter((item) => coincideMesValor(item.mes, mes))
     .forEach((item) => {
       const nombreGrupo = normalizarTexto(item[campo]) || etiquetaVacia;
       const importe = Number(item.importe || 0);
@@ -3281,14 +3274,14 @@ function renderTablaEgresosPendientes(mes) {
       const mesEgreso = normalizarTexto(item.mesHoja || item.mes);
       const porPagar = Number(item.porPagar || 0);
 
-      return mesEgreso === mes && porPagar > 0;
+      return coincideMesValor(mesEgreso, mes) && porPagar > 0;
     })
     .sort((a, b) => Number(b.porPagar || 0) - Number(a.porPagar || 0));
 
   if (pendientes.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="4">Sin pagos pendientes para el mes seleccionado.</td>
+        <td colspan="4">Sin pagos pendientes para el periodo seleccionado.</td>
       </tr>
     `;
     return;
@@ -3385,7 +3378,7 @@ function agruparEgresosPorCampo(
       const mesEgreso = normalizarTexto(item.mesHoja || item.mes);
       const pagado = Number(item.pagado || 0);
 
-      return mesEgreso === mes && pagado > 0;
+      return coincideMesValor(mesEgreso, mes) && pagado > 0;
     })
     .forEach((item) => {
       const nombreGrupo = normalizarTexto(item[campo]) || etiquetaVacia;
@@ -3960,6 +3953,7 @@ function agruparVentasPorAsesor(mes) {
     const montoVenta = obtenerMontoVenta(item);
     const unidades = obtenerUnidadesVenta(item);
     const metaMensual = Number(item.metaMensual || 0);
+    const mesMeta = normalizarTexto(item.mes) || obtenerMesBasePeriodo(mes);
 
     if (montoVenta <= 0 && unidades <= 0 && metaMensual <= 0) {
       return;
@@ -3971,7 +3965,8 @@ function agruparVentasPorAsesor(mes) {
         registros: 0,
         unidades: 0,
         total: 0,
-        metaMensual: 0
+        metaMensual: 0,
+        mesesMetaRegistrados: new Set()
       });
     }
 
@@ -3981,12 +3976,22 @@ function agruparVentasPorAsesor(mes) {
     grupo.unidades += unidades;
     grupo.total += montoVenta;
 
-    if (metaMensual > grupo.metaMensual) {
-      grupo.metaMensual = metaMensual;
+    if (metaMensual > 0 && !grupo.mesesMetaRegistrados.has(mesMeta)) {
+      grupo.metaMensual += metaMensual;
+      grupo.mesesMetaRegistrados.add(mesMeta);
     }
   });
 
   return Array.from(grupos.values())
+    .map((grupo) => {
+      return {
+        nombre: grupo.nombre,
+        registros: grupo.registros,
+        unidades: grupo.unidades,
+        total: grupo.total,
+        metaMensual: grupo.metaMensual
+      };
+    })
     .sort((a, b) => b.total - a.total);
 }
 
@@ -4162,8 +4167,10 @@ function obtenerContratosVentas(mes) {
 }
 
 function coincidePeriodoVenta(item, mesSeleccionado) {
+  const mesBase = obtenerMesBasePeriodo(mesSeleccionado);
+
   return coincideMesVenta(item.mes, mesSeleccionado)
-    && coincideAnioRegistro(item, mesSeleccionado, [
+    && coincideAnioRegistro(item, mesBase, [
       "fecha",
       "fechaContrato",
       "hojaOrigen",
@@ -4172,16 +4179,7 @@ function coincidePeriodoVenta(item, mesSeleccionado) {
 }
   
 function coincideMesVenta(mesRegistro, mesSeleccionado) {
-  const mesRegistroNormalizado = normalizarTexto(mesRegistro).toUpperCase();
-  const mesSeleccionadoNormalizado = normalizarTexto(mesSeleccionado).toUpperCase();
-
-  if (mesRegistroNormalizado === mesSeleccionadoNormalizado) {
-    return true;
-  }
-
-  const nombreMesSeleccionado = obtenerNombreMesDesdeClave(mesSeleccionadoNormalizado);
-
-  return mesRegistroNormalizado === nombreMesSeleccionado;
+  return coincideMesValor(mesRegistro, mesSeleccionado);
 }
 
 function obtenerNombreMesDesdeClave(mesSeleccionado) {
@@ -5583,8 +5581,10 @@ function obtenerServiciosMes(mes) {
 }
 
 function coincidePeriodoServicio(item, mesSeleccionado) {
+  const mesBase = obtenerMesBasePeriodo(mesSeleccionado);
+
   return coincideMesServicio(item.mes, mesSeleccionado)
-    && coincideAnioRegistro(item, mesSeleccionado, [
+    && coincideAnioRegistro(item, mesBase, [
       "fechaServicio",
       "fechaFin",
       "fuente"
@@ -5592,20 +5592,11 @@ function coincidePeriodoServicio(item, mesSeleccionado) {
 }
   
 function coincideMesServicio(mesRegistro, mesSeleccionado) {
-  const mesRegistroNormalizado = normalizarTexto(mesRegistro).toUpperCase();
-  const mesSeleccionadoNormalizado = normalizarTexto(mesSeleccionado).toUpperCase();
-
-  if (mesRegistroNormalizado === mesSeleccionadoNormalizado) {
-    return true;
-  }
-
-  const nombreMesSeleccionado = obtenerNombreMesDesdeClave(mesSeleccionadoNormalizado);
-
-  return mesRegistroNormalizado === nombreMesSeleccionado;
+  return coincideMesValor(mesRegistro, mesSeleccionado);
 }
 
 function coincideAnioRegistro(item, mesSeleccionado, campos) {
-  const anioSeleccionado = obtenerAnioDesdeClaveMes(mesSeleccionado);
+  const anioSeleccionado = obtenerAnioDesdeClaveMes(obtenerMesBasePeriodo(mesSeleccionado));
 
   if (!anioSeleccionado) {
     return true;
