@@ -4093,8 +4093,23 @@ function renderDetalleVentas(mes, totalVentas) {
   renderTablaVentasAsesor(mes);
   renderTablaVentasTipoServicio(mes);
   renderTablaVentasContratos(mes);
+  renderTablaVentasUiResponsable(mes);
   
   renderGraficasVentas(mes);
+}
+
+function renderTablaVentasUiResponsable(mes) {
+  const tbody = document.getElementById("tablaVentasUiResponsableBody");
+
+  if (!tbody) {
+    return;
+  }
+
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="6">Configuración pendiente de cálculo.</td>
+    </tr>
+  `;
 }
 
 function renderTablaVentasAsesor(mes) {
