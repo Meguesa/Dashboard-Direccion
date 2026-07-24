@@ -1,6 +1,8 @@
 window.state = {
   anioSeleccionado: "2026",
   mesSeleccionado: "2026-07",
+  mesInicioSeleccionado: "2026-07",
+  mesFinSeleccionado: "2026-07",
   datos: {
     ingresos: [],
     egresos: [],
@@ -113,20 +115,40 @@ function extraerAniosDeTexto(valor) {
 }
 
 function cargarSelectorMeses() {
-  const selector = document.getElementById("monthSelector");
+  const meses = obtenerMesesDelAnioSeleccionado();
 
+  cargarOpcionesSelectorMes(
+    document.getElementById("monthSelector"),
+    meses,
+    state.mesSeleccionado
+  );
+
+  cargarOpcionesSelectorMes(
+    document.getElementById("monthStartSelector"),
+    meses,
+    state.mesInicioSeleccionado
+  );
+
+  cargarOpcionesSelectorMes(
+    document.getElementById("monthEndSelector"),
+    meses,
+    state.mesFinSeleccionado
+  );
+}
+
+function cargarOpcionesSelectorMes(selector, meses, valorSeleccionado) {
   if (!selector) {
     return;
   }
 
   selector.innerHTML = "";
 
-  obtenerMesesDelAnioSeleccionado().forEach((mes) => {
+  meses.forEach((mes) => {
     const option = document.createElement("option");
     option.value = mes.clave;
     option.textContent = mes.nombre;
 
-    if (mes.clave === state.mesSeleccionado) {
+    if (mes.clave === valorSeleccionado) {
       option.selected = true;
     }
 
@@ -181,6 +203,8 @@ function sincronizarAnioConMesSeleccionado() {
 
 function conectarEventos() {
   const yearSelector = document.getElementById("yearSelector");
+  const monthStartSelector = document.getElementById("monthStartSelector");
+  const monthEndSelector = document.getElementById("monthEndSelector");
   const selector = document.getElementById("monthSelector");
   const refreshButton = document.getElementById("refreshButton");
   const testSharePointButton = document.getElementById("testSharePointButton");
@@ -189,22 +213,69 @@ function conectarEventos() {
 
   if (yearSelector) {
     yearSelector.addEventListener("change", (event) => {
-      const numeroMesActual = obtenerNumeroMesDesdeClave(state.mesSeleccionado) || "01";
-  
+      const numeroMesInicio = obtenerNumeroMesDesdeClave(state.mesInicioSeleccionado) || "01";
+      const numeroMesFin = obtenerNumeroMesDesdeClave(state.mesFinSeleccionado) || "01";
+
       state.anioSeleccionado = event.target.value;
-      state.mesSeleccionado = crearClaveMes(state.anioSeleccionado, numeroMesActual);
-  
+      state.mesInicioSeleccionado = crearClaveMes(state.anioSeleccionado, numeroMesInicio);
+      state.mesFinSeleccionado = crearClaveMes(state.anioSeleccionado, numeroMesFin);
+      state.mesSeleccionado = state.mesFinSeleccionado;
+
+      normalizarRangoMesesSeleccionado();
       cargarSelectorMeses();
       renderDashboard();
     });
   }
-  
+
+  if (monthStartSelector) {
+    monthStartSelector.addEventListener("change", (event) => {
+      state.mesInicioSeleccionado = event.target.value;
+      state.anioSeleccionado = obtenerAnioDesdeClaveMes(state.mesInicioSeleccionado) || state.anioSeleccionado;
+
+      const numeroInicio = Number(obtenerNumeroMesDesdeClave(state.mesInicioSeleccionado) || 1);
+      const numeroFin = Number(obtenerNumeroMesDesdeClave(state.mesFinSeleccionado) || numeroInicio);
+
+      if (numeroInicio > numeroFin) {
+        state.mesFinSeleccionado = state.mesInicioSeleccionado;
+      }
+
+      state.mesSeleccionado = state.mesFinSeleccionado;
+
+      cargarSelectorAnios();
+      cargarSelectorMeses();
+      renderDashboard();
+    });
+  }
+
+  if (monthEndSelector) {
+    monthEndSelector.addEventListener("change", (event) => {
+      state.mesFinSeleccionado = event.target.value;
+      state.anioSeleccionado = obtenerAnioDesdeClaveMes(state.mesFinSeleccionado) || state.anioSeleccionado;
+
+      const numeroInicio = Number(obtenerNumeroMesDesdeClave(state.mesInicioSeleccionado) || 1);
+      const numeroFin = Number(obtenerNumeroMesDesdeClave(state.mesFinSeleccionado) || numeroInicio);
+
+      if (numeroFin < numeroInicio) {
+        state.mesInicioSeleccionado = state.mesFinSeleccionado;
+      }
+
+      state.mesSeleccionado = state.mesFinSeleccionado;
+
+      cargarSelectorAnios();
+      cargarSelectorMeses();
+      renderDashboard();
+    });
+  }
+
   if (selector) {
     selector.addEventListener("change", (event) => {
       state.mesSeleccionado = event.target.value;
+      state.mesInicioSeleccionado = event.target.value;
+      state.mesFinSeleccionado = event.target.value;
       state.anioSeleccionado = obtenerAnioDesdeClaveMes(state.mesSeleccionado) || state.anioSeleccionado;
-  
+
       cargarSelectorAnios();
+      cargarSelectorMeses();
       renderDashboard();
     });
   }
@@ -383,6 +454,8 @@ function guardarDatosEnCache() {
       fechaGuardado: new Date().toISOString(),
       anioSeleccionado: state.anioSeleccionado,
       mesSeleccionado: state.mesSeleccionado,
+      mesInicioSeleccionado: state.mesInicioSeleccionado,
+      mesFinSeleccionado: state.mesFinSeleccionado,
       datos: {
         ingresos: state.datos.ingresos || [],
         egresos: state.datos.egresos || [],
@@ -429,6 +502,15 @@ function cargarDatosDesdeCache() {
       state.mesSeleccionado = cache.mesSeleccionado;
     }
     
+
+    if (cache.mesInicioSeleccionado) {
+      state.mesInicioSeleccionado = cache.mesInicioSeleccionado;
+    }
+
+    if (cache.mesFinSeleccionado) {
+      state.mesFinSeleccionado = cache.mesFinSeleccionado;
+    }
+   
     sincronizarAnioConMesSeleccionado();
 
     return true;

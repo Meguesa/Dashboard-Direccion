@@ -45,8 +45,20 @@
       </div>
 
       <div class="header-actions">
-        <select id="yearSelector" class="select"></select>
-        <select id="monthSelector" class="select"></select>
+        <div class="period-filter">
+          <label class="period-label" for="yearSelector">Año</label>
+          <select id="yearSelector" class="select select-period"></select>
+        </div>
+
+        <div class="period-filter">
+          <label class="period-label" for="monthStartSelector">Desde</label>
+          <select id="monthStartSelector" class="select select-period"></select>
+        </div>
+
+        <div class="period-filter">
+          <label class="period-label" for="monthEndSelector">Hasta</label>
+          <select id="monthEndSelector" class="select select-period"></select>
+        </div>
 
         <div class="user-box">
           <span class="user-label">Usuario:</span>

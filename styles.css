@@ -3167,3 +3167,40 @@ body {
 #pageServiciosParque .tabla-parque-propiedades tfoot th:first-child {
   text-align: left !important;
 }
+
+/* ================================
+   Selector de periodo: Año / Desde / Hasta
+================================ */
+
+.period-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 132px;
+}
+
+.period-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.select-period {
+  min-width: 132px;
+}
+
+.header-actions {
+  align-items: flex-end;
+}
+
+@media (max-width: 700px) {
+  .period-filter {
+    width: 100%;
+  }
+
+  .select-period {
+    width: 100%;
+  }
+}
