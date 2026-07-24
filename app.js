@@ -3125,7 +3125,7 @@ function renderTablaIngresosAgrupada(configuracion) {
   if (filas.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="4">Sin información para el mes seleccionado.</td>
+        <td colspan="4">Sin información para el periodo seleccionado.</td>
       </tr>
     `;
     return;
@@ -3422,7 +3422,7 @@ function renderTablaEgresosAgrupada(configuracion) {
   if (filas.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="${columnas}">Sin información para el mes seleccionado.</td>
+        <td colspan="${columnas}">Sin información para el periodo seleccionado.</td>
       </tr>
     `;
     return;
@@ -4218,7 +4218,7 @@ function renderTablaVentasContratos(mes) {
   if (contratos.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="4">Sin contratos para el mes seleccionado.</td>
+        <td colspan="4">Sin contratos para el periodo seleccionado.</td>
       </tr>
     `;
     return;
@@ -5583,7 +5583,7 @@ function renderTablaServiciosRecientes(mes) {
   if (servicios.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5">Sin servicios para el mes seleccionado.</td>
+        <td colspan="5">Sin servicios para el periodo seleccionado.</td>
       </tr>
     `;
     return;
