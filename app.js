@@ -3346,6 +3346,8 @@ function renderDetalleEgresos(mes, totalEgresos) {
     etiquetaVacia: "Sin tipo de gasto"
   });
 
+  conectarClickEgresosTipoGasto(mes);
+
   renderTablaEgresosAgrupada({
     tbodyId: "tablaEgresosBeneficiarioBody",
     mes,
@@ -4059,6 +4061,145 @@ function abrirModalEgresosTipoGastoBase(tipoGasto) {
   }
 
   modal.classList.remove("hidden");
+}
+
+function abrirModalEgresosTipoGasto(tipoGasto, mes) {
+  abrirModalEgresosTipoGastoBase(tipoGasto);
+  renderDetalleModalEgresosTipoGasto(tipoGasto, mes);
+}
+
+function conectarClickEgresosTipoGasto(mes) {
+  const filas = document.querySelectorAll("#tablaEgresosTipoGastoBody tr");
+
+  filas.forEach((fila) => {
+    const primeraCelda = fila.querySelector("td");
+
+    if (!primeraCelda) {
+      return;
+    }
+
+    const tipoGasto = normalizarTexto(primeraCelda.textContent);
+
+    if (!tipoGasto || tipoGasto.includes("Sin información")) {
+      return;
+    }
+
+    fila.classList.add("is-clickable", "egresos-tipo-gasto-row");
+    fila.dataset.tipoGasto = tipoGasto;
+
+    fila.addEventListener("click", () => {
+      abrirModalEgresosTipoGasto(tipoGasto, mes);
+    });
+  });
+}
+
+function renderDetalleModalEgresosTipoGasto(tipoGasto, mes) {
+  const tbody = document.getElementById("egresosTipoGastoModalBody");
+  const subtitle = document.getElementById("egresosTipoGastoModalSubtitle");
+
+  if (!tbody) {
+    return;
+  }
+
+  const movimientos = obtenerMovimientosEgresosPorTipoGasto(mes, tipoGasto);
+  const totalPagado = movimientos.reduce((suma, item) => suma + Number(item.pagado || 0), 0);
+  const totalPorPagar = movimientos.reduce((suma, item) => suma + Number(item.porPagar || 0), 0);
+
+  if (subtitle) {
+    subtitle.textContent = `${formatoNumero(movimientos.length)} movimientos · Pagado: ${formatoMoneda(totalPagado)} · Por pagar: ${formatoMoneda(totalPorPagar)}`;
+  }
+
+  if (movimientos.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6">Sin movimientos para este tipo de gasto en el periodo seleccionado.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  const filasHtml = movimientos
+    .map((item) => {
+      return `
+        <tr>
+          <td>${escaparHtml(obtenerFechaEgresoTexto(item))}</td>
+          <td>${escaparHtml(normalizarTexto(item.beneficiario) || "Sin beneficiario")}</td>
+          <td>${escaparHtml(normalizarTexto(item.rubro) || "Sin rubro")}</td>
+          <td>${escaparHtml(normalizarTexto(item.tipoGasto) || "Sin tipo")}</td>
+          <td>${formatoMoneda(item.pagado)}</td>
+          <td>${formatoMoneda(item.porPagar)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  const filaTotal = `
+    <tr class="modal-total-row">
+      <td colspan="4"><strong>Total</strong></td>
+      <td><strong>${formatoMoneda(totalPagado)}</strong></td>
+      <td><strong>${formatoMoneda(totalPorPagar)}</strong></td>
+    </tr>
+  `;
+
+  tbody.innerHTML = filasHtml + filaTotal;
+}
+
+function obtenerMovimientosEgresosPorTipoGasto(mes, tipoGastoBuscado) {
+  const tipoNormalizado = normalizarClaveComparacion(tipoGastoBuscado);
+
+  return (state.datos.egresos || [])
+    .filter((item) => {
+      const mesEgreso = normalizarTexto(item.mesHoja || item.mes);
+      const tipoGasto = normalizarClaveComparacion(item.tipoGasto);
+      const pagado = Number(item.pagado || 0);
+      const porPagar = Number(item.porPagar || 0);
+
+      return coincideMesValor(mesEgreso, mes)
+        && tipoGasto === tipoNormalizado
+        && (pagado > 0 || porPagar > 0);
+    })
+    .sort((a, b) => {
+      const fechaA = obtenerTimestampEgreso(a);
+      const fechaB = obtenerTimestampEgreso(b);
+
+      if (fechaB !== fechaA) {
+        return fechaB - fechaA;
+      }
+
+      return Number(b.pagado || 0) - Number(a.pagado || 0);
+    });
+}
+
+function obtenerFechaEgresoTexto(item) {
+  const valor = item.fecha || item.fechaPago || item.fechaEgreso || item.Fecha || "";
+
+  if (!valor) {
+    return "—";
+  }
+
+  const fecha = new Date(valor);
+
+  if (!Number.isNaN(fecha.getTime())) {
+    return new Intl.DateTimeFormat("es-MX", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    }).format(fecha);
+  }
+
+  return normalizarTexto(valor) || "—";
+}
+
+function obtenerTimestampEgreso(item) {
+  const valor = item.fecha || item.fechaPago || item.fechaEgreso || item.Fecha || "";
+
+  if (!valor) {
+    return 0;
+  }
+
+  const fecha = new Date(valor);
+
+  return Number.isNaN(fecha.getTime()) ? 0 : fecha.getTime();
 }
 
 function cerrarModalEgresosTipoGasto() {

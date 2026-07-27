@@ -3481,3 +3481,29 @@ body {
     max-height: 360px;
   }
 }
+
+/* ================================
+   Egresos: filas clickeables y total modal
+================================ */
+
+.egresos-tipo-gasto-row.is-clickable {
+  cursor: pointer;
+}
+
+.egresos-tipo-gasto-row.is-clickable:hover {
+  background: #f1f5f9;
+}
+
+.egresos-tipo-gasto-row.is-clickable td:first-child {
+  font-weight: 800;
+  color: #1f4e79;
+}
+
+.modal-total-row {
+  background: #f8fafc;
+  border-top: 2px solid var(--border);
+}
+
+.modal-total-row td {
+  font-weight: 900;
+}
