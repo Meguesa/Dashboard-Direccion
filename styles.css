@@ -3317,7 +3317,7 @@ body {
   background: #f8fafc;
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 14px;
+  padding: 12px 10px;
   min-width: 0;
 }
 
@@ -3334,12 +3334,14 @@ body {
 .ventas-asesor-modal-kpi strong {
   display: block;
   color: var(--text);
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 900;
   line-height: 1.15;
+  letter-spacing: -0.03em;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 1000px) {
