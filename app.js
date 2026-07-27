@@ -4125,7 +4125,7 @@ function renderDetalleModalEgresosTipoGasto(tipoGasto, mes) {
           <td>${escaparHtml(obtenerFechaEgresoTexto(item))}</td>
           <td>${escaparHtml(normalizarTexto(item.beneficiario) || "Sin beneficiario")}</td>
           <td>${escaparHtml(normalizarTexto(item.rubro) || "Sin rubro")}</td>
-          <td>${escaparHtml(normalizarTexto(item.tipoGasto) || "Sin tipo")}</td>
+          <td>${escaparHtml(normalizarTexto(item.contexto || item.concepto) || "Sin contexto")}</td>
           <td>${formatoMoneda(item.pagado)}</td>
           <td>${formatoMoneda(item.porPagar)}</td>
         </tr>

@@ -3434,42 +3434,53 @@ body {
 
 .egresos-tipo-gasto-modal-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1050px;
 }
 
 .egresos-tipo-gasto-modal-table th,
 .egresos-tipo-gasto-modal-table td {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   vertical-align: middle;
 }
 
 .egresos-tipo-gasto-modal-table th:nth-child(1),
 .egresos-tipo-gasto-modal-table td:nth-child(1) {
-  width: 110px;
+  width: 86px;
+  max-width: 86px;
+  white-space: nowrap;
 }
 
 .egresos-tipo-gasto-modal-table th:nth-child(2),
 .egresos-tipo-gasto-modal-table td:nth-child(2) {
-  min-width: 230px;
+  width: 210px;
+  max-width: 210px;
 }
 
 .egresos-tipo-gasto-modal-table th:nth-child(3),
 .egresos-tipo-gasto-modal-table td:nth-child(3) {
-  min-width: 210px;
+  width: 170px;
+  max-width: 170px;
 }
 
 .egresos-tipo-gasto-modal-table th:nth-child(4),
 .egresos-tipo-gasto-modal-table td:nth-child(4) {
-  width: 120px;
-  text-align: center;
+  min-width: 320px;
 }
 
 .egresos-tipo-gasto-modal-table th:nth-child(5),
 .egresos-tipo-gasto-modal-table td:nth-child(5),
 .egresos-tipo-gasto-modal-table th:nth-child(6),
 .egresos-tipo-gasto-modal-table td:nth-child(6) {
-  width: 130px;
+  width: 120px;
+  max-width: 120px;
   text-align: right;
+}
+
+.egresos-tipo-gasto-modal-table td:nth-child(2),
+.egresos-tipo-gasto-modal-table td:nth-child(3),
+.egresos-tipo-gasto-modal-table td:nth-child(4) {
+  white-space: normal;
+  line-height: 1.2;
 }
 
 @media (max-width: 700px) {

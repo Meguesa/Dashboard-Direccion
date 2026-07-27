@@ -405,13 +405,18 @@ async function obtenerEgresosSharePoint(mesesFiltro = []) {
 
       return {
         id: item.id,
+        fecha: limpiarTexto(f.Fecha),
+        fechaPago: limpiarTexto(f.Fecha_Pago),
         mes: limpiarTexto(f.Mes),
         mesHoja: limpiarTexto(f.Mes_Hoja),
         hojaOrigen: limpiarTexto(f.Hoja_Origen),
+        banco: limpiarTexto(f.Banco),
+        empresa: limpiarTexto(f.Empresa),
         rubro: limpiarTexto(f.Rubro),
         tipoGasto: limpiarTexto(f.Tipo_Gasto),
         beneficiario: limpiarTexto(f.Beneficiario),
         concepto: limpiarTexto(f.Concepto),
+        contexto: limpiarTexto(f.Contexto),
         importe: convertirNumero(f.Importe),
         pagado: convertirNumero(f.Pagado),
         porPagar: convertirNumero(f.Por_Pagar),
