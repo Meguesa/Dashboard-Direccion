@@ -37,6 +37,10 @@ const CONFIG = {
         nombre: "BI_Metas_Cobranza",
         listId: "b114407b-1632-48b5-ad3f-baee26b1a24e"
       },
+      metasVentas: {
+        nombre: "BI_Metas_Ventas",
+        listId: "fc0f8fbf-110a-418d-a7fb-542e633fab98"
+      },
       fuentes: {
         nombre: "BI_Fuentes",
         listId: "c76a60b1-4755-42a4-ad4a-03cc58643153"
