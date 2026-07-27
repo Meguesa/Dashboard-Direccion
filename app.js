@@ -4171,35 +4171,129 @@ function obtenerMovimientosEgresosPorTipoGasto(mes, tipoGastoBuscado) {
 }
 
 function obtenerFechaEgresoTexto(item) {
-  const valor = item.fecha || item.fechaPago || item.fechaEgreso || item.Fecha || "";
+  const fecha = obtenerFechaEgreso(item);
 
-  if (!valor) {
+  if (!fecha) {
     return "—";
   }
 
-  const fecha = new Date(valor);
-
-  if (!Number.isNaN(fecha.getTime())) {
-    return new Intl.DateTimeFormat("es-MX", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric"
-    }).format(fecha);
-  }
-
-  return normalizarTexto(valor) || "—";
+  return new Intl.DateTimeFormat("es-MX", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }).format(fecha);
 }
 
 function obtenerTimestampEgreso(item) {
-  const valor = item.fecha || item.fechaPago || item.fechaEgreso || item.Fecha || "";
+  const fecha = obtenerFechaEgreso(item);
+
+  return fecha ? fecha.getTime() : 0;
+}
+
+function obtenerFechaEgreso(item) {
+  const valor = obtenerValorFechaEgreso(item);
 
   if (!valor) {
-    return 0;
+    return null;
   }
 
-  const fecha = new Date(valor);
+  if (valor instanceof Date && !Number.isNaN(valor.getTime())) {
+    return valor;
+  }
 
-  return Number.isNaN(fecha.getTime()) ? 0 : fecha.getTime();
+  if (typeof valor === "number") {
+    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+    const fechaExcel = new Date(excelEpoch.getTime() + valor * 86400000);
+
+    return Number.isNaN(fechaExcel.getTime()) ? null : fechaExcel;
+  }
+
+  const texto = normalizarTexto(valor);
+
+  if (!texto) {
+    return null;
+  }
+
+  const fechaIso = new Date(texto);
+
+  if (!Number.isNaN(fechaIso.getTime())) {
+    return fechaIso;
+  }
+
+  const matchDiaMesAnio = texto.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+
+  if (matchDiaMesAnio) {
+    const dia = Number(matchDiaMesAnio[1]);
+    const mes = Number(matchDiaMesAnio[2]) - 1;
+    const anio = Number(matchDiaMesAnio[3]);
+    const fecha = new Date(anio, mes, dia);
+
+    return Number.isNaN(fecha.getTime()) ? null : fecha;
+  }
+
+  const matchAnioMesDia = texto.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
+
+  if (matchAnioMesDia) {
+    const anio = Number(matchAnioMesDia[1]);
+    const mes = Number(matchAnioMesDia[2]) - 1;
+    const dia = Number(matchAnioMesDia[3]);
+    const fecha = new Date(anio, mes, dia);
+
+    return Number.isNaN(fecha.getTime()) ? null : fecha;
+  }
+
+  return null;
+}
+
+function obtenerValorFechaEgreso(item) {
+  const camposDirectos = [
+    "fecha",
+    "Fecha",
+    "FECHA",
+    "fechaPago",
+    "FechaPago",
+    "Fecha_Pago",
+    "fecha_Pago",
+    "fechaEgreso",
+    "FechaEgreso",
+    "Fecha_Egreso",
+    "fechaFactura",
+    "FechaFactura",
+    "Fecha_Factura"
+  ];
+
+  for (const campo of camposDirectos) {
+    if (
+      item &&
+      item[campo] !== undefined &&
+      item[campo] !== null &&
+      normalizarTexto(item[campo]) !== ""
+    ) {
+      return item[campo];
+    }
+  }
+
+  const llaves = Object.keys(item || {});
+
+  const llaveFechaExacta = llaves.find((llave) => {
+    const clave = normalizarClaveComparacion(llave);
+    return clave === "FECHA";
+  });
+
+  if (llaveFechaExacta && normalizarTexto(item[llaveFechaExacta]) !== "") {
+    return item[llaveFechaExacta];
+  }
+
+  const llaveFechaFlexible = llaves.find((llave) => {
+    const clave = normalizarClaveComparacion(llave);
+    return clave.includes("FECHA");
+  });
+
+  if (llaveFechaFlexible && normalizarTexto(item[llaveFechaFlexible]) !== "") {
+    return item[llaveFechaFlexible];
+  }
+
+  return "";
 }
 
 function cerrarModalEgresosTipoGasto() {
