@@ -3415,3 +3415,69 @@ body {
     min-width: 920px;
   }
 }
+
+/* ================================
+   Modal: detalle egresos por tipo de gasto
+================================ */
+
+.egresos-tipo-gasto-modal-card {
+  width: min(1100px, 100%);
+  min-height: 560px;
+}
+
+.egresos-tipo-gasto-modal-scroll {
+  max-height: 430px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.egresos-tipo-gasto-modal-table {
+  width: 100%;
+  min-width: 980px;
+}
+
+.egresos-tipo-gasto-modal-table th,
+.egresos-tipo-gasto-modal-table td {
+  font-size: 0.78rem;
+  vertical-align: middle;
+}
+
+.egresos-tipo-gasto-modal-table th:nth-child(1),
+.egresos-tipo-gasto-modal-table td:nth-child(1) {
+  width: 110px;
+}
+
+.egresos-tipo-gasto-modal-table th:nth-child(2),
+.egresos-tipo-gasto-modal-table td:nth-child(2) {
+  min-width: 230px;
+}
+
+.egresos-tipo-gasto-modal-table th:nth-child(3),
+.egresos-tipo-gasto-modal-table td:nth-child(3) {
+  min-width: 210px;
+}
+
+.egresos-tipo-gasto-modal-table th:nth-child(4),
+.egresos-tipo-gasto-modal-table td:nth-child(4) {
+  width: 120px;
+  text-align: center;
+}
+
+.egresos-tipo-gasto-modal-table th:nth-child(5),
+.egresos-tipo-gasto-modal-table td:nth-child(5),
+.egresos-tipo-gasto-modal-table th:nth-child(6),
+.egresos-tipo-gasto-modal-table td:nth-child(6) {
+  width: 130px;
+  text-align: right;
+}
+
+@media (max-width: 700px) {
+  .egresos-tipo-gasto-modal-card {
+    min-height: 480px;
+  }
+
+  .egresos-tipo-gasto-modal-scroll {
+    max-height: 360px;
+  }
+}

@@ -1203,6 +1203,46 @@
       </section>
     </div>
 
+
+    <!-- Modal: detalle de egresos por tipo de gasto -->
+    <div id="egresosTipoGastoModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+      <section class="modal-card egresos-tipo-gasto-modal-card">
+        <div class="modal-header">
+          <div>
+            <h2 id="egresosTipoGastoModalTitle">Detalle de egresos</h2>
+            <p id="egresosTipoGastoModalSubtitle">
+              Movimientos del tipo de gasto seleccionado dentro del periodo.
+            </p>
+          </div>
+
+          <button id="egresosTipoGastoModalClose" class="modal-close-button" type="button">
+            ×
+          </button>
+        </div>
+
+        <div class="table-scroll egresos-tipo-gasto-modal-scroll">
+          <table class="table detail-table egresos-tipo-gasto-modal-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Beneficiario</th>
+                <th>Rubro</th>
+                <th>Tipo gasto</th>
+                <th>Pagado</th>
+                <th>Por pagar</th>
+              </tr>
+            </thead>
+
+            <tbody id="egresosTipoGastoModalBody">
+              <tr>
+                <td colspan="6">Selecciona un tipo de gasto para ver el detalle.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>

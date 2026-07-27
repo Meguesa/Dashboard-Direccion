@@ -36,6 +36,8 @@ function inicializarDashboard() {
   conectarEventos();
   conectarNavegacionInterna();
   conectarFiltrosTablas();
+  conectarModalVentasAsesor();
+  conectarModalEgresosTipoGasto();
   renderDashboard();
   mostrarPagina("resumen");
   ocultarPanelEstado();
@@ -4033,6 +4035,73 @@ function conectarModalVentasAsesor() {
   });
 
   modalVentasAsesorConectado = true;
+}
+
+let modalEgresosTipoGastoConectado = false;
+
+function abrirModalEgresosTipoGastoBase(tipoGasto) {
+  const modal = document.getElementById("egresosTipoGastoModal");
+  const title = document.getElementById("egresosTipoGastoModalTitle");
+  const subtitle = document.getElementById("egresosTipoGastoModalSubtitle");
+
+  if (!modal) {
+    return;
+  }
+
+  conectarModalEgresosTipoGasto();
+
+  if (title) {
+    title.textContent = `Detalle de egresos - ${tipoGasto || "Tipo de gasto"}`;
+  }
+
+  if (subtitle) {
+    subtitle.textContent = "Movimientos del tipo de gasto seleccionado dentro del periodo.";
+  }
+
+  modal.classList.remove("hidden");
+}
+
+function cerrarModalEgresosTipoGasto() {
+  const modal = document.getElementById("egresosTipoGastoModal");
+
+  if (!modal) {
+    return;
+  }
+
+  modal.classList.add("hidden");
+}
+
+function conectarModalEgresosTipoGasto() {
+  if (modalEgresosTipoGastoConectado) {
+    return;
+  }
+
+  const modal = document.getElementById("egresosTipoGastoModal");
+  const closeButton = document.getElementById("egresosTipoGastoModalClose");
+
+  if (closeButton) {
+    closeButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      cerrarModalEgresosTipoGasto();
+    });
+  }
+
+  if (modal) {
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) {
+        cerrarModalEgresosTipoGasto();
+      }
+    });
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      cerrarModalEgresosTipoGasto();
+    }
+  });
+
+  modalEgresosTipoGastoConectado = true;
 }
 
 function calcularMaximoEjeVentasAsesor(valores) {
