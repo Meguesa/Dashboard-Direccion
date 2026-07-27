@@ -2865,26 +2865,16 @@ function renderGraficaPieIngresos(configuracion) {
         }
       ]
     },
-    plugins: [
-      crearPluginEtiquetasPie(total)
-    ],
     options: {
       responsive: true,
       maintainAspectRatio: false,
       layout: {
-        padding: configuracion.chartKey === "ingresosCategoria"
-          ? {
-              top: 30,
-              right: 90,
-              bottom: 30,
-              left: 90
-            }
-          : {
-              top: 20,
-              right: 36,
-              bottom: 20,
-              left: 36
-            }
+        padding: {
+          top: 10,
+          right: 10,
+          bottom: 10,
+          left: 10
+        }
       },
       plugins: {
         legend: {
@@ -3294,18 +3284,15 @@ function renderGraficaPieEgresosRubro(mes) {
         }
       ]
     },
-    plugins: [
-      crearPluginEtiquetasPie(total)
-    ],
     options: {
       responsive: true,
       maintainAspectRatio: false,
       layout: {
         padding: {
-          top: 30,
-          right: 90,
-          bottom: 30,
-          left: 90
+          top: 10,
+          right: 10,
+          bottom: 10,
+          left: 10
         }
       },
       plugins: {
