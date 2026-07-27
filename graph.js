@@ -767,6 +767,97 @@ async function obtenerMetasCobranzaSharePoint(mesesFiltro = []) {
   }
 }
 
+async function obtenerMetasVentasSharePoint(mesesFiltro = []) {
+  try {
+    setAuthStatus("Leyendo BI_Metas_Ventas desde SharePoint...");
+
+    const listId = CONFIG.sharepoint.lists.metasVentas.listId;
+
+    if (!listId) {
+      throw new Error("No está configurado el listId de BI_Metas_Ventas.");
+    }
+
+    const filtroMeses = crearFiltroMesesSharePoint(mesesFiltro);
+    const items = await obtenerItemsLista(listId, 5000, {
+      filtro: filtroMeses
+    });
+
+    const metasVentas = items.map((item) => {
+      const f = item.fields || {};
+
+      return {
+        id: item.id,
+
+        title: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Title"
+        ])),
+
+        anio: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Anio",
+          "A_x00f1_o",
+          "Ano"
+        ])),
+
+        mes: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Mes"
+        ])),
+
+        nombreMes: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Nombre_Mes",
+          "Nombre_x005f_Mes",
+          "NombreMes",
+          "Nombre_x0020_Mes"
+        ])),
+
+        metaVentaTotal: convertirNumero(obtenerCampoSharePoint(f, [
+          "Meta_Venta_Total",
+          "Meta_x005f_Venta_x005f_Total",
+          "MetaVentaTotal",
+          "Meta_x0020_Venta_x0020_Total"
+        ])),
+
+        metaPrevision: convertirNumero(obtenerCampoSharePoint(f, [
+          "Meta_Prevision",
+          "Meta_x005f_Prevision",
+          "Meta_Previsi_x00f3_n",
+          "Meta_x005f_Previsi_x00f3_n",
+          "MetaPrevision"
+        ])),
+
+        metaUsoInmediatoCapillas: convertirNumero(obtenerCampoSharePoint(f, [
+          "Meta_Uso_Inmediato_Capillas",
+          "Meta_x005f_Uso_x005f_Inmediato_x005f_Capillas",
+          "MetaUsoInmediatoCapillas",
+          "Meta_x0020_Uso_x0020_Inmediato_x0020_Capillas"
+        ])),
+
+        activo: convertirBooleano(obtenerCampoSharePoint(f, [
+          "Activo"
+        ])),
+
+        fuente: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Fuente"
+        ]))
+      };
+    });
+
+    console.log("BI_Metas_Ventas leídas:", metasVentas);
+    console.table(metasVentas);
+
+    return metasVentas;
+  } catch (error) {
+    console.error("Error leyendo BI_Metas_Ventas:", error);
+
+    setText(
+      "sharePointStatus",
+      "Error al leer BI_Metas_Ventas. Revisa la consola del navegador."
+    );
+
+    setAuthStatus("Error al leer BI_Metas_Ventas.");
+    return [];
+  }
+}
+
 async function obtenerParquePropiedadesSharePoint() {
   try {
     setAuthStatus("Leyendo BI_Parque_Propiedades desde SharePoint...");
