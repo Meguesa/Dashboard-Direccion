@@ -9,6 +9,7 @@ window.state = {
     ventas: [],
     servicios: [],
     metasCobranza: [],
+    metasVentas: [],
     parquePropiedades: []
   }
 };
@@ -454,6 +455,12 @@ async function actualizarDatosDashboard(opciones = {}) {
       mesesRecargados
     );
 
+    state.datos.metasVentas = reemplazarRegistrosPorMes(
+      state.datos.metasVentas,
+      datosSharePoint.metasVentas || [],
+      mesesRecargados
+    );
+
     state.datos.parquePropiedades = datosSharePoint.parquePropiedades || [];
 
     cargarSelectorAnios();
@@ -547,6 +554,7 @@ function guardarDatosEnCache() {
         ventas: state.datos.ventas || [],
         servicios: state.datos.servicios || [],
         metasCobranza: state.datos.metasCobranza || [],
+        metasVentas: state.datos.metasVentas || [],
         parquePropiedades: state.datos.parquePropiedades || []
       }
   };
@@ -577,6 +585,7 @@ function cargarDatosDesdeCache() {
     state.datos.ventas = cache.datos.ventas || [];
     state.datos.servicios = cache.datos.servicios || [];
     state.datos.metasCobranza = cache.datos.metasCobranza || [];
+    state.datos.metasVentas = cache.datos.metasVentas || [];
     state.datos.parquePropiedades = cache.datos.parquePropiedades || [];
 
     if (cache.anioSeleccionado) {
@@ -989,8 +998,21 @@ function sumarVentas(mes) {
 }
 
 function sumarMetaVentasMensual(mes) {
+  const metasVentas = obtenerMetasVentasMes(mes);
+
+  if (metasVentas.length > 0) {
+    return metasVentas
+      .reduce((total, meta) => total + Number(meta.metaVentaTotal || 0), 0);
+  }
+
   return agruparVentasPorAsesor(mes)
     .reduce((total, fila) => total + Number(fila.metaMensual || 0), 0);
+}
+
+function obtenerMetasVentasMes(mes) {
+  return (state.datos.metasVentas || [])
+    .filter((meta) => coincideMesValor(meta.mes, mes))
+    .filter((meta) => meta.activo !== false);
 }
 
 function contarRegistrosIngresos(mes) {
