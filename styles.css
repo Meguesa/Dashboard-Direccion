@@ -3612,3 +3612,58 @@ body {
   min-width: 0 !important;
   box-sizing: border-box !important;
 }
+
+/* ================================
+   Ingresos: tabla por subcategoría con scroll
+================================ */
+
+.table-scroll-ingresos-subcategoria {
+  max-height: 360px;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+}
+
+.table-scroll-ingresos-subcategoria thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
+}
+
+.detail-table-ingresos-subcategoria {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.detail-table-ingresos-subcategoria th,
+.detail-table-ingresos-subcategoria td {
+  font-size: 0.82rem;
+  vertical-align: middle;
+}
+
+.detail-table-ingresos-subcategoria th:nth-child(1),
+.detail-table-ingresos-subcategoria td:nth-child(1) {
+  width: 44%;
+  text-align: left;
+}
+
+.detail-table-ingresos-subcategoria th:nth-child(2),
+.detail-table-ingresos-subcategoria td:nth-child(2) {
+  width: 16%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ingresos-subcategoria th:nth-child(3),
+.detail-table-ingresos-subcategoria td:nth-child(3) {
+  width: 24%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ingresos-subcategoria th:nth-child(4),
+.detail-table-ingresos-subcategoria td:nth-child(4) {
+  width: 16%;
+  text-align: right;
+  white-space: nowrap;
+}
