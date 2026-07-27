@@ -3518,3 +3518,97 @@ body {
 .modal-total-row td {
   font-weight: 900;
 }
+
+/* ================================
+   Override final: modal egresos tipo gasto
+   Ajuste definitivo de columnas
+================================ */
+
+#egresosTipoGastoModal .egresos-tipo-gasto-modal-card {
+  width: min(1380px, calc(100vw - 48px)) !important;
+  min-height: 560px !important;
+}
+
+#egresosTipoGastoModal .egresos-tipo-gasto-modal-scroll {
+  max-height: 430px !important;
+  overflow: auto !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+}
+
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table {
+  width: 100% !important;
+  min-width: 1280px !important;
+  table-layout: fixed !important;
+}
+
+/* Base */
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table th,
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table td {
+  font-size: 0.76rem !important;
+  vertical-align: middle !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+/* Fecha: angosta */
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table th:nth-child(1),
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table td:nth-child(1) {
+  width: 90px !important;
+  max-width: 90px !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+}
+
+/* Beneficiario */
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table th:nth-child(2),
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table td:nth-child(2) {
+  width: 220px !important;
+  max-width: 220px !important;
+  text-align: left !important;
+  white-space: normal !important;
+  line-height: 1.2 !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* Rubro */
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table th:nth-child(3),
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table td:nth-child(3) {
+  width: 170px !important;
+  max-width: 170px !important;
+  text-align: left !important;
+  white-space: normal !important;
+  line-height: 1.2 !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* Contexto: más ancho */
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table th:nth-child(4),
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table td:nth-child(4) {
+  width: 550px !important;
+  max-width: 550px !important;
+  text-align: left !important;
+  white-space: normal !important;
+  line-height: 1.2 !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* Pagado / Por pagar */
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table th:nth-child(5),
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table td:nth-child(5),
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table th:nth-child(6),
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table td:nth-child(6) {
+  width: 125px !important;
+  max-width: 125px !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+/* Filtros */
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table .table-filter-input {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
