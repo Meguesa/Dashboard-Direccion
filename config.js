@@ -39,7 +39,7 @@ const CONFIG = {
       },
       metasVentas: {
         nombre: "BI_Metas_Ventas",
-        listId: "fc0f8fbf-110a-418d-a7fb-542e633fab98"
+        listId: "fe30be2a-9760-477c-9b12-5bf7e0c2d657"
       },
       fuentes: {
         nombre: "BI_Fuentes",
