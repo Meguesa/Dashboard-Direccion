@@ -41,6 +41,10 @@ const CONFIG = {
         nombre: "BI_Metas_Ventas",
         listId: "fe30be2a-9760-477c-9b12-5bf7e0c2d657"
       },
+      alertas: {
+        nombre: "BI_Alertas",
+        listId: "8cb12357-bfb4-48ce-844f-d3ab7827d143"
+      },
       fuentes: {
         nombre: "BI_Fuentes",
         listId: "c76a60b1-4755-42a4-ad4a-03cc58643153"
