@@ -97,7 +97,14 @@ function obtenerAniosDashboard() {
   agregarAniosDesdeLista(anios, state.datos.ingresos, ["mes", "hojaOrigen", "fuente"]);
   agregarAniosDesdeLista(anios, state.datos.egresos, ["mes", "mesHoja", "hojaOrigen", "fuente"]);
   agregarAniosDesdeLista(anios, state.datos.ventas, ["mes", "fecha", "fechaContrato", "hojaOrigen", "fuente"]);
-  agregarAniosDesdeLista(anios, state.datos.servicios, ["mes", "fechaServicio", "fechaFin", "fuente"]);
+  agregarAniosDesdeLista(anios, state.datos.servicios, [
+    "mes",
+    "fechaServicio",
+    "fechaCreacionOrigen",
+    "fechaCreacionOriginal",
+    "fechaFin",
+    "fuente"
+  ]);
 
   return Array.from(anios)
     .filter((anio) => Number.isFinite(Number(anio)))
@@ -1512,6 +1519,11 @@ function obtenerFechaEfectivaServicio(item) {
     "fechaServicio",
     "Fecha_Servicio",
     "FechaServicio",
+
+    "fechaCreacionOrigen",
+    "Fecha_Creacion_Origen",
+    "FechaCreacionOrigen",
+
     "fechaCreacionOriginal",
     "Fecha_Creacion_Original",
     "FechaCreacionOriginal"
