@@ -6602,8 +6602,8 @@ function renderTablaServiciosRecientesCapillas(mes) {
   const filas = obtenerServiciosCapillasMes(mes)
     .slice()
     .sort((a, b) => {
-      const fechaA = convertirFechaServicio(a.fechaServicio);
-      const fechaB = convertirFechaServicio(b.fechaServicio);
+      const fechaA = convertirFechaServicio(obtenerFechaEfectivaServicio(a));
+      const fechaB = convertirFechaServicio(obtenerFechaEfectivaServicio(b));
 
       return (fechaB?.getTime() || 0) - (fechaA?.getTime() || 0);
     });
@@ -6626,7 +6626,7 @@ function renderTablaServiciosRecientesCapillas(mes) {
         "—"
       );
 
-      const fecha = convertirFechaServicio(item.fechaServicio);
+      const fecha = convertirFechaServicio(obtenerFechaEfectivaServicio(item));
       const fechaTexto = fecha ? formatearFechaCorta(fecha) : "—";
 
       const finado = normalizarTexto(item.finado || "Sin finado");
@@ -6659,15 +6659,56 @@ function obtenerServiciosMes(mes) {
 
 function coincidePeriodoServicio(item, mesSeleccionado) {
   const mesBase = obtenerMesBasePeriodo(mesSeleccionado);
+  const mesServicio = obtenerMesEfectivoServicio(item);
 
-  return coincideMesServicio(item.mes, mesSeleccionado)
-    && coincideAnioRegistro(item, mesBase, [
-      "fechaServicio",
-      "fechaFin",
-      "fuente"
-    ]);
+  return coincideMesServicio(mesServicio, mesSeleccionado)
+    && coincideAnioRegistro(
+      {
+        ...item,
+        mes: mesServicio
+      },
+      mesBase,
+      [
+        "fechaServicio",
+        "fechaCreacionOriginal",
+        "fechaFin",
+        "fuente"
+      ]
+    );
 }
-  
+
+function obtenerMesEfectivoServicio(item) {
+  const mesDirecto = normalizarTexto(item?.mes);
+
+  if (mesDirecto) {
+    return mesDirecto;
+  }
+
+  const fechaEfectiva = obtenerFechaEfectivaServicio(item);
+  const textoFecha = normalizarTexto(fechaEfectiva);
+
+  if (!textoFecha) {
+    return "";
+  }
+
+  const matchIso = textoFecha.match(/^(\d{4})-(\d{2})/);
+
+  if (matchIso) {
+    return `${matchIso[1]}-${matchIso[2]}`;
+  }
+
+  const fecha = convertirFechaServicio(textoFecha);
+
+  if (!fecha) {
+    return "";
+  }
+
+  const anio = fecha.getFullYear();
+  const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+
+  return `${anio}-${mes}`;
+}
+
 function coincideMesServicio(mesRegistro, mesSeleccionado) {
   return coincideMesValor(mesRegistro, mesSeleccionado);
 }
