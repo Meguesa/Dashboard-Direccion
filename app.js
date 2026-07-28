@@ -474,7 +474,7 @@ async function actualizarDatosDashboard(opciones = {}) {
     );
 
     state.datos.alertas = reemplazarRegistrosPorMes(
-      state.datos.alertas,
+      state.datos.alertas || [],
       datosSharePoint.alertas || [],
       mesesRecargados
     );
@@ -573,7 +573,6 @@ function guardarDatosEnCache() {
         servicios: state.datos.servicios || [],
         metasCobranza: state.datos.metasCobranza || [],
         metasVentas: state.datos.metasVentas || [],
-        alertas: state.datos.alertas || [],
         parquePropiedades: state.datos.parquePropiedades || []
       }
   };
