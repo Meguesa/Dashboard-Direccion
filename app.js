@@ -6614,10 +6614,17 @@ function renderTablaServiciosRecientesCapillas(mes) {
   const filas = obtenerServiciosCapillasMes(mes)
     .slice()
     .sort((a, b) => {
+      const numeroA = obtenerNumeroServicioOrden(a);
+      const numeroB = obtenerNumeroServicioOrden(b);
+
+      if (numeroA !== numeroB) {
+        return numeroA - numeroB;
+      }
+
       const fechaA = convertirFechaServicio(obtenerFechaEfectivaServicio(a));
       const fechaB = convertirFechaServicio(obtenerFechaEfectivaServicio(b));
 
-      return (fechaB?.getTime() || 0) - (fechaA?.getTime() || 0);
+      return (fechaA?.getTime() || 0) - (fechaB?.getTime() || 0);
     });
 
   if (filas.length === 0) {
@@ -6662,6 +6669,25 @@ function renderTablaServiciosRecientesCapillas(mes) {
       `;
     })
     .join("");
+}
+
+function obtenerNumeroServicioOrden(item) {
+  const valor = normalizarTexto(
+    item.numeroReferencia ||
+    item.numeroServicio ||
+    item.referenciaContrato ||
+    ""
+  );
+
+  const soloNumeros = valor.match(/\d+/);
+
+  if (!soloNumeros) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  const numero = Number(soloNumeros[0]);
+
+  return Number.isFinite(numero) ? numero : Number.MAX_SAFE_INTEGER;
 }
 
 function obtenerServiciosMes(mes) {
