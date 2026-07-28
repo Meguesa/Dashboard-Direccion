@@ -365,6 +365,7 @@ async function cargarDatosSharePoint(opciones = {}) {
     const servicios = await obtenerServiciosSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const metasCobranza = await obtenerMetasCobranzaSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const metasVentas = await obtenerMetasVentasSharePoint(usarFiltroMeses ? mesesRecargados : []);
+    const alertas = await obtenerAlertasSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const parquePropiedades = await obtenerParquePropiedadesSharePoint();
 
     const datos = {
@@ -375,6 +376,7 @@ async function cargarDatosSharePoint(opciones = {}) {
       servicios,
       metasCobranza,
       metasVentas,
+      alertas,
       parquePropiedades,
       mesesRecargados,
       modoCarga
@@ -384,7 +386,7 @@ async function cargarDatosSharePoint(opciones = {}) {
 
     setText(
       "sharePointStatus",
-      `Datos actualizados. Ingresos: ${ingresos.length}, Egresos: ${egresos.length}, Ventas: ${ventas.length}, Servicios: ${servicios.length}, Metas cobranza: ${metasCobranza.length}, Metas ventas: ${metasVentas.length}, Propiedades parque: ${parquePropiedades.length}.`
+      `Datos actualizados. Ingresos: ${ingresos.length}, Egresos: ${egresos.length}, Ventas: ${ventas.length}, Servicios: ${servicios.length}, Metas cobranza: ${metasCobranza.length}, Metas ventas: ${metasVentas.length}, Alertas: ${alertas.length}, Propiedades parque: ${parquePropiedades.length}.`
     );
 
     setAuthStatus("Datos actualizados correctamente.");

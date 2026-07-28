@@ -10,6 +10,7 @@ window.state = {
     servicios: [],
     metasCobranza: [],
     metasVentas: [],
+    alertas: [],
     parquePropiedades: []
   }
 };
@@ -472,6 +473,12 @@ async function actualizarDatosDashboard(opciones = {}) {
       mesesRecargados
     );
 
+    state.datos.alertas = reemplazarRegistrosPorMes(
+      state.datos.alertas,
+      datosSharePoint.alertas || [],
+      mesesRecargados
+    );
+
     state.datos.parquePropiedades = datosSharePoint.parquePropiedades || [];
 
     cargarSelectorAnios();
@@ -566,6 +573,7 @@ function guardarDatosEnCache() {
         servicios: state.datos.servicios || [],
         metasCobranza: state.datos.metasCobranza || [],
         metasVentas: state.datos.metasVentas || [],
+        alertas: state.datos.alertas || [],
         parquePropiedades: state.datos.parquePropiedades || []
       }
   };
@@ -597,6 +605,7 @@ function cargarDatosDesdeCache() {
     state.datos.servicios = cache.datos.servicios || [];
     state.datos.metasCobranza = cache.datos.metasCobranza || [];
     state.datos.metasVentas = cache.datos.metasVentas || [];
+    state.datos.alertas = cache.datos.alertas || [];
     state.datos.parquePropiedades = cache.datos.parquePropiedades || [];
 
     if (cache.anioSeleccionado) {
