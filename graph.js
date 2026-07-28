@@ -325,6 +325,22 @@ function obtenerCampoSharePoint(fields, nombres) {
   return "";
 }
 
+function obtenerUrlCampoSharePoint(valor) {
+  if (!valor) {
+    return "";
+  }
+
+  if (typeof valor === "string") {
+    return valor;
+  }
+
+  if (typeof valor === "object") {
+    return valor.Url || valor.url || valor.href || "";
+  }
+
+  return "";
+}
+
 async function cargarDatosSharePoint(opciones = {}) {
   try {
     setAuthStatus("Actualizando datos desde SharePoint...");
@@ -779,6 +795,119 @@ async function obtenerMetasCobranzaSharePoint(mesesFiltro = []) {
       "Error al leer BI_Metas_Cobranza. Revisa la consola del navegador."
     );
 
+    return [];
+  }
+}
+
+async function obtenerAlertasSharePoint(mesesFiltro = []) {
+  try {
+    setAuthStatus("Leyendo BI_Alertas desde SharePoint...");
+
+    const listId = CONFIG.sharepoint.lists.alertas.listId;
+
+    if (!listId) {
+      throw new Error("No está configurado el listId de BI_Alertas.");
+    }
+
+    const filtroMeses = crearFiltroMesesSharePoint(mesesFiltro);
+    const items = await obtenerItemsLista(listId, 5000, {
+      filtro: filtroMeses
+    });
+
+    const alertas = items.map((item) => {
+      const f = item.fields || {};
+
+      return {
+        id: item.id,
+
+        titulo: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Title"
+        ])),
+
+        modulo: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Modulo",
+          "M_x00f3_dulo"
+        ])),
+
+        prioridad: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Prioridad"
+        ])),
+
+        tipoAlerta: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Tipo_Alerta",
+          "Tipo_x005f_Alerta",
+          "TipoAlerta",
+          "Tipo_x0020_Alerta"
+        ])),
+
+        mensaje: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Mensaje"
+        ])),
+
+        mes: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Mes"
+        ])),
+
+        fechaDeteccion: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Fecha_Deteccion",
+          "Fecha_x005f_Deteccion",
+          "FechaDeteccion",
+          "Fecha_x0020_Deteccion"
+        ])),
+
+        responsable: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Responsable"
+        ])),
+
+        estatus: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Estatus",
+          "Status"
+        ])),
+
+        valorActual: convertirNumero(obtenerCampoSharePoint(f, [
+          "Valor_Actual",
+          "Valor_x005f_Actual",
+          "ValorActual",
+          "Valor_x0020_Actual"
+        ])),
+
+        valorReferencia: convertirNumero(obtenerCampoSharePoint(f, [
+          "Valor_Referencia",
+          "Valor_x005f_Referencia",
+          "ValorReferencia",
+          "Valor_x0020_Referencia"
+        ])),
+
+        porcentaje: convertirNumero(obtenerCampoSharePoint(f, [
+          "Porcentaje"
+        ])),
+
+        fuente: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Fuente"
+        ])),
+
+        linkDashboard: obtenerUrlCampoSharePoint(obtenerCampoSharePoint(f, [
+          "Link_Dashboard",
+          "Link_x005f_Dashboard",
+          "LinkDashboard",
+          "Link_x0020_Dashboard"
+        ]))
+      };
+    });
+
+    console.log("BI_Alertas leídas:", alertas);
+    console.table(alertas);
+
+    return alertas;
+  } catch (error) {
+    console.error("Error leyendo BI_Alertas:", error);
+
+    setText(
+      "sharePointStatus",
+      "Error al leer BI_Alertas. Revisa la consola del navegador."
+    );
+
+    setAuthStatus("Error al leer BI_Alertas.");
     return [];
   }
 }
