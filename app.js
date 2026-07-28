@@ -4464,7 +4464,9 @@ function calcularVentasUiPorResponsable(mes) {
   obtenerServiciosUsoInmediatoBiServicios(mes).forEach((servicio) => {
     const responsable = obtenerAsesorServicioUi(servicio);
     const origen = obtenerOrigenServicio(servicio);
-    const monto = obtenerMontoServicioUi(servicio);
+    const monto = origen === "Capillas"
+      ? obtenerMontoServicioUiCapillas(servicio)
+      : obtenerMontoServicioUi(servicio);
 
     if (!grupos.has(responsable)) {
       grupos.set(responsable, {
@@ -4559,6 +4561,18 @@ function obtenerMontoServicioUi(servicio) {
     "Monto",
     "total",
     "Total"
+  ]);
+}
+
+function obtenerMontoServicioUiCapillas(servicio) {
+  return obtenerNumeroCampoFlexible(servicio, [
+    "precioVenta",
+    "precio_venta",
+    "Precio_Venta",
+    "Precio Venta",
+    "PRECIO_VENTA",
+    "venta",
+    "Venta"
   ]);
 }
 
@@ -4821,15 +4835,25 @@ function calcularTicketsPromedioVentasPorTipo(mes) {
       return;
     }
 
-    const unidadesPropiedades =
-      obtenerNumeroVentaCampo(item, ["propiedades", "Propiedades", "PROPIEDADES"]) +
-      obtenerNumeroVentaCampo(item, ["nichos", "Nichos", "NICHOS"]);
+    const unidadesPropiedades = obtenerNumeroVentaCampo(item, [
+      "propiedades",
+      "Propiedades",
+      "PROPIEDADES"
+    ]);
+
+    const unidadesNichos = obtenerNumeroVentaCampo(item, [
+      "nichos",
+      "Nichos",
+      "NICHOS"
+    ]);
 
     const unidadesServicios =
       obtenerNumeroVentaCampo(item, ["serviciosAf", "serviciosAF", "Servicios_AF", "Servicios AF", "SERVICIOS_AF"]) +
       obtenerNumeroVentaCampo(item, ["serviciosCh", "serviciosCH", "Servicios_CH", "Servicios CH", "SERVICIOS_CH"]);
 
-    if (unidadesPropiedades > 0) {
+    const esComplemento = esContratoComplementoVenta(item);
+
+    if (unidadesPropiedades > 0 && unidadesNichos <= 0 && !esComplemento) {
       acumulado.propiedades.monto += montoContrato;
       acumulado.propiedades.unidades += unidadesPropiedades;
       return;
@@ -4858,6 +4882,24 @@ function calcularTicketsPromedioVentasPorTipo(mes) {
         : 0
     }
   };
+}
+
+function esContratoComplementoVenta(item) {
+  const texto = normalizarClaveComparacion([
+    item.tipoServicio,
+    item.tipoContrato,
+    item.tipoRegistro,
+    item.fuente,
+    item.hojaOrigen,
+    item.numeroContrato,
+    item.referencia
+  ].join(" "));
+
+  return texto.includes("COMPLEMENTO") ||
+    texto.includes("COMPLEMENTARIO") ||
+    texto.includes("TOTAL SERVICE COMPLEMENTO") ||
+    texto === "TSC" ||
+    texto.includes(" TSC ");
 }
 
 function obtenerNumeroVentaCampo(item, nombresCampos) {
