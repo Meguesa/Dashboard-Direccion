@@ -1066,11 +1066,7 @@ function renderServiciosDelDia() {
     );
 
     const fechaInicio = convertirFechaServicio(
-      obtenerCampoServicio(item, [
-        "fechaServicio",
-        "Fecha_Servicio",
-        "FechaServicio"
-      ])
+      obtenerFechaEfectivaServicio(item)
     );
 
     const fechaFin = convertirFechaServicio(
@@ -1509,6 +1505,17 @@ function obtenerUbicacionParqueServicio(item) {
   ]);
 
   return [seccion, manzana, lote].filter(Boolean).join(" / ");
+}
+
+function obtenerFechaEfectivaServicio(item) {
+  return obtenerCampoServicio(item, [
+    "fechaServicio",
+    "Fecha_Servicio",
+    "FechaServicio",
+    "fechaCreacionOriginal",
+    "Fecha_Creacion_Original",
+    "FechaCreacionOriginal"
+  ]);
 }
 
 function convertirFechaServicio(valor) {

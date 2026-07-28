@@ -554,6 +554,15 @@ async function obtenerServiciosSharePoint(mesesFiltro = []) {
           "Fecha_x0020_Fin"
         ])),
       
+        fechaCreacionOriginal: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Fecha_Creacion_Original",
+          "Fecha_x005f_Creacion_x005f_Original",
+          "FechaCreacionOriginal",
+          "Fecha_x0020_Creacion_x0020_Original",
+          "Created",
+          "Creado"
+        ])),
+
         titular: limpiarTexto(obtenerCampoSharePoint(f, [
           "Titular"
         ])),
