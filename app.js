@@ -41,7 +41,11 @@ function inicializarDashboard() {
   conectarModalEgresosTipoGasto();
   renderDashboard();
   mostrarPagina("resumen");
-  ocultarPanelEstado();
+
+  if (!actualizacionEnCurso) {
+    ocultarPanelEstado();
+  }
+
   iniciarActualizacionAutomatica();
 }
 
@@ -486,7 +490,7 @@ async function actualizarDatosDashboard(opciones = {}) {
   } finally {
     actualizacionEnCurso = false;
 
-    ocultarPanelEstadoConRetraso(12000);
+    ocultarPanelEstadoConRetraso(10000);
   }
 }
 
