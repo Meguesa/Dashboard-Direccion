@@ -1264,6 +1264,24 @@
       </section>
     </div>
 
+    <div id="notificationDetailModal" class="notification-detail-modal hidden">
+      <div class="notification-detail-card">
+        <div class="notification-detail-header">
+          <div>
+            <span id="notificationDetailPriority" class="notification-detail-priority">Alta</span>
+            <h2 id="notificationDetailTitle">Detalle de notificación</h2>
+            <p id="notificationDetailSubtitle">Información detallada de la alerta seleccionada.</p>
+          </div>
+
+          <button id="notificationDetailClose" class="notification-detail-close" type="button">
+            ×
+          </button>
+        </div>
+
+        <div id="notificationDetailBody" class="notification-detail-body"></div>
+      </div>
+    </div>
+
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>

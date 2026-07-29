@@ -7104,12 +7104,19 @@ function generarAlertaAsesoresDebajoMeta(periodo, etiquetaPeriodo) {
       modulo: "Ventas",
       prioridad: asesoresCriticos > 0 ? "Crítica" : "Alta",
       tipoAlerta: "Cumplimiento comercial por asesor",
-      mensaje: `${formatoNumero(asesores.length)} asesores están debajo del 90% de su meta esperada para ${etiquetaPeriodo}. Faltante acumulado estimado: ${formatoMoneda(faltanteTotal)}. Detalle: ${detalleAsesores}${extra}.`,
+      mensaje: `${formatoNumero(asesores.length)} asesores están debajo del 90% de su meta esperada para ${etiquetaPeriodo}. Faltante acumulado estimado: ${formatoMoneda(faltanteTotal)}.`,
       mes: obtenerMesTextoAlerta(periodo),
       responsable: "Dirección Comercial",
       valorActual: asesores.length,
-      valorReferencia: 0,
-      porcentaje: 0
+      valorReferencia: faltanteTotal,
+      porcentaje: 0,
+      detalles: asesores.map((fila) => ({
+        asesor: fila.nombre,
+        ventaActual: fila.ventaActual,
+        metaEsperada: fila.metaEsperada,
+        cumplimiento: fila.cumplimiento,
+        faltante: fila.faltante
+      }))
     })
   ];
 }
@@ -7329,7 +7336,8 @@ function crearAlertaAutomatica(configuracion) {
     valorActual: Number(configuracion.valorActual || 0),
     valorReferencia: Number(configuracion.valorReferencia || 0),
     porcentaje: Number(configuracion.porcentaje || 0),
-    fuente: "Regla automática local"
+    fuente: "Regla automática local",
+    detalles: configuracion.detalles || []
   };
 }
 
@@ -7453,6 +7461,8 @@ function renderListaNotificaciones() {
   contenedor.innerHTML = alertas
     .map((alerta) => renderNotificacionItem(alerta, idsVistas))
     .join("");
+
+  conectarClickDetalleNotificaciones(alertas);
 }
 
 function renderNotificacionItem(alerta, idsVistas) {
@@ -7467,7 +7477,10 @@ function renderNotificacionItem(alerta, idsVistas) {
   const responsable = normalizarTexto(alerta.responsable);
 
   return `
-    <article class="notification-item ${esNueva ? "is-unread" : ""}">
+    <article
+      class="notification-item ${esNueva ? "is-unread" : ""}"
+      data-alerta-id="${escaparAtributo(idAlerta)}"
+    >
       <div class="notification-item-top">
         <div class="notification-title">
           ${escaparHtml(titulo)}
@@ -7544,6 +7557,15 @@ function mostrarPopupAlertasNuevas(alertasNuevas) {
   alertasNuevas.slice(0, 3).forEach((alerta) => {
     const toast = document.createElement("article");
     toast.className = "notification-toast";
+
+    toast.style.cursor = "pointer";
+    toast.addEventListener("click", (event) => {
+      if (event.target.closest(".notification-toast-close")) {
+        return;
+      }
+
+      abrirDetalleNotificacion(alerta);
+    });
 
     const titulo = normalizarTexto(alerta.titulo) || normalizarTexto(alerta.tipoAlerta) || "Nueva notificación";
     const prioridad = normalizarTexto(alerta.prioridad) || "Informativa";
@@ -7701,6 +7723,262 @@ function guardarSetLocalStorage(key, setValores) {
   } catch (error) {
     console.warn(`No se pudo guardar ${key}:`, error);
   }
+}
+
+function conectarClickDetalleNotificaciones(alertas) {
+  const mapaAlertas = new Map(
+    (alertas || []).map((alerta) => [obtenerIdAlerta(alerta), alerta])
+  );
+
+  document.querySelectorAll(".notification-item[data-alerta-id]").forEach((item) => {
+    item.addEventListener("click", () => {
+      const idAlerta = item.dataset.alertaId;
+      const alerta = mapaAlertas.get(idAlerta);
+
+      if (!alerta) {
+        return;
+      }
+
+      abrirDetalleNotificacion(alerta);
+    });
+  });
+}
+
+function abrirDetalleNotificacion(alerta) {
+  const modal = document.getElementById("notificationDetailModal");
+  const title = document.getElementById("notificationDetailTitle");
+  const subtitle = document.getElementById("notificationDetailSubtitle");
+  const priority = document.getElementById("notificationDetailPriority");
+  const body = document.getElementById("notificationDetailBody");
+
+  if (!modal || !body) {
+    return;
+  }
+
+  conectarModalDetalleNotificacion();
+
+  const titulo = normalizarTexto(alerta.titulo) || normalizarTexto(alerta.tipoAlerta) || "Detalle de notificación";
+  const modulo = normalizarTexto(alerta.modulo) || "Dashboard";
+  const prioridad = normalizarTexto(alerta.prioridad) || "Informativa";
+  const fecha = formatearFechaAlerta(alerta);
+  const responsable = normalizarTexto(alerta.responsable) || "Sin responsable";
+
+  if (title) {
+    title.textContent = titulo;
+  }
+
+  if (subtitle) {
+    subtitle.textContent = [
+      modulo,
+      fecha,
+      responsable
+    ].filter(Boolean).join(" · ");
+  }
+
+  if (priority) {
+    priority.textContent = prioridad;
+    priority.className = `notification-detail-priority ${obtenerClasePrioridadAlerta(prioridad)}`;
+  }
+
+  body.innerHTML = renderDetalleNotificacionBody(alerta);
+
+  modal.classList.remove("hidden");
+}
+
+function renderDetalleNotificacionBody(alerta) {
+  const tipoAlerta = normalizarClaveComparacion(alerta.tipoAlerta);
+  const titulo = normalizarClaveComparacion(alerta.titulo);
+
+  if (
+    tipoAlerta.includes("CUMPLIMIENTO COMERCIAL") ||
+    titulo.includes("ASESORES DEBAJO DE META")
+  ) {
+    return renderDetalleAlertaAsesores(alerta);
+  }
+
+  return renderDetalleAlertaGenerica(alerta);
+}
+
+function renderDetalleAlertaAsesores(alerta) {
+  const detalles = Array.isArray(alerta.detalles) ? alerta.detalles : [];
+  const faltanteTotal = detalles.reduce((total, fila) => {
+    return total + Number(fila.faltante || 0);
+  }, 0);
+
+  const ventaTotal = detalles.reduce((total, fila) => {
+    return total + Number(fila.ventaActual || 0);
+  }, 0);
+
+  const metaTotal = detalles.reduce((total, fila) => {
+    return total + Number(fila.metaEsperada || 0);
+  }, 0);
+
+  const cumplimientoPromedio = metaTotal > 0 ? ventaTotal / metaTotal : 0;
+
+  if (!detalles.length) {
+    return renderDetalleAlertaGenerica(alerta);
+  }
+
+  const filasHtml = detalles
+    .slice()
+    .sort((a, b) => {
+      if (Number(a.cumplimiento || 0) !== Number(b.cumplimiento || 0)) {
+        return Number(a.cumplimiento || 0) - Number(b.cumplimiento || 0);
+      }
+
+      return Number(b.faltante || 0) - Number(a.faltante || 0);
+    })
+    .map((fila) => {
+      const cumplimiento = Number(fila.cumplimiento || 0);
+      const porcentajeBarra = Math.min(Math.max(cumplimiento * 100, 0), 100);
+      const claseBarra = cumplimiento < 0.75
+        ? "is-critical"
+        : cumplimiento >= 0.9
+          ? "is-good"
+          : "";
+
+      return `
+        <tr>
+          <td>${escaparHtml(fila.asesor || "Sin asesor")}</td>
+          <td class="numeric">${formatoMoneda(fila.ventaActual)}</td>
+          <td class="numeric">${formatoMoneda(fila.metaEsperada)}</td>
+          <td class="numeric">${formatoMoneda(fila.faltante)}</td>
+          <td>
+            <div class="notification-detail-progress">
+              <strong>${formatoPorcentaje(cumplimiento)}</strong>
+              <span class="notification-detail-progress-track">
+                <span
+                  class="notification-detail-progress-bar ${claseBarra}"
+                  style="width: ${porcentajeBarra}%;"
+                ></span>
+              </span>
+            </div>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="notification-detail-summary">
+      <div class="notification-detail-kpi">
+        <span>Asesores en alerta</span>
+        <strong>${formatoNumero(detalles.length)}</strong>
+      </div>
+
+      <div class="notification-detail-kpi">
+        <span>Venta actual</span>
+        <strong>${formatoMoneda(ventaTotal)}</strong>
+      </div>
+
+      <div class="notification-detail-kpi">
+        <span>Meta esperada</span>
+        <strong>${formatoMoneda(metaTotal)}</strong>
+      </div>
+
+      <div class="notification-detail-kpi">
+        <span>Cumplimiento</span>
+        <strong>${formatoPorcentaje(cumplimientoPromedio)}</strong>
+      </div>
+    </div>
+
+    <p class="notification-detail-message">
+      ${escaparHtml(alerta.mensaje || "")}
+      Faltante total estimado: ${escaparHtml(formatoMoneda(faltanteTotal))}.
+    </p>
+
+    <div class="notification-detail-table-scroll">
+      <table class="notification-detail-table">
+        <thead>
+          <tr>
+            <th>Asesor</th>
+            <th class="numeric">Venta actual</th>
+            <th class="numeric">Meta esperada</th>
+            <th class="numeric">Faltante</th>
+            <th>Cumplimiento</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filasHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderDetalleAlertaGenerica(alerta) {
+  const valorActual = Number(alerta.valorActual || 0);
+  const valorReferencia = Number(alerta.valorReferencia || 0);
+  const porcentaje = Number(alerta.porcentaje || 0);
+
+  return `
+    <div class="notification-detail-summary">
+      <div class="notification-detail-kpi">
+        <span>Módulo</span>
+        <strong>${escaparHtml(alerta.modulo || "Dashboard")}</strong>
+      </div>
+
+      <div class="notification-detail-kpi">
+        <span>Valor actual</span>
+        <strong>${formatoMoneda(valorActual)}</strong>
+      </div>
+
+      <div class="notification-detail-kpi">
+        <span>Referencia</span>
+        <strong>${formatoMoneda(valorReferencia)}</strong>
+      </div>
+
+      <div class="notification-detail-kpi">
+        <span>Porcentaje</span>
+        <strong>${porcentaje ? formatoPorcentaje(porcentaje) : "—"}</strong>
+      </div>
+    </div>
+
+    <p class="notification-detail-message">
+      ${escaparHtml(alerta.mensaje || "Sin detalle disponible.")}
+    </p>
+  `;
+}
+
+let modalDetalleNotificacionConectado = false;
+
+function conectarModalDetalleNotificacion() {
+  if (modalDetalleNotificacionConectado) {
+    return;
+  }
+
+  const modal = document.getElementById("notificationDetailModal");
+  const closeButton = document.getElementById("notificationDetailClose");
+
+  if (closeButton) {
+    closeButton.addEventListener("click", cerrarDetalleNotificacion);
+  }
+
+  if (modal) {
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) {
+        cerrarDetalleNotificacion();
+      }
+    });
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      cerrarDetalleNotificacion();
+    }
+  });
+
+  modalDetalleNotificacionConectado = true;
+}
+
+function cerrarDetalleNotificacion() {
+  const modal = document.getElementById("notificationDetailModal");
+
+  if (!modal) {
+    return;
+  }
+
+  modal.classList.add("hidden");
 }
 
 window.renderDashboard = renderDashboard;
