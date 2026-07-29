@@ -4337,3 +4337,66 @@ body {
     width: min(320px, calc(100vw - 48px));
   }
 }
+
+/* ================================
+   Corrección final: tamaño uniforme de iconos header
+================================ */
+
+.dashboard-toolbar .toolbar-icon-button,
+.dashboard-toolbar .notifications-button {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  flex: 0 0 44px !important;
+  border-radius: 999px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.dashboard-toolbar .toolbar-icon,
+.dashboard-toolbar .toolbar-icon-svg {
+  width: 21px !important;
+  height: 21px !important;
+  min-width: 21px !important;
+  max-width: 21px !important;
+  min-height: 21px !important;
+  max-height: 21px !important;
+  display: block !important;
+  color: currentColor !important;
+  fill: currentColor;
+  flex-shrink: 0 !important;
+}
+
+.dashboard-toolbar .toolbar-refresh-button .toolbar-icon-svg {
+  width: 21px !important;
+  height: 21px !important;
+}
+
+/* SVG de refresh: mantener trazo blanco, sin relleno */
+.dashboard-toolbar .toolbar-refresh-button .toolbar-icon-svg path {
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 2.4 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+
+/* Fondo uniforme para los 3 botones */
+.dashboard-toolbar .toolbar-refresh-button,
+.dashboard-toolbar .toolbar-user-button,
+.dashboard-toolbar .toolbar-notifications-button {
+  background: #4b1d0f !important;
+  border-color: #4b1d0f !important;
+  color: #ffffff !important;
+}
+
+.dashboard-toolbar .toolbar-refresh-button:hover,
+.dashboard-toolbar .toolbar-user-button:hover,
+.dashboard-toolbar .toolbar-notifications-button:hover {
+  background: #5a2615 !important;
+  border-color: #5a2615 !important;
+  color: #ffffff !important;
+}
