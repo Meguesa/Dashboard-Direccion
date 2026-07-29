@@ -1119,6 +1119,12 @@ function sumarMetaUiMensual(mes) {
   return metasVentas
     .reduce((total, meta) => {
       return total + obtenerNumeroMetaVenta(meta, [
+        "metaUsoInmediato",
+        "meta_uso_inmediato",
+        "Meta_Uso_Inmediato",
+        "Meta Uso Inmediato",
+        "META_USO_INMEDIATO",
+
         "metaUsoInmediatoCapillas",
         "meta_uso_inmediato_capillas",
         "Meta_Uso_Inmediato_Capillas",

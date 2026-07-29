@@ -966,12 +966,22 @@ async function obtenerMetasVentasSharePoint(mesesFiltro = []) {
         metaPrevision: convertirNumero(obtenerCampoSharePoint(f, [
           "Meta_Prevision",
           "Meta_x005f_Prevision",
-          "Meta_Previsi_x00f3_n",
-          "Meta_x005f_Previsi_x00f3_n",
-          "MetaPrevision"
+          "MetaPrevision",
+          "Meta_x0020_Prevision"
+        ])),
+
+        metaUsoInmediato: convertirNumero(obtenerCampoSharePoint(f, [
+          "Meta_Uso_Inmediato",
+          "Meta_x005f_Uso_x005f_Inmediato",
+          "MetaUsoInmediato",
+          "Meta_x0020_Uso_x0020_Inmediato"
         ])),
 
         metaUsoInmediatoCapillas: convertirNumero(obtenerCampoSharePoint(f, [
+          "Meta_Uso_Inmediato",
+          "Meta_x005f_Uso_x005f_Inmediato",
+          "MetaUsoInmediato",
+          "Meta_x0020_Uso_x0020_Inmediato",
           "Meta_Uso_Inmediato_Capillas",
           "Meta_x005f_Uso_x005f_Inmediato_x005f_Capillas",
           "MetaUsoInmediatoCapillas",
