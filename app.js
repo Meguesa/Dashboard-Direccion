@@ -42,6 +42,7 @@ const ALERTA_NUEVOS_SERVICIOS_HORAS = 24;
 let notificacionesConectadas = false;
 let alertasInicializadas = false;
 let dashboardUltimaActualizacionExitosa = "";
+let menuUsuarioConectado = false;
 
 let intervaloActualizacionDashboard = null;
 let actualizacionEnCurso = false;
@@ -63,6 +64,7 @@ function inicializarDashboard() {
   conectarModalVentasAsesor();
   conectarModalEgresosTipoGasto();
   conectarNotificaciones();
+  conectarMenuUsuario();
   renderDashboard();
   mostrarPagina("resumen");
 
@@ -426,6 +428,60 @@ function conectarEventos() {
       await obtenerIngresosSharePoint();
     });
   }
+}
+
+function conectarMenuUsuario() {
+  if (menuUsuarioConectado) {
+    return;
+  }
+
+  const wrapper = document.getElementById("userMenuWrapper");
+  const boton = document.getElementById("userMenuButton");
+  const panel = document.getElementById("userMenuPanel");
+
+  if (!wrapper || !boton || !panel) {
+    return;
+  }
+
+  boton.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const seVaAbrir = panel.classList.contains("hidden");
+
+    panel.classList.toggle("hidden", !seVaAbrir);
+    boton.setAttribute("aria-expanded", seVaAbrir ? "true" : "false");
+
+    const notificationsPanel = document.getElementById("notificationsPanel");
+
+    if (notificationsPanel) {
+      notificationsPanel.classList.add("hidden");
+    }
+  });
+
+  panel.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  document.addEventListener("click", (event) => {
+    if (wrapper.contains(event.target)) {
+      return;
+    }
+
+    panel.classList.add("hidden");
+    boton.setAttribute("aria-expanded", "false");
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") {
+      return;
+    }
+
+    panel.classList.add("hidden");
+    boton.setAttribute("aria-expanded", "false");
+  });
+
+  menuUsuarioConectado = true;
 }
 
 async function actualizarDatosDashboard(opciones = {}) {

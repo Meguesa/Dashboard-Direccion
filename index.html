@@ -60,31 +60,74 @@
           <select id="monthEndSelector" class="select select-period"></select>
         </div>
 
-        <div class="user-box">
-          <span class="user-label">Usuario:</span>
-          <span id="userName">No conectado</span>
-        </div>
-
-        <button id="logoutButton" class="button button-secondary">Cerrar sesión</button>
-        <button id="refreshButton" class="button">Actualizar</button>
-        <div id="notificationsWrapper" class="notifications-wrapper">
-          <button id="notificationsButton" class="notifications-button" type="button" aria-label="Notificaciones">
-            <span class="notifications-icon">🔔</span>
-            <span id="notificationsBadge" class="notifications-badge hidden">0</span>
+        <div class="dashboard-toolbar">
+          <!-- Actualizar -->
+          <button
+            id="refreshButton"
+            class="toolbar-icon-button toolbar-refresh-button"
+            type="button"
+            title="Actualizar dashboard"
+            aria-label="Actualizar dashboard"
+          >
+            <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4V1L7 6l5 5V7a5 5 0 1 1-4.9 6H5a7 7 0 1 0 12.65-6.65z"></path>
+            </svg>
           </button>
 
-          <section id="notificationsPanel" class="notifications-panel hidden">
-            <div class="notifications-panel-header">
-              <div>
-                <h3>Notificaciones</h3>
-                <p>Alertas nuevas y pendientes del dashboard.</p>
-              </div>
-            </div>
+          <!-- Usuario -->
+          <div id="userMenuWrapper" class="user-menu-wrapper">
+            <button
+              id="userMenuButton"
+              class="toolbar-icon-button toolbar-user-button"
+              type="button"
+              title="Cuenta"
+              aria-label="Cuenta"
+              aria-expanded="false"
+            >
+              <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z"></path>
+              </svg>
+            </button>
 
-            <div id="notificationsList" class="notifications-list">
-              <div class="notifications-empty">Sin notificaciones nuevas.</div>
-            </div>
-          </section>
+            <section id="userMenuPanel" class="user-menu-panel hidden">
+              <div class="user-menu-title">Cuenta activa</div>
+              <div id="userName" class="user-menu-email">No conectado</div>
+
+              <button id="logoutButton" class="user-menu-logout" type="button">
+                Cerrar sesión
+              </button>
+            </section>
+          </div>
+
+          <!-- Notificaciones -->
+          <div id="notificationsWrapper" class="notifications-wrapper">
+            <button
+              id="notificationsButton"
+              class="toolbar-icon-button toolbar-notifications-button notifications-button"
+              type="button"
+              title="Notificaciones"
+              aria-label="Notificaciones"
+            >
+              <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm6-6v-5a6 6 0 1 0-12 0v5l-2 2v1h16v-1l-2-2z"></path>
+              </svg>
+
+              <span id="notificationsBadge" class="notifications-badge hidden">0</span>
+            </button>
+
+            <section id="notificationsPanel" class="notifications-panel hidden">
+              <div class="notifications-panel-header">
+                <div>
+                  <h3>Notificaciones</h3>
+                  <p>Alertas nuevas y pendientes del dashboard.</p>
+                </div>
+              </div>
+
+              <div id="notificationsList" class="notifications-list">
+                <div class="notifications-empty">Sin notificaciones nuevas.</div>
+              </div>
+            </section>
+          </div>
         </div>
       </div>
     </header>
