@@ -874,9 +874,16 @@ function renderDashboard() {
 
   const totalIngresos = sumarIngresos(mes);
   const totalEgresos = sumarEgresos(mes);
-  const totalVentas = sumarVentas(mes);
+  const ventasPrevision = sumarVentasPrevision(mes);
+  const ventasUi = sumarVentasUiPeriodo(mes);
+  const totalVentas = ventasPrevision + ventasUi;
+
   const totalContratos = contarContratos(mes);
-  const metaVentas = sumarMetaVentasMensual(mes);
+
+  const metaPrevision = sumarMetaPrevisionMensual(mes);
+  const metaUi = sumarMetaUiMensual(mes);
+  const metaVentas = metaPrevision + metaUi;
+
   const porcentajeCumplimientoVentas = metaVentas > 0
     ? totalVentas / metaVentas
     : 0;
@@ -929,12 +936,16 @@ function renderDashboard() {
 
   const ticketsPromedioVentas = calcularTicketsPromedioVentasPorTipo(mes);
   
-  setText("pageVentasTotal", formatoMoneda(totalVentas));
-  setText("pageVentasMeta", formatoMoneda(metaVentas));
+  setText("pageVentasTotal", formatoMoneda(ventasPrevision));
+  setText("pageVentasUiTotal", formatoMoneda(ventasUi));
+  setText("pageVentasMetaPrevision", formatoMoneda(metaPrevision));
+  setText("pageVentasMetaUi", formatoMoneda(metaUi));
+
   setText(
     "pageVentasCumplimiento",
     metaVentas > 0 ? formatoPorcentaje(porcentajeCumplimientoVentas) : "—"
   );
+
   setText("pageVentasContratos", formatoNumero(totalContratos));
   
   setText(
@@ -1025,6 +1036,19 @@ function sumarEgresos(mes) {
     .reduce((total, item) => total + Number(item.pagado || 0), 0);
 }
 
+function sumarVentasPrevision(mes) {
+  return sumarVentas(mes);
+}
+
+function sumarVentasUiPeriodo(mes) {
+  return calcularVentasUiPorResponsable(mes)
+    .reduce((total, fila) => {
+      return total
+        + Number(fila.montoUiCapillas || 0)
+        + Number(fila.montoUiParque || 0);
+    }, 0);
+}
+
 function sumarVentas(mes) {
   const ventasMensuales = obtenerVentasMensuales(mes);
 
@@ -1045,15 +1069,69 @@ function sumarVentas(mes) {
 }
 
 function sumarMetaVentasMensual(mes) {
+  return sumarMetaPrevisionMensual(mes) + sumarMetaUiMensual(mes);
+}
+
+function sumarMetaPrevisionMensual(mes) {
   const metasVentas = obtenerMetasVentasMes(mes);
 
   if (metasVentas.length > 0) {
+    const metaPrevision = metasVentas
+      .reduce((total, meta) => {
+        return total + obtenerNumeroMetaVenta(meta, [
+          "metaPrevision",
+          "meta_prevision",
+          "Meta_Prevision",
+          "Meta Prevision",
+          "Meta_Previsión",
+          "Meta Previsión",
+          "META_PREVISION"
+        ]);
+      }, 0);
+
+    if (metaPrevision > 0) {
+      return metaPrevision;
+    }
+
     return metasVentas
-      .reduce((total, meta) => total + Number(meta.metaVentaTotal || 0), 0);
+      .reduce((total, meta) => {
+        return total + obtenerNumeroMetaVenta(meta, [
+          "metaVentaTotal",
+          "meta_venta_total",
+          "Meta_Venta_Total",
+          "Meta Venta Total",
+          "META_VENTA_TOTAL"
+        ]);
+      }, 0);
   }
 
   return agruparVentasPorAsesor(mes)
     .reduce((total, fila) => total + Number(fila.metaMensual || 0), 0);
+}
+
+function sumarMetaUiMensual(mes) {
+  const metasVentas = obtenerMetasVentasMes(mes);
+
+  if (!metasVentas.length) {
+    return 0;
+  }
+
+  return metasVentas
+    .reduce((total, meta) => {
+      return total + obtenerNumeroMetaVenta(meta, [
+        "metaUsoInmediatoCapillas",
+        "meta_uso_inmediato_capillas",
+        "Meta_Uso_Inmediato_Capillas",
+        "Meta Uso Inmediato Capillas",
+        "Meta_UI_Capillas",
+        "metaUiCapillas",
+        "META_USO_INMEDIATO_CAPILLAS"
+      ]);
+    }, 0);
+}
+
+function obtenerNumeroMetaVenta(meta, campos) {
+  return obtenerNumeroCampoFlexible(meta, campos);
 }
 
 function obtenerMetasVentasMes(mes) {
@@ -3596,35 +3674,22 @@ function renderGraficaVentasMensuales() {
   const meses = obtenerMesesDelAnioSeleccionado();
 
   const labels = meses.map((mes) => mes.nombre);
-  const valoresVentas = meses.map((mes) => sumarVentas(mes.clave));
-  const valoresMetas = meses.map((mes) => sumarMetaVentasMensual(mes.clave));
 
-  const datasets = [
-    {
-      label: "Ventas",
-      data: valoresVentas,
-      tension: 0.3,
-      fill: false,
-      borderWidth: 3,
-      pointRadius: 4,
-      pointHoverRadius: 6
-    }
-  ];
+  const valoresVentasPrevision = meses.map((mes) =>
+    sumarVentasPrevision(mes.clave)
+  );
 
-  const hayMetas = valoresMetas.some((valor) => Number(valor || 0) > 0);
+  const valoresMetaPrevision = meses.map((mes) =>
+    sumarMetaPrevisionMensual(mes.clave)
+  );
 
-  if (hayMetas) {
-    datasets.push({
-      label: "Meta mensual acumulada",
-      data: valoresMetas,
-      tension: 0.3,
-      fill: false,
-      borderWidth: 3,
-      borderDash: [6, 6],
-      pointRadius: 4,
-      pointHoverRadius: 6
-    });
-  }
+  const valoresVentasUi = meses.map((mes) =>
+    sumarVentasUiPeriodo(mes.clave)
+  );
+
+  const valoresMetaUi = meses.map((mes) =>
+    sumarMetaUiMensual(mes.clave)
+  );
 
   destruirGrafica("ventasMensuales");
 
@@ -3632,7 +3697,46 @@ function renderGraficaVentasMensuales() {
     type: "line",
     data: {
       labels,
-      datasets
+      datasets: [
+        {
+          label: "Ventas Previsión",
+          data: valoresVentasPrevision,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        },
+        {
+          label: "Meta Previsión",
+          data: valoresMetaPrevision,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          borderDash: [6, 6],
+          pointRadius: 4,
+          pointHoverRadius: 6
+        },
+        {
+          label: "Ventas UI",
+          data: valoresVentasUi,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        },
+        {
+          label: "Meta UI",
+          data: valoresMetaUi,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          borderDash: [6, 6],
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }
+      ]
     },
     options: {
       responsive: true,
