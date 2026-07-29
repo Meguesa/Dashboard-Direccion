@@ -24,8 +24,24 @@ const DASHBOARD_REFRESH_MS = 60 * 60 * 1000;
 const DASHBOARD_ALERTAS_VISTAS_KEY = "dashboardAlertasVistas";
 const DASHBOARD_ALERTAS_CONOCIDAS_KEY = "dashboardAlertasConocidas";
 
+const ALERTA_COBRANZA_AREA_MIN = 0.90;
+const ALERTA_COBRANZA_AREA_CRITICA = 0.75;
+
+const ALERTA_EGRESO_POR_PAGAR_MIN = 20000;
+
+const ALERTA_FLUJO_NETO_BAJO_PCT = 0.05;
+
+const ALERTA_BI_DESACTUALIZADA_HORAS = 24;
+
+const ALERTA_RUBRO_FUERA_RANGO_FACTOR = 1.30;
+const ALERTA_RUBRO_FUERA_RANGO_DIFERENCIA_MIN = 20000;
+const ALERTA_RUBRO_FUERA_RANGO_MONTO_MIN = 20000;
+
+const ALERTA_NUEVOS_SERVICIOS_HORAS = 24;
+
 let notificacionesConectadas = false;
 let alertasInicializadas = false;
+let dashboardUltimaActualizacionExitosa = "";
 
 let intervaloActualizacionDashboard = null;
 let actualizacionEnCurso = false;
@@ -491,9 +507,11 @@ async function actualizarDatosDashboard(opciones = {}) {
     cargarSelectorAnios();
     cargarSelectorMeses();
 
+    dashboardUltimaActualizacionExitosa = new Date().toISOString();
+
     guardarDatosEnCache();
     cacheCargadoDashboard = true;
-    
+
     renderDashboard();
     renderServiciosDelDiaSeguro();
 
@@ -604,6 +622,8 @@ function cargarDatosDesdeCache() {
     if (!cache || !cache.datos) {
       return false;
     }
+
+    dashboardUltimaActualizacionExitosa = cache.fechaGuardado || "";
 
     state.datos.ingresos = cache.datos.ingresos || [];
     state.datos.egresos = cache.datos.egresos || [];
@@ -7039,11 +7059,12 @@ function generarAlertasAutomaticasDashboard() {
 
   return [
     ...generarAlertaAsesoresDebajoMeta(periodo, etiquetaPeriodo),
-    ...generarAlertaVentasDebajoMeta(periodo, etiquetaPeriodo),
-    ...generarAlertaCobranzaDebajoMeta(periodo, etiquetaPeriodo),
-    ...generarAlertaFlujoNetoNegativo(periodo, etiquetaPeriodo),
-    ...generarAlertaServiciosUiSinPrecio(periodo, etiquetaPeriodo),
-    ...generarAlertaDatosVaciosDashboard(periodo, etiquetaPeriodo)
+    ...generarAlertaCobranzaAreasDebajoMeta(periodo, etiquetaPeriodo),
+    ...generarAlertaEgresosPorPagarElevados(periodo, etiquetaPeriodo),
+    ...generarAlertaFlujoNetoBajoONegativo(periodo, etiquetaPeriodo),
+    ...generarAlertaCargaBiIncompletaODesactualizada(periodo, etiquetaPeriodo),
+    ...generarAlertaRubrosEgresosFueraRango(periodo, etiquetaPeriodo),
+    ...generarAlertaNuevosServicios(periodo, etiquetaPeriodo)
   ];
 }
 
@@ -7110,6 +7131,514 @@ function generarAlertaAsesoresDebajoMeta(periodo, etiquetaPeriodo) {
       }))
     })
   ];
+}
+
+function generarAlertaCobranzaAreasDebajoMeta(periodo, etiquetaPeriodo) {
+  const filas = calcularAvanceMetasCobranza(periodo)
+    .filter((fila) => {
+      return Number(fila.meta || 0) > 0
+        && Number(fila.porcentajeCumplido || 0) < ALERTA_COBRANZA_AREA_MIN;
+    })
+    .sort((a, b) => {
+      return Number(a.porcentajeCumplido || 0) - Number(b.porcentajeCumplido || 0);
+    });
+
+  if (!filas.length) {
+    return [];
+  }
+
+  const hayCriticas = filas.some((fila) => {
+    return Number(fila.porcentajeCumplido || 0) < ALERTA_COBRANZA_AREA_CRITICA;
+  });
+
+  const porCumplirTotal = filas.reduce((total, fila) => {
+    return total + Number(fila.porCumplir || 0);
+  }, 0);
+
+  const detalleTexto = filas
+    .map((fila) => {
+      return `${fila.area}: ${formatoPorcentaje(fila.porcentajeCumplido)}`;
+    })
+    .join(", ");
+
+  return [
+    crearAlertaAutomatica({
+      id: `AUTO-COBRANZA-AREAS-DEBAJO-META-${obtenerKeyPeriodoAlerta(periodo)}`,
+      titulo: "Área de cobranza debajo de meta",
+      modulo: "Ingresos",
+      prioridad: hayCriticas ? "Crítica" : "Alta",
+      tipoAlerta: "Cumplimiento de cobranza por área",
+      tipoDetalle: "cobranzaArea",
+      mensaje: `${formatoNumero(filas.length)} área(s) de cobranza están debajo del 90% de cumplimiento para ${etiquetaPeriodo}. Por cumplir acumulado: ${formatoMoneda(porCumplirTotal)}. Áreas: ${detalleTexto}.`,
+      mes: obtenerMesTextoAlerta(periodo),
+      responsable: "Cobranza / Tesorería",
+      valorActual: filas.length,
+      valorReferencia: porCumplirTotal,
+      porcentaje: 0,
+      detalles: filas.map((fila) => ({
+        area: fila.area,
+        real: fila.real,
+        meta: fila.meta,
+        porcentajeCumplido: fila.porcentajeCumplido,
+        porCumplir: fila.porCumplir
+      }))
+    })
+  ];
+}
+
+function generarAlertaEgresosPorPagarElevados(periodo, etiquetaPeriodo) {
+  const pagos = obtenerEgresosPeriodo(periodo)
+    .filter((item) => Number(item.porPagar || 0) >= ALERTA_EGRESO_POR_PAGAR_MIN)
+    .sort((a, b) => Number(b.porPagar || 0) - Number(a.porPagar || 0));
+
+  if (!pagos.length) {
+    return [];
+  }
+
+  const totalPorPagar = pagos.reduce((total, item) => {
+    return total + Number(item.porPagar || 0);
+  }, 0);
+
+  const mayorPago = pagos[0];
+
+  return [
+    crearAlertaAutomatica({
+      id: `AUTO-EGRESOS-POR-PAGAR-ELEVADOS-${obtenerKeyPeriodoAlerta(periodo)}-${pagos.length}-${Math.round(totalPorPagar)}`,
+      titulo: "Egresos por pagar elevados",
+      modulo: "Egresos",
+      prioridad: totalPorPagar >= 500000 ? "Crítica" : "Alta",
+      tipoAlerta: "Pagos pendientes",
+      tipoDetalle: "egresosPorPagar",
+      mensaje: `Hay ${formatoNumero(pagos.length)} pago(s) pendiente(s) de ${formatoMoneda(ALERTA_EGRESO_POR_PAGAR_MIN)} o más para ${etiquetaPeriodo}. Total por pagar: ${formatoMoneda(totalPorPagar)}. Mayor pendiente: ${formatoMoneda(mayorPago.porPagar)}.`,
+      mes: obtenerMesTextoAlerta(periodo),
+      responsable: "Tesorería",
+      valorActual: totalPorPagar,
+      valorReferencia: ALERTA_EGRESO_POR_PAGAR_MIN,
+      porcentaje: 0,
+      detalles: pagos.map((item) => ({
+        fecha: obtenerFechaEgresoTexto(item),
+        beneficiario: normalizarTexto(item.beneficiario) || "Sin beneficiario",
+        rubro: normalizarTexto(item.rubro) || "Sin rubro",
+        tipoGasto: normalizarTexto(item.tipoGasto) || "Sin tipo de gasto",
+        contexto: normalizarTexto(item.contexto || item.concepto) || "",
+        pagado: Number(item.pagado || 0),
+        porPagar: Number(item.porPagar || 0)
+      }))
+    })
+  ];
+}
+
+function generarAlertaFlujoNetoBajoONegativo(periodo, etiquetaPeriodo) {
+  const ingresos = sumarIngresos(periodo);
+  const egresos = sumarEgresos(periodo);
+  const flujoNeto = ingresos - egresos;
+  const porcentajeFlujo = ingresos > 0 ? flujoNeto / ingresos : 0;
+
+  if (flujoNeto >= 0 && porcentajeFlujo >= ALERTA_FLUJO_NETO_BAJO_PCT) {
+    return [];
+  }
+
+  const esNegativo = flujoNeto < 0;
+
+  return [
+    crearAlertaAutomatica({
+      id: `AUTO-FLUJO-NETO-${esNegativo ? "NEGATIVO" : "BAJO"}-${obtenerKeyPeriodoAlerta(periodo)}-${Math.round(flujoNeto)}`,
+      titulo: esNegativo ? "Flujo neto negativo" : "Flujo neto bajo",
+      modulo: "Egresos",
+      prioridad: esNegativo ? "Crítica" : "Alta",
+      tipoAlerta: "Flujo de efectivo",
+      tipoDetalle: "flujoNeto",
+      mensaje: esNegativo
+        ? `Para ${etiquetaPeriodo}, los egresos superan los ingresos por ${formatoMoneda(Math.abs(flujoNeto))}.`
+        : `Para ${etiquetaPeriodo}, el flujo neto representa solo ${formatoPorcentaje(porcentajeFlujo)} de los ingresos.`,
+      mes: obtenerMesTextoAlerta(periodo),
+      responsable: "Tesorería / Dirección",
+      valorActual: flujoNeto,
+      valorReferencia: ingresos,
+      porcentaje: porcentajeFlujo,
+      detalles: [
+        {
+          concepto: "Ingresos",
+          monto: ingresos,
+          porcentajeIngreso: 1
+        },
+        {
+          concepto: "Egresos",
+          monto: egresos,
+          porcentajeIngreso: ingresos > 0 ? egresos / ingresos : 0
+        },
+        {
+          concepto: "Flujo neto",
+          monto: flujoNeto,
+          porcentajeIngreso: porcentajeFlujo
+        }
+      ]
+    })
+  ];
+}
+
+function generarAlertaCargaBiIncompletaODesactualizada(periodo, etiquetaPeriodo) {
+  const alertas = [];
+
+  const fuentesPeriodo = [
+    {
+      nombre: "BI_Ingresos",
+      modulo: "Ingresos",
+      registros: contarRegistrosIngresos(periodo)
+    },
+    {
+      nombre: "BI_Egresos",
+      modulo: "Egresos",
+      registros: contarRegistrosEgresos(periodo)
+    },
+    {
+      nombre: "BI_Ventas",
+      modulo: "Ventas",
+      registros: contarContratos(periodo)
+    },
+    {
+      nombre: "BI_Servicios",
+      modulo: "Servicios",
+      registros: contarServiciosPorOrigen(periodo, "CAPILLA") + contarServiciosPorOrigen(periodo, "PARQUE")
+    }
+  ];
+
+  const fuentesSinDatos = fuentesPeriodo.filter((fuente) => {
+    return Number(fuente.registros || 0) === 0;
+  });
+
+  if (fuentesSinDatos.length > 0) {
+    alertas.push(
+      crearAlertaAutomatica({
+        id: `AUTO-BI-INCOMPLETA-${obtenerKeyPeriodoAlerta(periodo)}-${fuentesSinDatos.map((fuente) => fuente.nombre).join("-")}`,
+        titulo: "Carga BI incompleta",
+        modulo: "Sistemas",
+        prioridad: "Crítica",
+        tipoAlerta: "Carga BI incompleta",
+        tipoDetalle: "cargaBi",
+        mensaje: `Hay fuentes BI sin registros para ${etiquetaPeriodo}: ${fuentesSinDatos.map((fuente) => fuente.nombre).join(", ")}.`,
+        mes: obtenerMesTextoAlerta(periodo),
+        responsable: "Sistemas",
+        valorActual: fuentesSinDatos.length,
+        valorReferencia: 0,
+        porcentaje: 0,
+        detalles: fuentesPeriodo.map((fuente) => ({
+          fuente: fuente.nombre,
+          modulo: fuente.modulo,
+          registros: fuente.registros,
+          estatus: fuente.registros > 0 ? "Con datos" : "Sin datos"
+        }))
+      })
+    );
+  }
+
+  const horasDesdeActualizacion = obtenerHorasDesdeUltimaActualizacionDashboard();
+
+  if (horasDesdeActualizacion !== null && horasDesdeActualizacion > ALERTA_BI_DESACTUALIZADA_HORAS) {
+    alertas.push(
+      crearAlertaAutomatica({
+        id: `AUTO-BI-DESACTUALIZADA-${Math.floor(horasDesdeActualizacion)}`,
+        titulo: "Carga BI desactualizada",
+        modulo: "Sistemas",
+        prioridad: horasDesdeActualizacion >= 48 ? "Crítica" : "Alta",
+        tipoAlerta: "Actualización de datos",
+        tipoDetalle: "cargaBi",
+        mensaje: `La última actualización exitosa del dashboard fue hace ${formatoNumero(horasDesdeActualizacion)} horas. Revisar actualización automática o conexión con SharePoint.`,
+        mes: obtenerMesTextoAlerta(periodo),
+        responsable: "Sistemas",
+        valorActual: horasDesdeActualizacion,
+        valorReferencia: ALERTA_BI_DESACTUALIZADA_HORAS,
+        porcentaje: horasDesdeActualizacion / ALERTA_BI_DESACTUALIZADA_HORAS,
+        detalles: [
+          {
+            fuente: "Dashboard",
+            modulo: "Sistemas",
+            registros: "",
+            estatus: `Última actualización: ${dashboardUltimaActualizacionExitosa || "Sin registro"}`
+          }
+        ]
+      })
+    );
+  }
+
+  return alertas;
+}
+
+function generarAlertaRubrosEgresosFueraRango(periodo, etiquetaPeriodo) {
+  const mesesPeriodo = normalizarPeriodoDashboard(periodo);
+
+  if (mesesPeriodo.length !== 1) {
+    return [];
+  }
+
+  const mesActual = mesesPeriodo[0];
+  const mesesHistoricos = obtenerMesesAnterioresClave(mesActual, 3);
+
+  if (!mesesHistoricos.length) {
+    return [];
+  }
+
+  const rubrosActuales = agruparEgresosPorRubroPeriodo([mesActual]);
+  const rubrosHistoricos = mesesHistoricos.map((mes) => {
+    return agruparEgresosPorRubroPeriodo([mes]);
+  });
+
+  const filasFueraRango = Array.from(rubrosActuales.values())
+    .map((rubroActual) => {
+      const totalHistorico = rubrosHistoricos.reduce((total, mapaMes) => {
+        const filaHistorica = mapaMes.get(rubroActual.rubro);
+        return total + Number(filaHistorica?.total || 0);
+      }, 0);
+
+      const mesesConDato = rubrosHistoricos.filter((mapaMes) => {
+        return Number(mapaMes.get(rubroActual.rubro)?.total || 0) > 0;
+      }).length;
+
+      const promedioHistorico = mesesConDato > 0
+        ? totalHistorico / mesesConDato
+        : 0;
+
+      const diferencia = rubroActual.total - promedioHistorico;
+      const variacion = promedioHistorico > 0 ? rubroActual.total / promedioHistorico : 0;
+
+      return {
+        rubro: rubroActual.rubro,
+        tipoGasto: rubroActual.tipoGasto,
+        registros: rubroActual.registros,
+        totalActual: rubroActual.total,
+        promedioHistorico,
+        diferencia,
+        variacion,
+        mesesConDato
+      };
+    })
+    .filter((fila) => {
+      return fila.totalActual >= ALERTA_RUBRO_FUERA_RANGO_MONTO_MIN
+        && fila.promedioHistorico > 0
+        && fila.variacion >= ALERTA_RUBRO_FUERA_RANGO_FACTOR
+        && fila.diferencia >= ALERTA_RUBRO_FUERA_RANGO_DIFERENCIA_MIN;
+    })
+    .sort((a, b) => Number(b.diferencia || 0) - Number(a.diferencia || 0));
+
+  if (!filasFueraRango.length) {
+    return [];
+  }
+
+  const diferenciaTotal = filasFueraRango.reduce((total, fila) => {
+    return total + Number(fila.diferencia || 0);
+  }, 0);
+
+  return [
+    crearAlertaAutomatica({
+      id: `AUTO-EGRESOS-RUBRO-FUERA-RANGO-${mesActual}-${filasFueraRango.length}-${Math.round(diferenciaTotal)}`,
+      titulo: "Egresos por rubro fuera de rango",
+      modulo: "Egresos",
+      prioridad: diferenciaTotal >= 100000 ? "Crítica" : "Alta",
+      tipoAlerta: "Variación inusual de egresos",
+      tipoDetalle: "rubrosFueraRango",
+      mensaje: `${formatoNumero(filasFueraRango.length)} rubro(s) de egresos están fuera de rango para ${etiquetaPeriodo}. Diferencia acumulada contra promedio histórico: ${formatoMoneda(diferenciaTotal)}.`,
+      mes: obtenerMesTextoAlerta(periodo),
+      responsable: "Tesorería",
+      valorActual: diferenciaTotal,
+      valorReferencia: 0,
+      porcentaje: 0,
+      detalles: filasFueraRango
+    })
+  ];
+}
+
+function generarAlertaNuevosServicios(periodo, etiquetaPeriodo) {
+  const ahora = new Date();
+  const limiteMs = ALERTA_NUEVOS_SERVICIOS_HORAS * 60 * 60 * 1000;
+
+  const serviciosNuevos = (state.datos.servicios || [])
+    .map((servicio) => {
+      const fechaAlta = obtenerFechaAltaServicioAlerta(servicio);
+
+      return {
+        servicio,
+        fechaAlta
+      };
+    })
+    .filter((item) => {
+      if (!item.fechaAlta) {
+        return false;
+      }
+
+      const diferenciaMs = ahora.getTime() - item.fechaAlta.getTime();
+
+      return diferenciaMs >= 0 && diferenciaMs <= limiteMs;
+    })
+    .sort((a, b) => b.fechaAlta.getTime() - a.fechaAlta.getTime());
+
+  if (!serviciosNuevos.length) {
+    return [];
+  }
+
+  const totalCapillas = serviciosNuevos.filter((item) => {
+    return obtenerOrigenServicio(item.servicio) === "Capillas";
+  }).length;
+
+  const totalParque = serviciosNuevos.filter((item) => {
+    return obtenerOrigenServicio(item.servicio) === "Parque";
+  }).length;
+
+  const ultimoServicio = serviciosNuevos[0]?.servicio || {};
+  const ultimoId = obtenerIdServicioAlerta(ultimoServicio);
+
+  return [
+    crearAlertaAutomatica({
+      id: `AUTO-NUEVOS-SERVICIOS-${formatearFechaClaveAlerta(ahora)}-${serviciosNuevos.length}-${ultimoId}`,
+      titulo: "Nuevos servicios registrados",
+      modulo: "Servicios",
+      prioridad: "Informativa",
+      tipoAlerta: "Nuevos servicios",
+      tipoDetalle: "nuevosServicios",
+      mensaje: `Se registraron ${formatoNumero(serviciosNuevos.length)} servicio(s) nuevo(s) en las últimas ${ALERTA_NUEVOS_SERVICIOS_HORAS} horas. Capillas: ${formatoNumero(totalCapillas)}. Parque: ${formatoNumero(totalParque)}.`,
+      mes: obtenerMesTextoAlerta(periodo),
+      responsable: "Operaciones",
+      valorActual: serviciosNuevos.length,
+      valorReferencia: 0,
+      porcentaje: 0,
+      detalles: serviciosNuevos.slice(0, 30).map((item) => {
+        const servicio = item.servicio;
+
+        return {
+          numeroServicio: normalizarTexto(
+            servicio.numeroReferencia ||
+            servicio.numeroServicio ||
+            servicio.referenciaContrato ||
+            "Sin referencia"
+          ),
+          fechaAlta: formatearFechaHoraCorta(item.fechaAlta),
+          origen: obtenerOrigenServicio(servicio),
+          ubicacion: obtenerUbicacionServicio(servicio),
+          tipoServicio: normalizarTexto(servicio.tipoServicio) || "Sin tipo",
+          finado: normalizarTexto(servicio.finado || servicio.titular) || "Sin finado"
+        };
+      })
+    })
+  ];
+}
+
+function obtenerEgresosPeriodo(periodo) {
+  return (state.datos.egresos || [])
+    .filter((item) => {
+      const mesEgreso = normalizarTexto(item.mesHoja || item.mes);
+      return coincideMesValor(mesEgreso, periodo);
+    });
+}
+
+function obtenerHorasDesdeUltimaActualizacionDashboard() {
+  if (!dashboardUltimaActualizacionExitosa) {
+    return null;
+  }
+
+  const fecha = new Date(dashboardUltimaActualizacionExitosa);
+
+  if (Number.isNaN(fecha.getTime())) {
+    return null;
+  }
+
+  const diferenciaMs = Date.now() - fecha.getTime();
+
+  return diferenciaMs / (60 * 60 * 1000);
+}
+
+function obtenerMesesAnterioresClave(mesClave, totalMeses) {
+  const partes = normalizarTexto(mesClave).split("-");
+
+  if (partes.length < 2) {
+    return [];
+  }
+
+  const anio = Number(partes[0]);
+  const mes = Number(partes[1]);
+
+  if (!Number.isFinite(anio) || !Number.isFinite(mes)) {
+    return [];
+  }
+
+  const meses = [];
+
+  for (let i = 1; i <= totalMeses; i++) {
+    const fecha = new Date(anio, mes - 1 - i, 1);
+    const anioMes = fecha.getFullYear();
+    const numeroMes = String(fecha.getMonth() + 1).padStart(2, "0");
+
+    meses.push(`${anioMes}-${numeroMes}`);
+  }
+
+  return meses;
+}
+
+function agruparEgresosPorRubroPeriodo(periodo) {
+  const grupos = new Map();
+
+  obtenerEgresosPeriodo(periodo)
+    .filter((item) => Number(item.pagado || 0) > 0)
+    .forEach((item) => {
+      const rubro = normalizarTexto(item.rubro) || "Sin rubro";
+      const tipoGasto = normalizarTexto(item.tipoGasto) || "Sin tipo de gasto";
+      const llave = `${rubro}||${tipoGasto}`;
+
+      if (!grupos.has(llave)) {
+        grupos.set(llave, {
+          rubro,
+          tipoGasto,
+          registros: 0,
+          total: 0
+        });
+      }
+
+      const grupo = grupos.get(llave);
+
+      grupo.registros += 1;
+      grupo.total += Number(item.pagado || 0);
+    });
+
+  return grupos;
+}
+
+function obtenerFechaAltaServicioAlerta(servicio) {
+  const valor = obtenerCampoFlexible(servicio, [
+    "fechaCreacionOrigen",
+    "Fecha_Creacion_Origen",
+    "FechaCreacionOrigen",
+    "fechaCarga",
+    "Fecha_Carga",
+    "FechaCarga",
+    "fechaActualizacion",
+    "Fecha_Actualizacion",
+    "FechaActualizacion",
+    "fechaCreacionOriginal",
+    "Fecha_Creacion_Original",
+    "FechaCreacionOriginal"
+  ]);
+
+  return convertirFechaServicio(valor);
+}
+
+function obtenerIdServicioAlerta(servicio) {
+  return normalizarTexto(
+    servicio.id ||
+    servicio.numeroReferencia ||
+    servicio.numeroServicio ||
+    servicio.referenciaContrato ||
+    servicio.fechaCreacionOrigen ||
+    servicio.fechaCarga ||
+    servicio.fechaActualizacion ||
+    ""
+  ).replace(/\s+/g, "-");
+}
+
+function formatearFechaClaveAlerta(fecha) {
+  const anio = fecha.getFullYear();
+  const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+  const dia = String(fecha.getDate()).padStart(2, "0");
+  const hora = String(fecha.getHours()).padStart(2, "0");
+
+  return `${anio}${mes}${dia}${hora}`;
 }
 
 function calcularMetaEsperadaAsesor(nombreAsesor, periodo) {
@@ -7319,6 +7848,7 @@ function crearAlertaAutomatica(configuracion) {
     modulo: configuracion.modulo,
     prioridad: configuracion.prioridad,
     tipoAlerta: configuracion.tipoAlerta,
+    tipoDetalle: configuracion.tipoDetalle || "",
     mensaje: configuracion.mensaje,
     mes: configuracion.mes,
     fechaDeteccion: new Date().toISOString(),
@@ -7787,6 +8317,10 @@ function renderDetalleNotificacionBody(alerta) {
     return renderDetalleAlertaAsesores(alerta);
   }
 
+  if (Array.isArray(alerta.detalles) && alerta.detalles.length > 0) {
+    return renderDetalleAlertaConTabla(alerta);
+  }
+
   return renderDetalleAlertaGenerica(alerta);
 }
 
@@ -7895,6 +8429,184 @@ function renderDetalleAlertaAsesores(alerta) {
       </table>
     </div>
   `;
+}
+
+function renderDetalleAlertaConTabla(alerta) {
+  const tipoDetalle = normalizarTexto(alerta.tipoDetalle);
+  const detalles = Array.isArray(alerta.detalles) ? alerta.detalles : [];
+
+  const configuraciones = {
+    cobranzaArea: {
+      columnas: [
+        ["area", "Área", "texto"],
+        ["real", "Real cobrado", "moneda"],
+        ["meta", "Meta mensual", "moneda"],
+        ["porCumplir", "Por cumplir", "moneda"],
+        ["porcentajeCumplido", "% cumplido", "porcentaje"]
+      ]
+    },
+    egresosPorPagar: {
+      columnas: [
+        ["fecha", "Fecha", "texto"],
+        ["beneficiario", "Beneficiario", "texto"],
+        ["rubro", "Rubro", "texto"],
+        ["tipoGasto", "Tipo gasto", "texto"],
+        ["pagado", "Pagado", "moneda"],
+        ["porPagar", "Por pagar", "moneda"]
+      ]
+    },
+    flujoNeto: {
+      columnas: [
+        ["concepto", "Concepto", "texto"],
+        ["monto", "Monto", "moneda"],
+        ["porcentajeIngreso", "% ingreso", "porcentaje"]
+      ]
+    },
+    cargaBi: {
+      columnas: [
+        ["fuente", "Fuente", "texto"],
+        ["modulo", "Módulo", "texto"],
+        ["registros", "Registros", "numero"],
+        ["estatus", "Estatus", "texto"]
+      ]
+    },
+    rubrosFueraRango: {
+      columnas: [
+        ["rubro", "Rubro", "texto"],
+        ["tipoGasto", "Tipo gasto", "texto"],
+        ["registros", "Registros", "numero"],
+        ["totalActual", "Actual", "moneda"],
+        ["promedioHistorico", "Promedio histórico", "moneda"],
+        ["diferencia", "Diferencia", "moneda"],
+        ["variacion", "Variación", "multiplo"]
+      ]
+    },
+    nuevosServicios: {
+      columnas: [
+        ["numeroServicio", "No. servicio", "texto"],
+        ["fechaAlta", "Fecha alta", "texto"],
+        ["origen", "Origen", "texto"],
+        ["ubicacion", "Ubicación", "texto"],
+        ["tipoServicio", "Tipo servicio", "texto"],
+        ["finado", "Finado", "texto"]
+      ]
+    }
+  };
+
+  const configuracion = configuraciones[tipoDetalle];
+
+  if (!configuracion) {
+    return renderDetalleAlertaGenerica(alerta);
+  }
+
+  const columnas = configuracion.columnas;
+
+  const valorActual = Number(alerta.valorActual || 0);
+  const valorReferencia = Number(alerta.valorReferencia || 0);
+  const porcentaje = Number(alerta.porcentaje || 0);
+
+  const thead = columnas
+    .map(([, etiqueta, tipo]) => {
+      const clase = ["moneda", "numero", "porcentaje", "multiplo"].includes(tipo)
+        ? "numeric"
+        : "";
+
+      return `<th class="${clase}">${escaparHtml(etiqueta)}</th>`;
+    })
+    .join("");
+
+  const filas = detalles
+    .map((fila) => {
+      const celdas = columnas
+        .map(([campo, , tipo]) => {
+          const clase = ["moneda", "numero", "porcentaje", "multiplo"].includes(tipo)
+            ? "numeric"
+            : "";
+
+          return `<td class="${clase}">${formatearValorDetalleAlerta(fila[campo], tipo)}</td>`;
+        })
+        .join("");
+
+      return `<tr>${celdas}</tr>`;
+    })
+    .join("");
+
+  return `
+    <div class="notification-detail-summary">
+      <div class="notification-detail-kpi">
+        <span>Registros</span>
+        <strong>${formatoNumero(detalles.length)}</strong>
+      </div>
+
+      <div class="notification-detail-kpi">
+        <span>Valor actual</span>
+        <strong>${formatearKpiAlerta(alerta, valorActual, "actual")}</strong>
+      </div>
+
+      <div class="notification-detail-kpi">
+        <span>Referencia</span>
+        <strong>${formatearKpiAlerta(alerta, valorReferencia, "referencia")}</strong>
+      </div>
+
+      <div class="notification-detail-kpi">
+        <span>Porcentaje</span>
+        <strong>${porcentaje ? formatoPorcentaje(porcentaje) : "—"}</strong>
+      </div>
+    </div>
+
+    <p class="notification-detail-message">
+      ${escaparHtml(alerta.mensaje || "Sin detalle disponible.")}
+    </p>
+
+    <div class="notification-detail-table-scroll">
+      <table class="notification-detail-table">
+        <thead>
+          <tr>${thead}</tr>
+        </thead>
+        <tbody>
+          ${filas}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function formatearValorDetalleAlerta(valor, tipo) {
+  if (tipo === "moneda") {
+    return formatoMoneda(valor);
+  }
+
+  if (tipo === "numero") {
+    return formatoNumero(valor);
+  }
+
+  if (tipo === "porcentaje") {
+    return formatoPorcentaje(valor);
+  }
+
+  if (tipo === "multiplo") {
+    return `${Number(valor || 0).toFixed(2)}x`;
+  }
+
+  return escaparHtml(valor || "—");
+}
+
+function formatearKpiAlerta(alerta, valor, tipo) {
+  const tipoDetalle = normalizarTexto(alerta.tipoDetalle);
+
+  if (tipoDetalle === "cobranzaArea" && tipo === "actual") {
+    return formatoNumero(valor);
+  }
+
+  if (tipoDetalle === "cargaBi") {
+    return formatoNumero(valor);
+  }
+
+  if (tipoDetalle === "nuevosServicios") {
+    return formatoNumero(valor);
+  }
+
+  return formatoMoneda(valor);
 }
 
 function renderDetalleAlertaGenerica(alerta) {
