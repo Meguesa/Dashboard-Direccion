@@ -7053,20 +7053,21 @@ function generarAlertaAsesoresDebajoMeta(periodo, etiquetaPeriodo) {
     .map((fila) => {
       const nombre = obtenerNombreAsesorAgrupado(fila);
       const ventaActual = Number(fila.total || 0);
-      const metaEsperada = calcularMetaEsperadaAsesor(nombre, periodo);
-      const cumplimiento = metaEsperada > 0 ? ventaActual / metaEsperada : 0;
-      const faltante = Math.max(metaEsperada - ventaActual, 0);
+      const metaMensual = Number(fila.metaMensual || 0);
+      const cumplimiento = metaMensual > 0 ? ventaActual / metaMensual : 0;
+      const faltante = Math.max(metaMensual - ventaActual, 0);
 
       return {
         nombre,
         ventaActual,
-        metaEsperada,
+        metaMensual,
+        metaEsperada: metaMensual,
         cumplimiento,
         faltante
       };
     })
     .filter((fila) => {
-      return fila.metaEsperada > 0 && fila.cumplimiento < 0.9;
+      return fila.metaMensual > 0 && fila.cumplimiento < 0.9;
     })
     .sort((a, b) => {
       if (a.cumplimiento !== b.cumplimiento) {
@@ -7082,17 +7083,6 @@ function generarAlertaAsesoresDebajoMeta(periodo, etiquetaPeriodo) {
 
   const asesoresCriticos = asesores.filter((fila) => fila.cumplimiento < 0.75).length;
 
-  const detalleAsesores = asesores
-    .slice(0, 8)
-    .map((fila) => {
-      return `${fila.nombre}: ${formatoMoneda(fila.ventaActual)} / ${formatoMoneda(fila.metaEsperada)} (${formatoPorcentaje(fila.cumplimiento)})`;
-    })
-    .join("; ");
-
-  const extra = asesores.length > 8
-    ? ` y ${asesores.length - 8} asesores más`
-    : "";
-
   const faltanteTotal = asesores.reduce((total, fila) => {
     return total + Number(fila.faltante || 0);
   }, 0);
@@ -7100,11 +7090,11 @@ function generarAlertaAsesoresDebajoMeta(periodo, etiquetaPeriodo) {
   return [
     crearAlertaAutomatica({
       id: `AUTO-ASESORES-DEBAJO-META-${obtenerKeyPeriodoAlerta(periodo)}`,
-      titulo: "Asesores debajo de meta esperada",
+      titulo: "Asesores debajo de meta mensual",
       modulo: "Ventas",
       prioridad: asesoresCriticos > 0 ? "Crítica" : "Alta",
       tipoAlerta: "Cumplimiento comercial por asesor",
-      mensaje: `${formatoNumero(asesores.length)} asesores están debajo del 90% de su meta esperada para ${etiquetaPeriodo}. Faltante acumulado estimado: ${formatoMoneda(faltanteTotal)}.`,
+      mensaje: `${formatoNumero(asesores.length)} asesores están debajo del 90% de su meta mensual para ${etiquetaPeriodo}. Faltante acumulado estimado: ${formatoMoneda(faltanteTotal)}.`,
       mes: obtenerMesTextoAlerta(periodo),
       responsable: "Dirección Comercial",
       valorActual: asesores.length,
@@ -7113,7 +7103,8 @@ function generarAlertaAsesoresDebajoMeta(periodo, etiquetaPeriodo) {
       detalles: asesores.map((fila) => ({
         asesor: fila.nombre,
         ventaActual: fila.ventaActual,
-        metaEsperada: fila.metaEsperada,
+        metaMensual: fila.metaMensual,
+        metaEsperada: fila.metaMensual,
         cumplimiento: fila.cumplimiento,
         faltante: fila.faltante
       }))
@@ -7162,7 +7153,7 @@ function generarAlertaVentasDebajoMeta(periodo, etiquetaPeriodo) {
   return [
     crearAlertaAutomatica({
       id: `AUTO-VENTAS-META-${obtenerKeyPeriodoAlerta(periodo)}`,
-      titulo: "Ventas debajo de meta esperada",
+      titulo: "Ventas debajo de meta mensual",
       modulo: "Ventas",
       prioridad,
       tipoAlerta: "Meta comercial en riesgo",
@@ -7196,7 +7187,7 @@ function generarAlertaCobranzaDebajoMeta(periodo, etiquetaPeriodo) {
   return [
     crearAlertaAutomatica({
       id: `AUTO-COBRANZA-META-${obtenerKeyPeriodoAlerta(periodo)}`,
-      titulo: "Cobranza debajo de meta esperada",
+      titulo: "Cobranza debajo de meta mensual",
       modulo: "Ingresos",
       prioridad,
       tipoAlerta: "Meta de cobranza en riesgo",
@@ -7810,7 +7801,7 @@ function renderDetalleAlertaAsesores(alerta) {
   }, 0);
 
   const metaTotal = detalles.reduce((total, fila) => {
-    return total + Number(fila.metaEsperada || 0);
+    return total + Number(fila.metaMensual || fila.metaEsperada || 0);
   }, 0);
 
   const cumplimientoPromedio = metaTotal > 0 ? ventaTotal / metaTotal : 0;
@@ -7841,7 +7832,7 @@ function renderDetalleAlertaAsesores(alerta) {
         <tr>
           <td>${escaparHtml(fila.asesor || "Sin asesor")}</td>
           <td class="numeric">${formatoMoneda(fila.ventaActual)}</td>
-          <td class="numeric">${formatoMoneda(fila.metaEsperada)}</td>
+          <td class="numeric">${formatoMoneda(fila.metaMensual || fila.metaEsperada)}</td>
           <td class="numeric">${formatoMoneda(fila.faltante)}</td>
           <td>
             <div class="notification-detail-progress">
@@ -7872,7 +7863,7 @@ function renderDetalleAlertaAsesores(alerta) {
       </div>
 
       <div class="notification-detail-kpi">
-        <span>Meta esperada</span>
+        <span>Meta mensual</span>
         <strong>${formatoMoneda(metaTotal)}</strong>
       </div>
 
@@ -7893,7 +7884,7 @@ function renderDetalleAlertaAsesores(alerta) {
           <tr>
             <th>Asesor</th>
             <th class="numeric">Venta actual</th>
-            <th class="numeric">Meta esperada</th>
+            <th class="numeric">Meta mensual</th>
             <th class="numeric">Faltante</th>
             <th>Cumplimiento</th>
           </tr>
