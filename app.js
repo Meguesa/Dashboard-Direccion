@@ -21,6 +21,12 @@ const dashboardCharts = {};
 const DASHBOARD_CACHE_KEY = "dashboardDireccionUltimosDatos";
 const DASHBOARD_REFRESH_MS = 60 * 60 * 1000;
 
+const DASHBOARD_ALERTAS_VISTAS_KEY = "dashboardAlertasVistas";
+const DASHBOARD_ALERTAS_CONOCIDAS_KEY = "dashboardAlertasConocidas";
+
+let notificacionesConectadas = false;
+let alertasInicializadas = false;
+
 let intervaloActualizacionDashboard = null;
 let actualizacionEnCurso = false;
 let cacheCargadoDashboard = false;
@@ -40,6 +46,7 @@ function inicializarDashboard() {
   conectarFiltrosTablas();
   conectarModalVentasAsesor();
   conectarModalEgresosTipoGasto();
+  conectarNotificaciones();
   renderDashboard();
   mostrarPagina("resumen");
 
@@ -944,6 +951,7 @@ function renderDashboard() {
   renderDetalleVentas(mes, totalVentas);
   renderDetalleServiciosCapillas(mes, totalCapillas);
   renderDetalleServiciosParque(mes, totalParque);
+  renderNotificacionesDashboard();
   aplicarFiltrosTodasLasTablas();
 }
 
@@ -6966,6 +6974,373 @@ function obtenerFechaHoraActual() {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(new Date());
+}
+
+function conectarNotificaciones() {
+  if (notificacionesConectadas) {
+    return;
+  }
+
+  const wrapper = document.getElementById("notificationsWrapper");
+  const boton = document.getElementById("notificationsButton");
+  const panel = document.getElementById("notificationsPanel");
+
+  if (!boton || !panel) {
+    return;
+  }
+
+  boton.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const seVaAbrir = panel.classList.contains("hidden");
+
+    panel.classList.toggle("hidden", !seVaAbrir);
+
+    if (seVaAbrir) {
+      renderListaNotificaciones();
+      marcarAlertasActualesComoVistas();
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!wrapper || wrapper.contains(event.target)) {
+      return;
+    }
+
+    panel.classList.add("hidden");
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      panel.classList.add("hidden");
+    }
+  });
+
+  notificacionesConectadas = true;
+}
+
+function renderNotificacionesDashboard() {
+  const alertas = obtenerAlertasActivasDashboard();
+  const idsVistas = leerSetLocalStorage(DASHBOARD_ALERTAS_VISTAS_KEY);
+  const alertasNoVistas = alertas.filter((alerta) => {
+    return !idsVistas.has(obtenerIdAlerta(alerta));
+  });
+
+  actualizarBadgeNotificaciones(alertasNoVistas.length);
+  renderListaNotificaciones();
+  detectarAlertasNuevasParaPopup(alertas);
+}
+
+function obtenerAlertasActivasDashboard() {
+  return (state.datos.alertas || [])
+    .filter((alerta) => {
+      const estatus = normalizarClaveComparacion(alerta.estatus);
+
+      return ![
+        "RESUELTA",
+        "RESUELTO",
+        "DESCARTADA",
+        "DESCARTADO",
+        "CERRADA",
+        "CERRADO"
+      ].includes(estatus);
+    })
+    .sort((a, b) => {
+      const prioridadA = obtenerOrdenPrioridadAlerta(a.prioridad);
+      const prioridadB = obtenerOrdenPrioridadAlerta(b.prioridad);
+
+      if (prioridadA !== prioridadB) {
+        return prioridadA - prioridadB;
+      }
+
+      return obtenerTimestampAlerta(b) - obtenerTimestampAlerta(a);
+    });
+}
+
+function actualizarBadgeNotificaciones(total) {
+  const badge = document.getElementById("notificationsBadge");
+
+  if (!badge) {
+    return;
+  }
+
+  const cantidad = Number(total || 0);
+
+  badge.textContent = cantidad > 99 ? "99+" : String(cantidad);
+  badge.classList.toggle("hidden", cantidad <= 0);
+}
+
+function renderListaNotificaciones() {
+  const contenedor = document.getElementById("notificationsList");
+
+  if (!contenedor) {
+    return;
+  }
+
+  const alertas = obtenerAlertasActivasDashboard();
+  const idsVistas = leerSetLocalStorage(DASHBOARD_ALERTAS_VISTAS_KEY);
+
+  if (!alertas.length) {
+    contenedor.innerHTML = `
+      <div class="notifications-empty">
+        Sin notificaciones activas.
+      </div>
+    `;
+    return;
+  }
+
+  contenedor.innerHTML = alertas
+    .map((alerta) => renderNotificacionItem(alerta, idsVistas))
+    .join("");
+}
+
+function renderNotificacionItem(alerta, idsVistas) {
+  const idAlerta = obtenerIdAlerta(alerta);
+  const esNueva = !idsVistas.has(idAlerta);
+  const prioridad = normalizarTexto(alerta.prioridad) || "Informativa";
+  const clasePrioridad = obtenerClasePrioridadAlerta(prioridad);
+  const titulo = normalizarTexto(alerta.titulo) || normalizarTexto(alerta.tipoAlerta) || "Notificación";
+  const modulo = normalizarTexto(alerta.modulo) || "Dashboard";
+  const mensaje = normalizarTexto(alerta.mensaje) || "Sin detalle.";
+  const fecha = formatearFechaAlerta(alerta);
+  const responsable = normalizarTexto(alerta.responsable);
+
+  return `
+    <article class="notification-item ${esNueva ? "is-unread" : ""}">
+      <div class="notification-item-top">
+        <div class="notification-title">
+          ${escaparHtml(titulo)}
+        </div>
+
+        <span class="notification-priority ${clasePrioridad}">
+          ${escaparHtml(prioridad)}
+        </span>
+      </div>
+
+      <p class="notification-message">
+        ${escaparHtml(mensaje)}
+      </p>
+
+      <div class="notification-meta">
+        ${esNueva ? `<span class="notification-new-label">Nueva</span>` : ""}
+        <span>${escaparHtml(modulo)}</span>
+        ${fecha ? `<span>· ${escaparHtml(fecha)}</span>` : ""}
+        ${responsable ? `<span>· ${escaparHtml(responsable)}</span>` : ""}
+      </div>
+    </article>
+  `;
+}
+
+function marcarAlertasActualesComoVistas() {
+  const alertas = obtenerAlertasActivasDashboard();
+  const idsVistas = leerSetLocalStorage(DASHBOARD_ALERTAS_VISTAS_KEY);
+
+  alertas.forEach((alerta) => {
+    idsVistas.add(obtenerIdAlerta(alerta));
+  });
+
+  guardarSetLocalStorage(DASHBOARD_ALERTAS_VISTAS_KEY, idsVistas);
+  actualizarBadgeNotificaciones(0);
+}
+
+function detectarAlertasNuevasParaPopup(alertas) {
+  const idsActuales = new Set(
+    (alertas || []).map((alerta) => obtenerIdAlerta(alerta))
+  );
+
+  const idsConocidas = leerSetLocalStorage(DASHBOARD_ALERTAS_CONOCIDAS_KEY);
+
+  if (!alertasInicializadas) {
+    guardarSetLocalStorage(DASHBOARD_ALERTAS_CONOCIDAS_KEY, idsActuales);
+    alertasInicializadas = true;
+    return;
+  }
+
+  const alertasNuevas = (alertas || []).filter((alerta) => {
+    return !idsConocidas.has(obtenerIdAlerta(alerta));
+  });
+
+  if (!alertasNuevas.length) {
+    return;
+  }
+
+  mostrarPopupAlertasNuevas(alertasNuevas);
+
+  alertasNuevas.forEach((alerta) => {
+    idsConocidas.add(obtenerIdAlerta(alerta));
+  });
+
+  guardarSetLocalStorage(DASHBOARD_ALERTAS_CONOCIDAS_KEY, idsConocidas);
+}
+
+function mostrarPopupAlertasNuevas(alertasNuevas) {
+  const contenedor = document.getElementById("notificationToastContainer");
+
+  if (!contenedor) {
+    return;
+  }
+
+  alertasNuevas.slice(0, 3).forEach((alerta) => {
+    const toast = document.createElement("article");
+    toast.className = "notification-toast";
+
+    const titulo = normalizarTexto(alerta.titulo) || normalizarTexto(alerta.tipoAlerta) || "Nueva notificación";
+    const prioridad = normalizarTexto(alerta.prioridad) || "Informativa";
+    const modulo = normalizarTexto(alerta.modulo) || "Dashboard";
+    const mensaje = normalizarTexto(alerta.mensaje) || "Se generó una nueva alerta en el dashboard.";
+
+    toast.innerHTML = `
+      <div class="notification-toast-header">
+        <div>
+          <div class="notification-toast-title">
+            ${escaparHtml(titulo)}
+          </div>
+          <div class="notification-meta">
+            <span>${escaparHtml(modulo)}</span>
+            <span>· ${escaparHtml(prioridad)}</span>
+          </div>
+        </div>
+
+        <button class="notification-toast-close" type="button" aria-label="Cerrar notificación">
+          ×
+        </button>
+      </div>
+
+      <p class="notification-toast-message">
+        ${escaparHtml(mensaje)}
+      </p>
+    `;
+
+    const cerrar = () => {
+      toast.remove();
+    };
+
+    const botonCerrar = toast.querySelector(".notification-toast-close");
+
+    if (botonCerrar) {
+      botonCerrar.addEventListener("click", cerrar);
+    }
+
+    contenedor.appendChild(toast);
+
+    setTimeout(cerrar, 12000);
+  });
+}
+
+function obtenerIdAlerta(alerta) {
+  const idDirecto = normalizarTexto(alerta.id);
+
+  if (idDirecto) {
+    return idDirecto;
+  }
+
+  return normalizarTexto([
+    alerta.titulo,
+    alerta.modulo,
+    alerta.tipoAlerta,
+    alerta.mensaje,
+    alerta.fechaDeteccion,
+    alerta.mes
+  ].join("|"));
+}
+
+function obtenerOrdenPrioridadAlerta(prioridad) {
+  const texto = normalizarClaveComparacion(prioridad);
+
+  if (texto.includes("CRITICA") || texto.includes("CRITICAL")) {
+    return 1;
+  }
+
+  if (texto.includes("ALTA")) {
+    return 2;
+  }
+
+  if (texto.includes("MEDIA")) {
+    return 3;
+  }
+
+  if (texto.includes("INFORMATIVA") || texto.includes("INFO")) {
+    return 4;
+  }
+
+  return 5;
+}
+
+function obtenerClasePrioridadAlerta(prioridad) {
+  const texto = normalizarClaveComparacion(prioridad);
+
+  if (texto.includes("CRITICA") || texto.includes("CRITICAL")) {
+    return "prioridad-critica";
+  }
+
+  if (texto.includes("ALTA")) {
+    return "prioridad-alta";
+  }
+
+  if (texto.includes("MEDIA")) {
+    return "prioridad-media";
+  }
+
+  return "prioridad-informativa";
+}
+
+function obtenerTimestampAlerta(alerta) {
+  const fecha = convertirFechaServicio(
+    alerta.fechaDeteccion ||
+    alerta.fecha ||
+    alerta.created ||
+    ""
+  );
+
+  return fecha ? fecha.getTime() : 0;
+}
+
+function formatearFechaAlerta(alerta) {
+  const fecha = convertirFechaServicio(
+    alerta.fechaDeteccion ||
+    alerta.fecha ||
+    alerta.created ||
+    ""
+  );
+
+  if (!fecha) {
+    return "";
+  }
+
+  return formatearFechaHoraCorta(fecha);
+}
+
+function leerSetLocalStorage(key) {
+  try {
+    const texto = localStorage.getItem(key);
+
+    if (!texto) {
+      return new Set();
+    }
+
+    const valores = JSON.parse(texto);
+
+    if (!Array.isArray(valores)) {
+      return new Set();
+    }
+
+    return new Set(valores.map((valor) => String(valor)));
+  } catch (error) {
+    console.warn(`No se pudo leer ${key}:`, error);
+    return new Set();
+  }
+}
+
+function guardarSetLocalStorage(key, setValores) {
+  try {
+    localStorage.setItem(
+      key,
+      JSON.stringify(Array.from(setValores || []).map((valor) => String(valor)))
+    );
+  } catch (error) {
+    console.warn(`No se pudo guardar ${key}:`, error);
+  }
 }
 
 window.renderDashboard = renderDashboard;

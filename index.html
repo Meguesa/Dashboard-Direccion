@@ -67,8 +67,29 @@
 
         <button id="logoutButton" class="button button-secondary">Cerrar sesión</button>
         <button id="refreshButton" class="button">Actualizar</button>
+        <div id="notificationsWrapper" class="notifications-wrapper">
+          <button id="notificationsButton" class="notifications-button" type="button" aria-label="Notificaciones">
+            <span class="notifications-icon">🔔</span>
+            <span id="notificationsBadge" class="notifications-badge hidden">0</span>
+          </button>
+
+          <section id="notificationsPanel" class="notifications-panel hidden">
+            <div class="notifications-panel-header">
+              <div>
+                <h3>Notificaciones</h3>
+                <p>Alertas nuevas y pendientes del dashboard.</p>
+              </div>
+            </div>
+
+            <div id="notificationsList" class="notifications-list">
+              <div class="notifications-empty">Sin notificaciones nuevas.</div>
+            </div>
+          </section>
+        </div>
       </div>
     </header>
+
+    <div id="notificationToastContainer" class="notification-toast-container"></div>
 
     <section id="statusPanel" class="auth-panel hidden">
       <div id="authStatus">Revisando sesión...</div>

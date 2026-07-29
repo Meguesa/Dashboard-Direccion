@@ -3667,3 +3667,237 @@ body {
   text-align: right;
   white-space: nowrap;
 }
+
+.notifications-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.notifications-button {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.notifications-button:hover {
+  background: #f8fafc;
+}
+
+.notifications-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.notifications-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+  box-shadow: 0 0 0 2px #ffffff;
+}
+
+.notifications-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 390px;
+  max-height: 520px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+  z-index: 1200;
+  overflow: hidden;
+}
+
+.notifications-panel-header {
+  padding: 16px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+.notifications-panel-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.notifications-panel-header p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.notifications-list {
+  max-height: 430px;
+  overflow-y: auto;
+}
+
+.notifications-empty {
+  padding: 18px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.notification-item {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.notification-item.is-unread {
+  background: #fff7ed;
+}
+
+.notification-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.notification-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.notification-priority {
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.notification-priority.prioridad-critica {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.notification-priority.prioridad-alta {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.notification-priority.prioridad-media {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.notification-priority.prioridad-informativa {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.notification-message {
+  margin: 0;
+  font-size: 12px;
+  color: #334155;
+  line-height: 1.45;
+}
+
+.notification-meta {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.notification-new-label {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.notification-toast-container {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(420px, calc(100vw - 32px));
+}
+
+.notification-toast {
+  background: #ffffff;
+  border-left: 5px solid #dc2626;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+  border-top: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 14px 16px;
+  animation: notificationToastIn 0.25s ease-out;
+}
+
+.notification-toast-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.notification-toast-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.notification-toast-close {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.notification-toast-message {
+  margin: 0;
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.45;
+}
+
+@keyframes notificationToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
