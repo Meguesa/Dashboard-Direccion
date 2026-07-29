@@ -884,8 +884,12 @@ function renderDashboard() {
   const metaUi = sumarMetaUiMensual(mes);
   const metaVentas = metaPrevision + metaUi;
 
-  const porcentajeCumplimientoVentas = metaVentas > 0
-    ? totalVentas / metaVentas
+  const porcentajeCumplimientoPrevision = metaPrevision > 0
+    ? ventasPrevision / metaPrevision
+    : 0;
+
+  const porcentajeCumplimientoUi = metaUi > 0
+    ? ventasUi / metaUi
     : 0;
 
   const totalCapillas = contarServiciosPorOrigen(mes, "CAPILLA");
@@ -937,13 +941,19 @@ function renderDashboard() {
   const ticketsPromedioVentas = calcularTicketsPromedioVentasPorTipo(mes);
   
   setText("pageVentasTotal", formatoMoneda(ventasPrevision));
-  setText("pageVentasUiTotal", formatoMoneda(ventasUi));
   setText("pageVentasMetaPrevision", formatoMoneda(metaPrevision));
+
+  setText(
+    "pageVentasCumplimientoPrevision",
+    metaPrevision > 0 ? formatoPorcentaje(porcentajeCumplimientoPrevision) : "—"
+  );
+
+  setText("pageVentasUiTotal", formatoMoneda(ventasUi));
   setText("pageVentasMetaUi", formatoMoneda(metaUi));
 
   setText(
-    "pageVentasCumplimiento",
-    metaVentas > 0 ? formatoPorcentaje(porcentajeCumplimientoVentas) : "—"
+    "pageVentasCumplimientoUi",
+    metaUi > 0 ? formatoPorcentaje(porcentajeCumplimientoUi) : "—"
   );
 
   setText("pageVentasContratos", formatoNumero(totalContratos));
