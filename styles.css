@@ -4165,10 +4165,10 @@ body {
 .toolbar-icon-button {
   width: 44px;
   height: 44px;
-  border: 1px solid #d8dee8;
-  border-radius: 14px;
-  background: #ffffff;
-  color: var(--primary);
+  border: 1px solid #4b1d0f;
+  border-radius: 999px;
+  background: #4b1d0f;
+  color: #ffffff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4184,14 +4184,14 @@ body {
 }
 
 .toolbar-icon-button:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: #5a2615;
+  border-color: #5a2615;
   transform: translateY(-1px);
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10);
 }
 
 .toolbar-icon-button:focus {
-  outline: 3px solid rgba(31, 78, 121, 0.22);
+  outline: 3px solid rgba(75, 29, 15, 0.22);
   outline-offset: 2px;
 }
 
@@ -4201,27 +4201,29 @@ body {
   fill: currentColor;
 }
 
-/* Actualizar */
-.toolbar-refresh-button {
-  color: var(--primary);
-}
-
-/* Usuario: estilo similar al icono adjunto */
-.toolbar-user-button {
+/* Los 3 iconos con el mismo formato */
+.toolbar-refresh-button,
+.toolbar-user-button,
+.toolbar-notifications-button {
   background: #4b1d0f;
   border-color: #4b1d0f;
   color: #ffffff;
   border-radius: 999px;
 }
 
-.toolbar-user-button:hover {
+.toolbar-refresh-button:hover,
+.toolbar-user-button:hover,
+.toolbar-notifications-button:hover {
   background: #5a2615;
   border-color: #5a2615;
+  color: #ffffff;
 }
 
-/* Campana */
-.toolbar-notifications-button {
-  color: var(--primary);
+.toolbar-refresh-button:focus,
+.toolbar-user-button:focus,
+.toolbar-notifications-button:focus {
+  outline: 3px solid rgba(75, 29, 15, 0.22);
+  outline-offset: 2px;
 }
 
 /* Menú de usuario */
