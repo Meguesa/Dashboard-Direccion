@@ -7038,12 +7038,101 @@ function generarAlertasAutomaticasDashboard() {
   const etiquetaPeriodo = obtenerEtiquetaPeriodoSeleccionado();
 
   return [
+    ...generarAlertaAsesoresDebajoMeta(periodo, etiquetaPeriodo),
     ...generarAlertaVentasDebajoMeta(periodo, etiquetaPeriodo),
     ...generarAlertaCobranzaDebajoMeta(periodo, etiquetaPeriodo),
     ...generarAlertaFlujoNetoNegativo(periodo, etiquetaPeriodo),
     ...generarAlertaServiciosUiSinPrecio(periodo, etiquetaPeriodo),
     ...generarAlertaDatosVaciosDashboard(periodo, etiquetaPeriodo)
   ];
+}
+
+function generarAlertaAsesoresDebajoMeta(periodo, etiquetaPeriodo) {
+  const asesores = agruparVentasPorAsesor(periodo)
+    .filter((fila) => obtenerNombreAsesorAgrupado(fila) !== "Sin asesor")
+    .map((fila) => {
+      const nombre = obtenerNombreAsesorAgrupado(fila);
+      const ventaActual = Number(fila.total || 0);
+      const metaEsperada = calcularMetaEsperadaAsesor(nombre, periodo);
+      const cumplimiento = metaEsperada > 0 ? ventaActual / metaEsperada : 0;
+      const faltante = Math.max(metaEsperada - ventaActual, 0);
+
+      return {
+        nombre,
+        ventaActual,
+        metaEsperada,
+        cumplimiento,
+        faltante
+      };
+    })
+    .filter((fila) => {
+      return fila.metaEsperada > 0 && fila.cumplimiento < 0.9;
+    })
+    .sort((a, b) => {
+      if (a.cumplimiento !== b.cumplimiento) {
+        return a.cumplimiento - b.cumplimiento;
+      }
+
+      return b.faltante - a.faltante;
+    });
+
+  if (!asesores.length) {
+    return [];
+  }
+
+  const asesoresCriticos = asesores.filter((fila) => fila.cumplimiento < 0.75).length;
+
+  const detalleAsesores = asesores
+    .slice(0, 8)
+    .map((fila) => {
+      return `${fila.nombre}: ${formatoMoneda(fila.ventaActual)} / ${formatoMoneda(fila.metaEsperada)} (${formatoPorcentaje(fila.cumplimiento)})`;
+    })
+    .join("; ");
+
+  const extra = asesores.length > 8
+    ? ` y ${asesores.length - 8} asesores más`
+    : "";
+
+  const faltanteTotal = asesores.reduce((total, fila) => {
+    return total + Number(fila.faltante || 0);
+  }, 0);
+
+  return [
+    crearAlertaAutomatica({
+      id: `AUTO-ASESORES-DEBAJO-META-${obtenerKeyPeriodoAlerta(periodo)}`,
+      titulo: "Asesores debajo de meta esperada",
+      modulo: "Ventas",
+      prioridad: asesoresCriticos > 0 ? "Crítica" : "Alta",
+      tipoAlerta: "Cumplimiento comercial por asesor",
+      mensaje: `${formatoNumero(asesores.length)} asesores están debajo del 90% de su meta esperada para ${etiquetaPeriodo}. Faltante acumulado estimado: ${formatoMoneda(faltanteTotal)}. Detalle: ${detalleAsesores}${extra}.`,
+      mes: obtenerMesTextoAlerta(periodo),
+      responsable: "Dirección Comercial",
+      valorActual: asesores.length,
+      valorReferencia: 0,
+      porcentaje: 0
+    })
+  ];
+}
+
+function calcularMetaEsperadaAsesor(nombreAsesor, periodo) {
+  const asesorBuscado = normalizarTexto(nombreAsesor).toUpperCase();
+
+  return normalizarPeriodoDashboard(periodo)
+    .reduce((total, mes) => {
+      const filaMes = agruparVentasPorAsesor(mes)
+        .find((fila) => {
+          return normalizarTexto(fila.nombre).toUpperCase() === asesorBuscado;
+        });
+
+      if (!filaMes) {
+        return total;
+      }
+
+      const metaMensual = Number(filaMes.metaMensual || 0);
+      const factorAvance = obtenerFactorAvanceMes(mes);
+
+      return total + (metaMensual * factorAvance);
+    }, 0);
 }
 
 function generarAlertaVentasDebajoMeta(periodo, etiquetaPeriodo) {
