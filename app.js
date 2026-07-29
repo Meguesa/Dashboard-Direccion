@@ -7032,8 +7032,279 @@ function renderNotificacionesDashboard() {
   detectarAlertasNuevasParaPopup(alertas);
 }
 
+function generarAlertasAutomaticasDashboard() {
+  const mesesPeriodo = obtenerMesesRangoSeleccionado();
+  const periodo = mesesPeriodo.length ? mesesPeriodo : [state.mesSeleccionado];
+  const etiquetaPeriodo = obtenerEtiquetaPeriodoSeleccionado();
+
+  return [
+    ...generarAlertaVentasDebajoMeta(periodo, etiquetaPeriodo),
+    ...generarAlertaCobranzaDebajoMeta(periodo, etiquetaPeriodo),
+    ...generarAlertaFlujoNetoNegativo(periodo, etiquetaPeriodo),
+    ...generarAlertaServiciosUiSinPrecio(periodo, etiquetaPeriodo),
+    ...generarAlertaDatosVaciosDashboard(periodo, etiquetaPeriodo)
+  ];
+}
+
+function generarAlertaVentasDebajoMeta(periodo, etiquetaPeriodo) {
+  const ventaActual = sumarVentas(periodo);
+  const metaEsperada = calcularMetaEsperadaPeriodo(periodo, sumarMetaVentasMensual);
+
+  if (metaEsperada <= 0) {
+    return [];
+  }
+
+  const cumplimiento = ventaActual / metaEsperada;
+
+  if (cumplimiento >= 0.9) {
+    return [];
+  }
+
+  const faltante = Math.max(metaEsperada - ventaActual, 0);
+  const prioridad = cumplimiento < 0.75 ? "Crítica" : "Alta";
+
+  return [
+    crearAlertaAutomatica({
+      id: `AUTO-VENTAS-META-${obtenerKeyPeriodoAlerta(periodo)}`,
+      titulo: "Ventas debajo de meta esperada",
+      modulo: "Ventas",
+      prioridad,
+      tipoAlerta: "Meta comercial en riesgo",
+      mensaje: `Para ${etiquetaPeriodo}, la venta acumulada es ${formatoMoneda(ventaActual)} contra una meta esperada de ${formatoMoneda(metaEsperada)}. Faltante estimado: ${formatoMoneda(faltante)}.`,
+      mes: obtenerMesTextoAlerta(periodo),
+      responsable: "Dirección Comercial",
+      valorActual: ventaActual,
+      valorReferencia: metaEsperada,
+      porcentaje: cumplimiento
+    })
+  ];
+}
+
+function generarAlertaCobranzaDebajoMeta(periodo, etiquetaPeriodo) {
+  const cobranzaActual = sumarIngresoRealCobranza(periodo);
+  const metaEsperada = calcularMetaEsperadaPeriodo(periodo, sumarMetaCobranzaMensual);
+
+  if (metaEsperada <= 0) {
+    return [];
+  }
+
+  const cumplimiento = cobranzaActual / metaEsperada;
+
+  if (cumplimiento >= 0.9) {
+    return [];
+  }
+
+  const faltante = Math.max(metaEsperada - cobranzaActual, 0);
+  const prioridad = cumplimiento < 0.75 ? "Crítica" : "Alta";
+
+  return [
+    crearAlertaAutomatica({
+      id: `AUTO-COBRANZA-META-${obtenerKeyPeriodoAlerta(periodo)}`,
+      titulo: "Cobranza debajo de meta esperada",
+      modulo: "Ingresos",
+      prioridad,
+      tipoAlerta: "Meta de cobranza en riesgo",
+      mensaje: `Para ${etiquetaPeriodo}, la cobranza considerada para meta es ${formatoMoneda(cobranzaActual)} contra una meta esperada de ${formatoMoneda(metaEsperada)}. Faltante estimado: ${formatoMoneda(faltante)}.`,
+      mes: obtenerMesTextoAlerta(periodo),
+      responsable: "Cobranza / Tesorería",
+      valorActual: cobranzaActual,
+      valorReferencia: metaEsperada,
+      porcentaje: cumplimiento
+    })
+  ];
+}
+
+function generarAlertaFlujoNetoNegativo(periodo, etiquetaPeriodo) {
+  const ingresos = sumarIngresos(periodo);
+  const egresos = sumarEgresos(periodo);
+  const flujoNeto = ingresos - egresos;
+
+  if (flujoNeto >= 0) {
+    return [];
+  }
+
+  return [
+    crearAlertaAutomatica({
+      id: `AUTO-FLUJO-NEGATIVO-${obtenerKeyPeriodoAlerta(periodo)}`,
+      titulo: "Flujo neto negativo",
+      modulo: "Egresos",
+      prioridad: "Crítica",
+      tipoAlerta: "Flujo de efectivo",
+      mensaje: `Para ${etiquetaPeriodo}, los egresos superan los ingresos por ${formatoMoneda(Math.abs(flujoNeto))}. Ingresos: ${formatoMoneda(ingresos)}. Egresos: ${formatoMoneda(egresos)}.`,
+      mes: obtenerMesTextoAlerta(periodo),
+      responsable: "Tesorería / Dirección",
+      valorActual: flujoNeto,
+      valorReferencia: 0,
+      porcentaje: 0
+    })
+  ];
+}
+
+function generarAlertaServiciosUiSinPrecio(periodo, etiquetaPeriodo) {
+  const serviciosSinPrecio = (state.datos.servicios || [])
+    .filter((servicio) => coincidePeriodoServicio(servicio, periodo))
+    .filter((servicio) => obtenerOrigenServicio(servicio) === "Capillas")
+    .filter((servicio) => esServicioUsoInmediatoBiServicios(servicio))
+    .filter((servicio) => obtenerMontoServicioUiCapillas(servicio) <= 0);
+
+  if (!serviciosSinPrecio.length) {
+    return [];
+  }
+
+  const referencias = serviciosSinPrecio
+    .slice(0, 8)
+    .map((servicio) => {
+      return normalizarTexto(
+        servicio.numeroReferencia ||
+        servicio.numeroServicio ||
+        servicio.referenciaContrato ||
+        "Sin referencia"
+      );
+    })
+    .join(", ");
+
+  const extra = serviciosSinPrecio.length > 8
+    ? ` y ${serviciosSinPrecio.length - 8} más`
+    : "";
+
+  return [
+    crearAlertaAutomatica({
+      id: `AUTO-SERVICIOS-UI-SIN-PRECIO-${obtenerKeyPeriodoAlerta(periodo)}`,
+      titulo: "Servicios UI sin Precio_Venta",
+      modulo: "Servicios",
+      prioridad: "Alta",
+      tipoAlerta: "Datos incompletos",
+      mensaje: `Hay ${formatoNumero(serviciosSinPrecio.length)} servicios de Uso Inmediato en Capillas sin Precio_Venta para ${etiquetaPeriodo}. Referencias: ${referencias}${extra}.`,
+      mes: obtenerMesTextoAlerta(periodo),
+      responsable: "Sistemas / Operaciones",
+      valorActual: serviciosSinPrecio.length,
+      valorReferencia: 0,
+      porcentaje: 0
+    })
+  ];
+}
+
+function generarAlertaDatosVaciosDashboard(periodo, etiquetaPeriodo) {
+  const fuentesVacias = [
+    {
+      nombre: "BI_Ingresos",
+      total: (state.datos.ingresos || []).length
+    },
+    {
+      nombre: "BI_Egresos",
+      total: (state.datos.egresos || []).length
+    },
+    {
+      nombre: "BI_Ventas",
+      total: (state.datos.ventas || []).length
+    },
+    {
+      nombre: "BI_Servicios",
+      total: (state.datos.servicios || []).length
+    }
+  ].filter((fuente) => fuente.total === 0);
+
+  if (!fuentesVacias.length) {
+    return [];
+  }
+
+  return [
+    crearAlertaAutomatica({
+      id: `AUTO-DATOS-VACIOS-${fuentesVacias.map((fuente) => fuente.nombre).join("-")}`,
+      titulo: "Fuente BI sin datos cargados",
+      modulo: "Sistemas",
+      prioridad: "Crítica",
+      tipoAlerta: "Carga BI incompleta",
+      mensaje: `Las siguientes fuentes no tienen registros cargados: ${fuentesVacias.map((fuente) => fuente.nombre).join(", ")}. Revisar conexión o flujo de actualización.`,
+      mes: obtenerMesTextoAlerta(periodo),
+      responsable: "Sistemas",
+      valorActual: fuentesVacias.length,
+      valorReferencia: 0,
+      porcentaje: 0
+    })
+  ];
+}
+
+function crearAlertaAutomatica(configuracion) {
+  return {
+    id: configuracion.id,
+    titulo: configuracion.titulo,
+    modulo: configuracion.modulo,
+    prioridad: configuracion.prioridad,
+    tipoAlerta: configuracion.tipoAlerta,
+    mensaje: configuracion.mensaje,
+    mes: configuracion.mes,
+    fechaDeteccion: new Date().toISOString(),
+    responsable: configuracion.responsable || "Sistemas",
+    estatus: "Nueva",
+    valorActual: Number(configuracion.valorActual || 0),
+    valorReferencia: Number(configuracion.valorReferencia || 0),
+    porcentaje: Number(configuracion.porcentaje || 0),
+    fuente: "Regla automática local"
+  };
+}
+
+function calcularMetaEsperadaPeriodo(periodo, obtenerMetaMensual) {
+  return normalizarPeriodoDashboard(periodo)
+    .reduce((total, mes) => {
+      const metaMensual = Number(obtenerMetaMensual(mes) || 0);
+      const factorAvance = obtenerFactorAvanceMes(mes);
+
+      return total + (metaMensual * factorAvance);
+    }, 0);
+}
+
+function obtenerFactorAvanceMes(mes) {
+  const partes = normalizarTexto(mes).split("-");
+
+  if (partes.length < 2) {
+    return 1;
+  }
+
+  const anio = Number(partes[0]);
+  const numeroMes = Number(partes[1]);
+
+  if (!Number.isFinite(anio) || !Number.isFinite(numeroMes)) {
+    return 1;
+  }
+
+  const hoy = new Date();
+  const inicioMes = new Date(anio, numeroMes - 1, 1);
+  const finMes = new Date(anio, numeroMes, 0);
+
+  if (hoy < inicioMes) {
+    return 0;
+  }
+
+  if (hoy > finMes) {
+    return 1;
+  }
+
+  return hoy.getDate() / finMes.getDate();
+}
+
+function obtenerKeyPeriodoAlerta(periodo) {
+  return normalizarPeriodoDashboard(periodo).join("_") || state.mesSeleccionado;
+}
+
+function obtenerMesTextoAlerta(periodo) {
+  const meses = normalizarPeriodoDashboard(periodo);
+
+  if (meses.length <= 1) {
+    return meses[0] || state.mesSeleccionado;
+  }
+
+  return `${meses[0]} a ${meses[meses.length - 1]}`;
+}
+
 function obtenerAlertasActivasDashboard() {
-  return (state.datos.alertas || [])
+  const alertasSharePoint = state.datos.alertas || [];
+  const alertasAutomaticas = generarAlertasAutomaticasDashboard();
+
+  return [
+    ...alertasSharePoint,
+    ...alertasAutomaticas
+  ]
     .filter((alerta) => {
       const estatus = normalizarClaveComparacion(alerta.estatus);
 
