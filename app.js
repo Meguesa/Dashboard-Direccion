@@ -970,7 +970,8 @@ function renderDashboard() {
   const promedioEgresos = registrosEgresos > 0 ? totalEgresos / registrosEgresos : 0;
   const promedioVentas = totalContratos > 0 ? totalVentas / totalContratos : 0;
   
-  const flujoNeto = totalIngresos - totalEgresos;
+  const flujoEfectivo = calcularFlujoEfectivo(mes);
+  const flujoNeto = flujoEfectivo.flujoNeto;
 
   setText("kpiIngresos", formatoMoneda(totalIngresos));
   setText("kpiEgresos", formatoMoneda(totalEgresos));
@@ -2225,40 +2226,72 @@ function calcularFlujoEfectivo(mes) {
 
   const costosVariablesDirectos = obtenerDetalleEgresosFlujo(mes, "COSTOS_VARIABLES_DIRECTOS");
   const costosVariablesOperativos = obtenerDetalleEgresosFlujo(mes, "COSTOS_VARIABLES_OPERATIVOS");
-  const costosFijos = obtenerDetalleEgresosFlujo(mes, "COSTOS_FIJOS");
-  const accionistas = obtenerDetalleEgresosFlujo(mes, "ACCIONISTAS");
+  const gastosFijos = obtenerDetalleEgresosFlujo(mes, "GASTOS_FIJOS");
+  const pasivosBancarios = obtenerDetalleEgresosFlujo(mes, "PASIVOS_BANCARIOS");
+  const otrosPasivos = obtenerDetalleEgresosFlujo(mes, "OTROS_PASIVOS");
   const reinversion = obtenerDetalleEgresosFlujo(mes, "REINVERSION");
+  const ivaPorPagar = obtenerDetalleEgresosFlujo(mes, "IVA_POR_PAGAR");
+  const isrPtu = obtenerDetalleEgresosFlujo(mes, "ISR_PTU");
 
   const totalIngresos = sumarTotalFlujo(ingresos);
   const totalCostosVariablesDirectos = sumarTotalFlujo(costosVariablesDirectos);
   const totalCostosVariablesOperativos = sumarTotalFlujo(costosVariablesOperativos);
-  const totalCostosFijos = sumarTotalFlujo(costosFijos);
-  const totalAccionistas = sumarTotalFlujo(accionistas);
+  const totalGastosFijos = sumarTotalFlujo(gastosFijos);
+  const totalPasivosBancarios = sumarTotalFlujo(pasivosBancarios);
+  const totalOtrosPasivos = sumarTotalFlujo(otrosPasivos);
   const totalReinversion = sumarTotalFlujo(reinversion);
+  const totalIvaPorPagar = sumarTotalFlujo(ivaPorPagar);
+  const totalIsrPtu = sumarTotalFlujo(isrPtu);
 
-  const flujoOperativo = totalIngresos
+  const contribucionMarginal = totalIngresos
     - totalCostosVariablesDirectos
-    - totalCostosVariablesOperativos
-    - totalCostosFijos;
+    - totalCostosVariablesOperativos;
 
-  const flujoLibre = flujoOperativo - totalAccionistas;
-  const flujoNeto = flujoLibre - totalReinversion;
+  const flujoOperativo = contribucionMarginal - totalGastosFijos;
+
+  const flujoLibrePasivos = flujoOperativo
+    - totalPasivosBancarios
+    - totalOtrosPasivos;
+
+  const flujoNeto = flujoLibrePasivos
+    - totalReinversion
+    - totalIvaPorPagar
+    - totalIsrPtu;
 
   return {
     totalIngresos,
     ingresos,
+
     costosVariablesDirectos,
     totalCostosVariablesDirectos,
+
     costosVariablesOperativos,
     totalCostosVariablesOperativos,
-    costosFijos,
-    totalCostosFijos,
+
+    contribucionMarginal,
+
+    gastosFijos,
+    totalGastosFijos,
+
     flujoOperativo,
-    accionistas,
-    totalAccionistas,
-    flujoLibre,
+
+    pasivosBancarios,
+    totalPasivosBancarios,
+
+    otrosPasivos,
+    totalOtrosPasivos,
+
+    flujoLibrePasivos,
+
     reinversion,
     totalReinversion,
+
+    ivaPorPagar,
+    totalIvaPorPagar,
+
+    isrPtu,
+    totalIsrPtu,
+
     flujoNeto
   };
 }
@@ -2290,11 +2323,17 @@ function construirFilasFlujoEfectivo(flujo) {
       signo: "negativo"
     },
     {
+      tipo: "resultado",
+      concepto: "CONTRIBUCIÓN MARGINAL",
+      total: flujo.contribucionMarginal,
+      signo: flujo.contribucionMarginal >= 0 ? "positivo" : "negativo"
+    },
+    {
       tipo: "grupo",
-      id: "costosFijos",
-      concepto: "COSTOS FIJOS",
-      total: flujo.totalCostosFijos,
-      detalles: flujo.costosFijos,
+      id: "gastosFijos",
+      concepto: "GASTOS FIJOS",
+      total: flujo.totalGastosFijos,
+      detalles: flujo.gastosFijos,
       signo: "negativo"
     },
     {
@@ -2305,17 +2344,25 @@ function construirFilasFlujoEfectivo(flujo) {
     },
     {
       tipo: "grupo",
-      id: "accionistas",
-      concepto: "ACCIONISTAS",
-      total: flujo.totalAccionistas,
-      detalles: flujo.accionistas,
+      id: "pasivosBancarios",
+      concepto: "PASIVOS BANCARIOS",
+      total: flujo.totalPasivosBancarios,
+      detalles: flujo.pasivosBancarios,
+      signo: "negativo"
+    },
+    {
+      tipo: "grupo",
+      id: "otrosPasivos",
+      concepto: "OTROS PASIVOS",
+      total: flujo.totalOtrosPasivos,
+      detalles: flujo.otrosPasivos,
       signo: "negativo"
     },
     {
       tipo: "resultado",
-      concepto: "FLUJO LIBRE",
-      total: flujo.flujoLibre,
-      signo: flujo.flujoLibre >= 0 ? "positivo" : "negativo"
+      concepto: "FLUJO LIBRE (PASIVOS)",
+      total: flujo.flujoLibrePasivos,
+      signo: flujo.flujoLibrePasivos >= 0 ? "positivo" : "negativo"
     },
     {
       tipo: "grupo",
@@ -2323,6 +2370,22 @@ function construirFilasFlujoEfectivo(flujo) {
       concepto: "REINVERSIÓN",
       total: flujo.totalReinversion,
       detalles: flujo.reinversion,
+      signo: "negativo"
+    },
+    {
+      tipo: "grupo",
+      id: "ivaPorPagar",
+      concepto: "IVA POR PAGAR",
+      total: flujo.totalIvaPorPagar,
+      detalles: flujo.ivaPorPagar,
+      signo: "negativo"
+    },
+    {
+      tipo: "grupo",
+      id: "isrPtu",
+      concepto: "ISR y PTU",
+      total: flujo.totalIsrPtu,
+      detalles: flujo.isrPtu,
       signo: "negativo"
     },
     {
@@ -2500,7 +2563,8 @@ function ordenarDetalleFlujo(lista) {
 function obtenerSubgrupoIngresoFlujo(item) {
   const categoria = normalizarClaveComparacion(item.categoria);
   const subcategoria = normalizarClaveComparacion(item.subcategoria);
-  const texto = `${categoria} ${subcategoria}`;
+  const referencia = normalizarClaveComparacion(item.referenciaContrato);
+  const texto = `${categoria} ${subcategoria} ${referencia}`;
 
   if (texto.includes("DESTAPE")) {
     return "DESTAPES";
@@ -2508,42 +2572,83 @@ function obtenerSubgrupoIngresoFlujo(item) {
 
   if (
     texto.includes("ENGANCHE") ||
-    texto.includes("ENGACHES") ||
+    texto.includes("ENGANCHES") ||
+    texto.includes("ENGACHE") ||
     /\bENG\b/.test(texto)
   ) {
     return "ENGANCHES";
   }
 
   if (
-    texto.includes("ANUALIDAD") ||
-    texto.includes("ANUALIDADES") ||
-    /\bANUA\b/.test(texto)
+    texto.includes("USO INMEDIATO") ||
+    /\bUI\b/.test(texto)
   ) {
-    return "ANUALIDADES";
+    if (
+      texto.includes("PANTEON") ||
+      texto.includes("PANTEÓN") ||
+      texto.includes("PROP") ||
+      texto.includes("PARQUE")
+    ) {
+      return "USO INMEDIATO (Panteón)";
+    }
+
+    return "USO INMEDIATO (Capillas)";
   }
 
-  if (texto.includes("USO INMEDIATO") || /\bUI\b/.test(texto)) {
-    return "USO INMEDIATO";
+  if (
+    texto.includes("REEMBOLSO") ||
+    texto.includes("DEVOLUCION") ||
+    texto.includes("DEVOLUCIÓN") ||
+    texto.includes("OTROS INGRESOS")
+  ) {
+    return "OTROS INGRESOS";
   }
 
   if (
     texto.includes("COBRANZA") ||
     texto.includes("MENSUALIDAD") ||
-    /\bMEN\b/.test(texto)
+    texto.includes("MENSUALIDADES") ||
+    texto.includes("ANUALIDAD") ||
+    texto.includes("ANUALIDADES") ||
+    texto.includes("CONTADO") ||
+    /\bMEN\b/.test(texto) ||
+    /\bANUA\b/.test(texto)
   ) {
     return "COBRANZA";
   }
 
-  return normalizarTexto(item.subcategoria || item.categoria || "OTROS INGRESOS").toUpperCase();
+  return "OTROS INGRESOS";
 }
 
 function obtenerGrupoEgresoFlujo(item) {
   const tipoGasto = normalizarClaveComparacion(item.tipoGasto);
   const rubro = normalizarClaveComparacion(item.rubro);
-  const texto = `${tipoGasto} ${rubro}`;
+  const concepto = normalizarClaveComparacion(item.concepto);
+  const contexto = normalizarClaveComparacion(item.contexto);
+  const beneficiario = normalizarClaveComparacion(item.beneficiario);
 
-  if (esRubroAccionistasFlujo(texto)) {
-    return "ACCIONISTAS";
+  const texto = [
+    tipoGasto,
+    rubro,
+    concepto,
+    contexto,
+    beneficiario
+  ].join(" ");
+
+  if (esRubroIvaPorPagarFlujo(texto)) {
+    return "IVA_POR_PAGAR";
+  }
+
+  if (esRubroIsrPtuFlujo(texto)) {
+    return "ISR_PTU";
+  }
+
+  if (esRubroPasivoBancarioFlujo(texto)) {
+    return "PASIVOS_BANCARIOS";
+  }
+
+  if (esRubroOtroPasivoFlujo(texto)) {
+    return "OTROS_PASIVOS";
   }
 
   if (esRubroReinversionFlujo(texto)) {
@@ -2558,12 +2663,12 @@ function obtenerGrupoEgresoFlujo(item) {
     return "COSTOS_VARIABLES_DIRECTOS";
   }
 
-  if (tipoGasto === "GF") {
-    return "COSTOS_FIJOS";
-  }
-
   if (tipoGasto === "GV") {
     return "COSTOS_VARIABLES_DIRECTOS";
+  }
+
+  if (tipoGasto === "GF") {
+    return "GASTOS_FIJOS";
   }
 
   if (tipoGasto === "RE") {
@@ -2571,56 +2676,303 @@ function obtenerGrupoEgresoFlujo(item) {
   }
 
   if (tipoGasto === "SACC") {
-    return "ACCIONISTAS";
+    return "OTROS_PASIVOS";
   }
 
-  return "COSTOS_FIJOS";
+  return "GASTOS_FIJOS";
 }
 
 function obtenerSubgrupoEgresoFlujo(item) {
+  const tipoGasto = normalizarClaveComparacion(item.tipoGasto);
   const rubro = normalizarTexto(item.rubro);
+  const concepto = normalizarTexto(item.concepto);
+  const contexto = normalizarTexto(item.contexto);
 
-  if (!rubro) {
-    return "OTROS";
+  const texto = normalizarClaveComparacion([
+    tipoGasto,
+    rubro,
+    concepto,
+    contexto
+  ].join(" "));
+
+  const reglas = [
+    ["CVCRE", "CREMATORIOS"],
+    ["CVAUR", "ATAUDES-URNAS"],
+    ["CVINH", "INHUMACIONES"],
+    ["CVINS", "INSUMOS PARA SERVICIOS"],
+    ["CVEMB", "EMBALSAMAMIENTOS"],
+    ["CVIT", "TS INSUMOS"],
+    ["CVGAS", "GASOLINAS"],
+    ["CVOTR", "OTROS VARIABLES"],
+
+    ["CVCOM", "COMISIONES VENTAS"],
+    ["BONOS VENTAS", "BONOS VENTAS"],
+    ["CVBV", "BONOS COBRANZA"],
+    ["CVPUB", "PUBLICIDAD"],
+
+    ["CFNOM", "NOMINAS"],
+    ["CFIM", "IMSS, INFONAVIT, 3%"],
+    ["CFREN", "RENTAS"],
+    ["CGIM", "HONORARIOS GIM"],
+    ["CFJAR", "MTTO JARDIN"],
+    ["CFSER", "SERVICIOS"],
+    ["ARRAUT", "ARRENDAMIENTO AUTOS"],
+    ["CFMTA", "MTTO AUTOS"],
+    ["CFSEG", "SEGUROS"],
+    ["CFSIS", "SISTEMAS"],
+    ["MOBILIARIO", "MOBILIARIO Y EQUIPO DE OFICINA"],
+    ["CFPAL", "PASIVO LABORAL"],
+    ["CFMCE", "MTTO CAPILLAS Y EDIFICIOS"],
+    ["CFEV", "EVENTOS"],
+    ["CFMPR", "MUNICIPIO / PREDIALES / REFRENDOS"],
+    ["ILRCAF", "IMPUESTOS LA ROCA CAPILLAS AF"],
+    ["RETSA", "RETENCIONES POR SALARIOS"],
+    ["RHPE", "RH PERSONAL"],
+    ["CBAN", "COMISIONES BANCARIAS"],
+    ["CFOTR", "OTROS FIJOS"],
+
+    ["GNIA", "GNI Revolvente"],
+    ["HSBC", "HSBC"],
+    ["BANR", "BANREGIO"],
+    ["DESPACHO JMM", "Despacho JMM"],
+    ["AUOP", "AUTO OPERACIÓN"],
+
+    ["MMMG", "MMMG"],
+
+    ["CFVIP", "CONSTRUCCIÓN FOSAS Y VIPS"],
+    ["RENI", "NICHOS"],
+    ["DESFILE", "DESFILE Y DÍA DE MUERTOS"],
+    ["TERCERA SALA", "Tercera Sala CH"],
+    ["BONOS ANUALES", "Bonos Anuales"],
+    ["REOT", "PANTEON OTROS"],
+
+    ["IVA", "IVA POR PAGAR"],
+    ["ISR", "ISR y PTU"],
+    ["PTU", "ISR y PTU"]
+  ];
+
+  const regla = reglas.find(([clave]) => texto.includes(normalizarClaveComparacion(clave)));
+
+  if (regla) {
+    return regla[1].toUpperCase();
   }
 
-  return rubro.toUpperCase();
+  if (rubro) {
+    return rubro.toUpperCase();
+  }
+
+  if (concepto) {
+    return concepto.toUpperCase();
+  }
+
+  return "OTROS";
+}
+
+function textoContieneAlguno(texto, palabras) {
+  const textoNormalizado = normalizarClaveComparacion(texto);
+
+  return (palabras || []).some((palabra) => {
+    return textoNormalizado.includes(normalizarClaveComparacion(palabra));
+  });
 }
 
 function esRubroVariableDirectoFlujo(texto) {
-  return texto.includes("CREMATORIO") ||
-    texto.includes("ATAUD") ||
-    texto.includes("URNA") ||
-    texto.includes("INHUMACION") ||
-    texto.includes("EMBALSAMAMIENTO") ||
-    texto.includes("INSUMOS PARA SERVICIOS") ||
-    texto.includes("GASOLINA") ||
-    texto.includes("COVID");
+  return textoContieneAlguno(texto, [
+    "CVCRE",
+    "CREMATORIOS",
+    "CREMATORIO",
+
+    "CVAUR",
+    "ATAUDES-URNAS",
+    "ATAUDES",
+    "ATAUD",
+    "URNAS",
+    "URNA",
+
+    "CVINH",
+    "INHUMACIONES",
+    "INHUMACION",
+
+    "CVINS",
+    "INSUMOS PARA SERVICIOS",
+
+    "CVEMB",
+    "EMBALSAMAMIENTOS",
+    "EMBALSAMAMIENTO",
+
+    "CVIT",
+    "TS INSUMOS",
+
+    "CVGAS",
+    "GASOLINAS",
+    "GASOLINA",
+
+    "CVOTR",
+    "OTROS VARIABLES"
+  ]);
 }
 
 function esRubroVariableOperativoFlujo(texto) {
-  return texto.includes("COMISION") ||
-    texto.includes("PUBLICIDAD") ||
-    texto.includes("MARKETING") ||
-    texto.includes("VENTAS");
+  return textoContieneAlguno(texto, [
+    "CVCOM",
+    "COMISIONES VENTAS",
+    "COMISION VENTAS",
+    "COMISIONES",
+    "COMISION",
+
+    "BONOS VENTAS",
+    "BONO VENTAS",
+
+    "CVBV",
+    "BONOS COBRANZA",
+    "BONO COBRANZA",
+
+    "CVPUB",
+    "PUBLICIDAD",
+    "MARKETING"
+  ]);
+}
+
+function esRubroGastoFijoFlujo(texto) {
+  return textoContieneAlguno(texto, [
+    "CFNOM",
+    "NOMINAS",
+    "NOMINA",
+
+    "CFIM",
+    "IMSS",
+    "INFONAVIT",
+
+    "CFREN",
+    "RENTAS",
+    "RENTA",
+
+    "CGIM",
+    "HONORARIOS GIM",
+
+    "CFJAR",
+    "MTTO JARDIN",
+    "MTTO JARDÍN",
+    "MANTENIMIENTO JARDIN",
+    "MANTENIMIENTO JARDÍN",
+
+    "CFSER",
+    "SERVICIOS",
+
+    "ARRAUT",
+    "ARRENDAMIENTO AUTOS",
+
+    "CFMTA",
+    "MTTO AUTOS",
+    "MANTENIMIENTO AUTOS",
+
+    "CFSEG",
+    "SEGUROS",
+
+    "CFSIS",
+    "SISTEMAS",
+
+    "MOBILIARIO Y EQUIPO DE OFICINA",
+    "MOBILIARIO",
+
+    "CFPAL",
+    "PASIVO LABORAL",
+
+    "CFMCE",
+    "MTTO CAPILLAS Y EDIFICIOS",
+    "MANTENIMIENTO CAPILLAS",
+
+    "CFEV",
+    "EVENTOS",
+
+    "CFMPR",
+    "MUNICIPIO",
+    "PREDIALES",
+    "REFRENDOS",
+
+    "ILRCAF",
+    "IMPUESTOS LA ROCA CAPILLAS AF",
+
+    "RETSA",
+    "RETENCIONES POR SALARIOS",
+
+    "RHPE",
+    "RH PERSONAL",
+
+    "CBAN",
+    "COMISIONES BANCARIAS",
+
+    "CFOTR",
+    "OTROS FIJOS"
+  ]);
+}
+
+function esRubroPasivoBancarioFlujo(texto) {
+  return textoContieneAlguno(texto, [
+    "GNIA",
+    "GNI REVOLVENTE",
+
+    "HSBC",
+
+    "BANR",
+    "BANREGIO",
+
+    "DESPACHO JMM",
+
+    "AUOP",
+    "AUTO OPERACION",
+    "AUTO OPERACIÓN"
+  ]);
+}
+
+function esRubroOtroPasivoFlujo(texto) {
+  return textoContieneAlguno(texto, [
+    "MMMG",
+    "MAMG",
+    "ACCIONISTA",
+    "ACCIONISTAS",
+    "SACC"
+  ]);
 }
 
 function esRubroReinversionFlujo(texto) {
-  return texto.includes("REINVERSION") ||
-    texto.includes("PANTEON CONSTRUCCION") ||
-    texto.includes("CAPILLAS AF") ||
-    texto.includes("CAPILLAS CH") ||
-    texto.includes("EVENTOS") ||
-    texto.includes("ADQUISICION") ||
-    texto.includes("CONSULTORIA") ||
-    texto.includes("PANTEON OTROS");
+  return textoContieneAlguno(texto, [
+    "CFVIP",
+    "CONSTRUCCION FOSAS Y VIPS",
+    "CONSTRUCCIÓN FOSAS Y VIPS",
+
+    "RENI",
+    "NICHOS",
+    "NICHO",
+
+    "DESFILE Y DIA DE MUERTOS",
+    "DESFILE Y DÍA DE MUERTOS",
+    "DESFILE",
+
+    "TERCERA SALA CH",
+    "TERCERA SALA",
+
+    "BONOS ANUALES",
+
+    "REOT",
+    "PANTEON OTROS",
+    "PANTEÓN OTROS"
+  ]);
 }
 
-function esRubroAccionistasFlujo(texto) {
-  return texto.includes("ACCIONISTA") ||
-    texto.includes("SACC") ||
-    texto.includes("MAMG") ||
-    texto.includes("MMMG");
+function esRubroIvaPorPagarFlujo(texto) {
+  return textoContieneAlguno(texto, [
+    "IVA POR PAGAR",
+    "IVA"
+  ]);
+}
+
+function esRubroIsrPtuFlujo(texto) {
+  return textoContieneAlguno(texto, [
+    "ISR Y PTU",
+    "ISR",
+    "PTU"
+  ]);
 }
 
 const AREAS_META_COBRANZA = [
