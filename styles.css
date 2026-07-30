@@ -4407,3 +4407,47 @@ body {
   border-color: #5a2615 !important;
   color: #ffffff !important;
 }
+
+/* ================================
+   Corrección definitiva badge notificaciones
+================================ */
+
+.header,
+.header-actions,
+.dashboard-toolbar,
+.notifications-wrapper {
+  overflow: visible !important;
+}
+
+.dashboard-toolbar .toolbar-notifications-button,
+.dashboard-toolbar .notifications-button {
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.dashboard-toolbar .notifications-badge {
+  position: absolute !important;
+  top: -5px !important;
+  right: -5px !important;
+  min-width: 18px !important;
+  height: 18px !important;
+  padding: 0 5px !important;
+  border-radius: 999px !important;
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border: 2px solid #f8fafc !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  line-height: 14px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 9999 !important;
+  pointer-events: none !important;
+  box-sizing: border-box !important;
+  clip-path: none !important;
+}
+
+.dashboard-toolbar .notifications-badge.hidden {
+  display: none !important;
+}
