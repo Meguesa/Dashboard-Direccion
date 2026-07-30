@@ -4282,31 +4282,38 @@ body {
 /* Ajuste de notificaciones con el nuevo botón */
 .notifications-wrapper {
   position: relative;
+  overflow: visible;
+  flex: 0 0 auto;
 }
 
 .notifications-button {
   width: 44px;
   height: 44px;
   padding: 0;
+  position: relative;
+  overflow: visible;
 }
 
 .notifications-badge {
   position: absolute;
-  top: -5px;
-  right: -5px;
-  min-width: 20px;
-  height: 20px;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
   padding: 0 5px;
   border-radius: 999px;
-  background: #dc2626;
+  background: #ef4444;
   color: #ffffff;
-  font-size: 11px;
-  font-weight: 900;
+  border: 2px solid #f8fafc;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  line-height: 1;
-  box-shadow: 0 0 0 2px #ffffff;
+  z-index: 20;
+  pointer-events: none;
+  box-sizing: border-box;
 }
 
 .notifications-badge.hidden {
