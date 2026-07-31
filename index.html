@@ -197,6 +197,11 @@
           <div id="kpiVentas" class="kpi-value">$0.00</div>
         </article>
 
+        <article class="card kpi-card" data-page="marketing" role="button" tabindex="0">
+          <div class="kpi-label">Total ventas generadas MKT</div>
+          <div id="kpiMarketingVentas" class="kpi-value">$0.00</div>
+        </article>
+
         <article class="card kpi-card" data-page="serviciosCapillas" role="button" tabindex="0">
           <div class="kpi-label">Servicios Capillas</div>
           <div id="kpiServiciosCapillas" class="kpi-value">0</div>
@@ -987,6 +992,68 @@
             </article>
           </div>
         </div>
+      </article>
+    </section>
+
+    
+    <!-- Página de Marketing -->
+    <section id="pageMarketing" class="dashboard-page hidden">
+      <article class="card">
+        <div class="page-header">
+          <div>
+            <h2 class="section-title">Marketing</h2>
+            <p class="footer-note">Indicadores de marketing digital del periodo seleccionado.</p>
+          </div>
+
+          <button class="button button-secondary page-back-button" data-page="resumen">
+            Regresar
+          </button>
+        </div>
+
+        <div class="detail-kpi-grid detail-kpi-grid-6">
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Leads generadas</span>
+            <strong id="pageMarketingLeadsGenerados">0</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Leads efectivos</span>
+            <strong id="pageMarketingLeadsEfectivos">0</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Costo por lead</span>
+            <strong id="pageMarketingCostoLead">$0.00</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Costo por venta</span>
+            <strong id="pageMarketingCostoVenta">$0.00</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">ROI</span>
+            <strong id="pageMarketingRoi">0.00x</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Número de ventas</span>
+            <strong id="pageMarketingNumeroVentas">0</strong>
+          </div>
+        </div>
+
+        <article class="detail-section-card">
+          <div class="detail-section-header">
+            <div>
+              <h3>Detalle de Marketing</h3>
+              <p>Sección pendiente para tablas, gráficas o desglose por campaña.</p>
+            </div>
+          </div>
+
+          <div class="placeholder-box">
+            Información pendiente por definir.
+          </div>
+        </article>
       </article>
     </section>
 

@@ -362,6 +362,7 @@ async function cargarDatosSharePoint(opciones = {}) {
     const ingresos = await obtenerIngresosSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const egresos = await obtenerEgresosSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const ventas = await obtenerVentasSharePoint(usarFiltroMeses ? mesesRecargados : []);
+    const marketing = await obtenerMarketingSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const servicios = await obtenerServiciosSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const metasCobranza = await obtenerMetasCobranzaSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const metasVentas = await obtenerMetasVentasSharePoint(usarFiltroMeses ? mesesRecargados : []);
@@ -374,6 +375,7 @@ async function cargarDatosSharePoint(opciones = {}) {
       egresos,
       ventas,
       servicios,
+      marketing,
       metasCobranza,
       metasVentas,
       alertas,
@@ -386,7 +388,7 @@ async function cargarDatosSharePoint(opciones = {}) {
 
     setText(
       "sharePointStatus",
-      `Datos actualizados. Ingresos: ${ingresos.length}, Egresos: ${egresos.length}, Ventas: ${ventas.length}, Servicios: ${servicios.length}, Metas cobranza: ${metasCobranza.length}, Metas ventas: ${metasVentas.length}, Alertas: ${alertas.length}, Propiedades parque: ${parquePropiedades.length}.`
+      `Datos actualizados. Ingresos: ${ingresos.length}, Egresos: ${egresos.length}, Ventas: ${ventas.length}, Marketing: ${marketing.length}, Servicios: ${servicios.length}, Metas cobranza: ${metasCobranza.length}, Metas ventas: ${metasVentas.length}, Alertas: ${alertas.length}, Propiedades parque: ${parquePropiedades.length}.`
     );
 
     setAuthStatus("Datos actualizados correctamente.");
@@ -1133,6 +1135,144 @@ async function obtenerParquePropiedadesSharePoint() {
   } catch (error) {
     console.error("Error leyendo BI_Parque_Propiedades:", error);
     setAuthStatus("Error al leer BI_Parque_Propiedades.");
+    return [];
+  }
+}
+
+async function obtenerMarketingSharePoint(mesesFiltro = []) {
+  try {
+    setAuthStatus("Leyendo BI_Marketing desde SharePoint...");
+
+    const listId = CONFIG.sharepoint.lists.marketing.listId;
+
+    if (!listId) {
+      throw new Error("No está configurado el listId de BI_Marketing.");
+    }
+
+    const filtroMeses = crearFiltroMesesSharePoint(mesesFiltro);
+
+    const items = await obtenerItemsLista(listId, 5000, {
+      filtro: filtroMeses
+    });
+
+    const marketing = items.map((item) => {
+      const f = item.fields || {};
+
+      return {
+        id: item.id,
+
+        title: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Title"
+        ])),
+
+        anio: convertirNumero(obtenerCampoSharePoint(f, [
+          "Anio",
+          "A_x00f1_o",
+          "Ano"
+        ])),
+
+        mes: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Mes"
+        ])),
+
+        nombreMes: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Nombre_Mes",
+          "Nombre_x005f_Mes",
+          "NombreMes",
+          "Nombre_x0020_Mes"
+        ])),
+
+        leadsGenerados: convertirNumero(obtenerCampoSharePoint(f, [
+          "Leads_Generados",
+          "Leads_x005f_Generados",
+          "LeadsGenerados"
+        ])),
+
+        leadsEfectivos: convertirNumero(obtenerCampoSharePoint(f, [
+          "Leads_Efectivos",
+          "Leads_x005f_Efectivos",
+          "LeadsEfectivos"
+        ])),
+
+        conversionLeads: convertirNumero(obtenerCampoSharePoint(f, [
+          "Conversion_Leads",
+          "Conversion_x005f_Leads",
+          "ConversionLeads"
+        ])),
+
+        numeroVentas: convertirNumero(obtenerCampoSharePoint(f, [
+          "Numero_Ventas",
+          "Numero_x005f_Ventas",
+          "NumeroVentas",
+          "N_x00fa_mero_Ventas"
+        ])),
+
+        ventaTotalDigital: convertirNumero(obtenerCampoSharePoint(f, [
+          "Venta_Total_Digital",
+          "Venta_x005f_Total_x005f_Digital",
+          "VentaTotalDigital"
+        ])),
+
+        inversionTotalDigital: convertirNumero(obtenerCampoSharePoint(f, [
+          "Inversion_Total_Digital",
+          "Inversion_x005f_Total_x005f_Digital",
+          "InversionTotalDigital",
+          "Inversi_x00f3_n_Total_Digital"
+        ])),
+
+        costoPorLead: convertirNumero(obtenerCampoSharePoint(f, [
+          "Costo_Por_Lead",
+          "Costo_x005f_Por_x005f_Lead",
+          "CostoPorLead"
+        ])),
+
+        costoPorVenta: convertirNumero(obtenerCampoSharePoint(f, [
+          "Costo_Por_Venta",
+          "Costo_x005f_Por_x005f_Venta",
+          "CostoPorVenta"
+        ])),
+
+        roi: convertirNumero(obtenerCampoSharePoint(f, [
+          "ROI"
+        ])),
+
+        fuente: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Fuente"
+        ])),
+
+        claveRegistro: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Clave_Registro",
+          "Clave_x005f_Registro",
+          "ClaveRegistro"
+        ])),
+
+        fechaCarga: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Fecha_Carga",
+          "Fecha_x005f_Carga",
+          "FechaCarga"
+        ])),
+
+        fechaActualizacion: limpiarTexto(obtenerCampoSharePoint(f, [
+          "Fecha_Actualizacion",
+          "Fecha_x005f_Actualizacion",
+          "FechaActualizacion"
+        ]))
+      };
+    });
+
+    console.log("BI_Marketing leído:", marketing);
+    console.table(marketing);
+
+    return marketing;
+  } catch (error) {
+    console.error("Error leyendo BI_Marketing:", error);
+
+    setText(
+      "sharePointStatus",
+      "Error al leer BI_Marketing. Revisa la consola del navegador."
+    );
+
+    setAuthStatus("Error al leer BI_Marketing.");
     return [];
   }
 }

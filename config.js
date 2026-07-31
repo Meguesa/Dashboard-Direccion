@@ -33,6 +33,10 @@ const CONFIG = {
         nombre: "BI_Servicios",
         listId: "fb475b08-ff65-4320-b006-379bb2832c27"
       },
+      marketing: {
+        nombre: "BI_Marketing",
+        listId: "c2a2ffe4-76ff-4e43-9887-68c76e1310bb"
+      },
       metasCobranza: {
         nombre: "BI_Metas_Cobranza",
         listId: "b114407b-1632-48b5-ad3f-baee26b1a24e"

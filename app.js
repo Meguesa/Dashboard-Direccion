@@ -8,6 +8,7 @@ window.state = {
     egresos: [],
     ventas: [],
     servicios: [],
+    marketing: [],
     metasCobranza: [],
     metasVentas: [],
     alertas: [],
@@ -534,6 +535,12 @@ async function actualizarDatosDashboard(opciones = {}) {
       mesesRecargados
     );
 
+    state.datos.marketing = reemplazarRegistrosPorMes(
+      state.datos.marketing || [],
+      datosSharePoint.marketing || [],
+      mesesRecargados
+    );
+
     state.datos.servicios = reemplazarRegistrosPorMes(
       state.datos.servicios,
       datosSharePoint.servicios || [],
@@ -652,6 +659,7 @@ function guardarDatosEnCache() {
         egresos: state.datos.egresos || [],
         ventas: state.datos.ventas || [],
         servicios: state.datos.servicios || [],
+        marketing: state.datos.marketing || [],
         metasCobranza: state.datos.metasCobranza || [],
         metasVentas: state.datos.metasVentas || [],
         parquePropiedades: state.datos.parquePropiedades || []
@@ -685,6 +693,7 @@ function cargarDatosDesdeCache() {
     state.datos.egresos = cache.datos.egresos || [];
     state.datos.ventas = cache.datos.ventas || [];
     state.datos.servicios = cache.datos.servicios || [];
+    state.datos.marketing = cache.datos.marketing || [];
     state.datos.metasCobranza = cache.datos.metasCobranza || [];
     state.datos.metasVentas = cache.datos.metasVentas || [];
     state.datos.alertas = cache.datos.alertas || [];
@@ -889,6 +898,7 @@ function mostrarPagina(nombrePagina) {
     ingresos: "pageIngresos",
     egresos: "pageEgresos",
     ventas: "pageVentas",
+    marketing: "pageMarketing",
     serviciosCapillas: "pageServiciosCapillas",
     serviciosParque: "pageServiciosParque"
   };
@@ -933,6 +943,14 @@ function renderDashboard() {
   const ventasPrevision = sumarVentasPrevision(mes);
   const ventasUi = sumarVentasUiPeriodo(mes);
   const totalVentas = ventasPrevision + ventasUi;
+  const totalMarketingVentasGeneradas = sumarMarketingVentasGeneradas(mes);
+
+  const marketingLeadsGenerados = sumarMarketingLeadsGenerados(mes);
+  const marketingLeadsEfectivos = sumarMarketingLeadsEfectivos(mes);
+  const marketingNumeroVentas = sumarMarketingNumeroVentas(mes);
+  const marketingCostoPorLead = calcularMarketingCostoPorLead(mes);
+  const marketingCostoPorVenta = calcularMarketingCostoPorVenta(mes);
+  const marketingRoi = calcularMarketingRoi(mes);
 
   const totalContratos = contarContratos(mes);
 
@@ -977,8 +995,17 @@ function renderDashboard() {
   setText("kpiEgresos", formatoMoneda(totalEgresos));
   setText("kpiFlujo", formatoMoneda(flujoNeto));
   setText("kpiVentas", formatoMoneda(totalVentas));
+  setText("kpiMarketingVentas", formatoMoneda(totalMarketingVentasGeneradas));
   setText("kpiServiciosCapillas", formatoNumero(totalCapillas));
   setText("kpiServiciosParque", formatoNumero(totalParque));
+
+  setText("pageMarketingLeadsGenerados", formatoNumero(marketingLeadsGenerados));
+  setText("pageMarketingLeadsEfectivos", formatoNumero(marketingLeadsEfectivos));
+  setText("pageMarketingCostoLead", formatoMoneda(marketingCostoPorLead));
+  setText("pageMarketingCostoVenta", formatoMoneda(marketingCostoPorVenta));
+  setText("pageMarketingRoi", formatoMultiploMarketing(marketingRoi));
+  setText("pageMarketingNumeroVentas", formatoNumero(marketingNumeroVentas));
+
 
   setText("pageIngresosTotal", formatoMoneda(totalIngresos));
   setText("pageIngresosReal", formatoMoneda(ingresoReal));
@@ -1069,6 +1096,57 @@ function sumarIngresos(mes) {
   return state.datos.ingresos
     .filter((item) => coincideMesValor(item.mes, mes))
     .reduce((total, item) => total + Number(item.importe || 0), 0);
+}
+
+function obtenerMarketingPeriodo(mes) {
+  return (state.datos.marketing || [])
+    .filter((item) => coincideMesValor(item.mes, mes));
+}
+
+function sumarMarketingCampo(mes, campo) {
+  return obtenerMarketingPeriodo(mes)
+    .reduce((total, item) => total + Number(item[campo] || 0), 0);
+}
+
+function sumarMarketingLeadsGenerados(mes) {
+  return sumarMarketingCampo(mes, "leadsGenerados");
+}
+
+function sumarMarketingLeadsEfectivos(mes) {
+  return sumarMarketingCampo(mes, "leadsEfectivos");
+}
+
+function sumarMarketingNumeroVentas(mes) {
+  return sumarMarketingCampo(mes, "numeroVentas");
+}
+
+function sumarMarketingVentasGeneradas(mes) {
+  return sumarMarketingCampo(mes, "ventaTotalDigital");
+}
+
+function sumarMarketingInversionTotal(mes) {
+  return sumarMarketingCampo(mes, "inversionTotalDigital");
+}
+
+function calcularMarketingCostoPorLead(mes) {
+  const inversion = sumarMarketingInversionTotal(mes);
+  const leads = sumarMarketingLeadsGenerados(mes);
+
+  return leads > 0 ? inversion / leads : 0;
+}
+
+function calcularMarketingCostoPorVenta(mes) {
+  const inversion = sumarMarketingInversionTotal(mes);
+  const ventas = sumarMarketingNumeroVentas(mes);
+
+  return ventas > 0 ? inversion / ventas : 0;
+}
+
+function calcularMarketingRoi(mes) {
+  const ventasGeneradas = sumarMarketingVentasGeneradas(mes);
+  const inversion = sumarMarketingInversionTotal(mes);
+
+  return inversion > 0 ? ventasGeneradas / inversion : 0;
 }
 
 function sumarIngresoRealCobranza(mes) {
@@ -7501,6 +7579,16 @@ function formatoPorcentaje(valor) {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1
   }).format(Number(valor || 0));
+}
+
+function formatoMultiploMarketing(valor) {
+  const numero = Number(valor || 0);
+
+  if (!Number.isFinite(numero)) {
+    return "0.00x";
+  }
+
+  return `${numero.toFixed(2)}x`;
 }
 
 function escaparHtml(valor) {
