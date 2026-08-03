@@ -1143,140 +1143,225 @@ async function obtenerParquePropiedadesSharePoint() {
   }
 }
 
-async function obtenerMarketingSharePoint(mesesFiltro = []) {
+async function obtenerMarketingSharePoint() {
   try {
     setAuthStatus("Leyendo BI_Marketing desde SharePoint...");
 
     const listId = CONFIG.sharepoint.lists.marketing.listId;
 
     if (!listId) {
-      throw new Error("No está configurado el listId de BI_Marketing.");
+      throw new Error(
+        "No está configurado el listId de BI_Marketing."
+      );
     }
 
-    const filtroMeses = crearFiltroMesesSharePoint(mesesFiltro);
-
-    const items = await obtenerItemsLista(listId, 5000, {
-      filtro: filtroMeses
-    });
+    /*
+      Marketing se lee completo:
+      únicamente contiene 12 registros anuales.
+    */
+    const items = await obtenerItemsLista(listId, 5000);
 
     const marketing = items.map((item) => {
       const f = item.fields || {};
 
-      return {
-        id: item.id,
-
-        title: limpiarTexto(obtenerCampoSharePoint(f, [
-          "Title"
-        ])),
-
-        anio: convertirNumero(obtenerCampoSharePoint(f, [
+      /*
+        Se incluyen tanto los nombres internos normales
+        como field_1, field_2, etc., por si SharePoint
+        asignó nombres internos genéricos.
+      */
+      const anio = convertirNumero(
+        obtenerCampoSharePoint(f, [
           "Anio",
           "A_x00f1_o",
-          "Ano"
-        ])),
+          "Ano",
+          "field_1"
+        ])
+      );
 
-        mes: limpiarTexto(obtenerCampoSharePoint(f, [
-          "Mes"
-        ])),
+      const mesOriginal = limpiarTexto(
+        obtenerCampoSharePoint(f, [
+          "Mes",
+          "field_2"
+        ])
+      );
 
-        nombreMes: limpiarTexto(obtenerCampoSharePoint(f, [
+      const nombreMes = limpiarTexto(
+        obtenerCampoSharePoint(f, [
           "Nombre_Mes",
           "Nombre_x005f_Mes",
           "NombreMes",
-          "Nombre_x0020_Mes"
-        ])),
+          "Nombre_x0020_Mes",
+          "field_3"
+        ])
+      );
 
-        leadsGenerados: convertirNumero(obtenerCampoSharePoint(f, [
-          "Leads_Generados",
-          "Leads_x005f_Generados",
-          "LeadsGenerados"
-        ])),
+      return {
+        id: item.id,
 
-        leadsEfectivos: convertirNumero(obtenerCampoSharePoint(f, [
-          "Leads_Efectivos",
-          "Leads_x005f_Efectivos",
-          "LeadsEfectivos"
-        ])),
+        title: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Title"
+          ])
+        ),
 
-        conversionLeads: convertirNumero(obtenerCampoSharePoint(f, [
-          "Conversion_Leads",
-          "Conversion_x005f_Leads",
-          "ConversionLeads"
-        ])),
+        anio,
 
-        numeroVentas: convertirNumero(obtenerCampoSharePoint(f, [
-          "Numero_Ventas",
-          "Numero_x005f_Ventas",
-          "NumeroVentas",
-          "N_x00fa_mero_Ventas"
-        ])),
+        /*
+          Convierte:
+          Anio = 2026
+          Mes = 6
 
-        ventaTotalDigital: convertirNumero(obtenerCampoSharePoint(f, [
-          "Venta_Total_Digital",
-          "Venta_x005f_Total_x005f_Digital",
-          "VentaTotalDigital"
-        ])),
+          en:
+          mes = "2026-06"
+        */
+        mes: crearClaveMesMarketing(
+          anio,
+          mesOriginal,
+          nombreMes
+        ),
 
-        inversionTotalDigital: convertirNumero(obtenerCampoSharePoint(f, [
-          "Inversion_Total_Digital",
-          "Inversion_x005f_Total_x005f_Digital",
-          "InversionTotalDigital",
-          "Inversi_x00f3_n_Total_Digital"
-        ])),
+        nombreMes,
 
-        costoPorLead: convertirNumero(obtenerCampoSharePoint(f, [
-          "Costo_Por_Lead",
-          "Costo_x005f_Por_x005f_Lead",
-          "CostoPorLead"
-        ])),
+        leadsGenerados: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Leads_Generados",
+            "Leads_x005f_Generados",
+            "LeadsGenerados",
+            "field_4"
+          ])
+        ),
 
-        costoPorVenta: convertirNumero(obtenerCampoSharePoint(f, [
-          "Costo_Por_Venta",
-          "Costo_x005f_Por_x005f_Venta",
-          "CostoPorVenta"
-        ])),
+        leadsEfectivos: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Leads_Efectivos",
+            "Leads_x005f_Efectivos",
+            "LeadsEfectivos",
+            "field_5"
+          ])
+        ),
 
-        roi: convertirNumero(obtenerCampoSharePoint(f, [
-          "ROI"
-        ])),
+        conversionLeads: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Conversion_Leads",
+            "Conversion_x005f_Leads",
+            "ConversionLeads",
+            "field_6"
+          ])
+        ),
 
-        fuente: limpiarTexto(obtenerCampoSharePoint(f, [
-          "Fuente"
-        ])),
+        numeroVentas: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Numero_Ventas",
+            "Numero_x005f_Ventas",
+            "NumeroVentas",
+            "N_x00fa_mero_Ventas",
+            "field_7"
+          ])
+        ),
 
-        claveRegistro: limpiarTexto(obtenerCampoSharePoint(f, [
-          "Clave_Registro",
-          "Clave_x005f_Registro",
-          "ClaveRegistro"
-        ])),
+        ventaTotalDigital: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Venta_Total_Digital",
+            "Venta_x005f_Total_x005f_Digital",
+            "VentaTotalDigital",
+            "field_8"
+          ])
+        ),
 
-        fechaCarga: limpiarTexto(obtenerCampoSharePoint(f, [
-          "Fecha_Carga",
-          "Fecha_x005f_Carga",
-          "FechaCarga"
-        ])),
+        inversionTotalDigital: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Inversion_Total_Digital",
+            "Inversion_x005f_Total_x005f_Digital",
+            "InversionTotalDigital",
+            "Inversi_x00f3_n_Total_Digital",
+            "field_9"
+          ])
+        ),
 
-        fechaActualizacion: limpiarTexto(obtenerCampoSharePoint(f, [
-          "Fecha_Actualizacion",
-          "Fecha_x005f_Actualizacion",
-          "FechaActualizacion"
-        ]))
+        costoPorLead: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Costo_Por_Lead",
+            "Costo_x005f_Por_x005f_Lead",
+            "CostoPorLead",
+            "field_10"
+          ])
+        ),
+
+        costoPorVenta: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Costo_Por_Venta",
+            "Costo_x005f_Por_x005f_Venta",
+            "CostoPorVenta",
+            "field_11"
+          ])
+        ),
+
+        roi: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "ROI",
+            "field_12"
+          ])
+        ),
+
+        fuente: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Fuente",
+            "field_13"
+          ])
+        ),
+
+        claveRegistro: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Clave_Registro",
+            "Clave_x005f_Registro",
+            "ClaveRegistro",
+            "field_14"
+          ])
+        ),
+
+        fechaCarga: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Fecha_Carga",
+            "Fecha_x005f_Carga",
+            "FechaCarga",
+            "field_15"
+          ])
+        ),
+
+        fechaActualizacion: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Fecha_Actualizacion",
+            "Fecha_x005f_Actualizacion",
+            "FechaActualizacion",
+            "field_16"
+          ])
+        )
       };
     });
 
-    console.log("BI_Marketing leído:", marketing);
+    console.log(
+      "BI_Marketing leído:",
+      marketing
+    );
+
     console.table(marketing);
 
     return marketing;
   } catch (error) {
-    console.error("Error leyendo BI_Marketing:", error);
+    console.error(
+      "Error leyendo BI_Marketing:",
+      error
+    );
 
     setText(
       "sharePointStatus",
       "Error al leer BI_Marketing. Revisa la consola del navegador."
     );
 
-    setAuthStatus("Error al leer BI_Marketing.");
+    setAuthStatus(
+      "Error al leer BI_Marketing."
+    );
+
     return [];
   }
 }
