@@ -42,6 +42,10 @@ const ALERTA_RUBRO_FUERA_RANGO_MONTO_MIN = 20000;
 
 const ALERTA_NUEVOS_SERVICIOS_HORAS = 24;
 
+const MARKETING_META_VENTA_TOTAL_MENSUAL = 9000000;
+const MARKETING_META_DIGITAL_MIN_PCT = 0.25;
+const MARKETING_META_DIGITAL_MAX_PCT = 0.35;
+
 let notificacionesConectadas = false;
 let alertasInicializadas = false;
 let dashboardUltimaActualizacionExitosa = "";
@@ -1087,6 +1091,7 @@ function renderDashboard() {
   renderDetalleIngresos(mes, totalIngresos);
   renderDetalleEgresos(mes, totalEgresos);
   renderDetalleVentas(mes, totalVentas);
+  renderDetalleMarketing();
   renderDetalleServiciosCapillas(mes, totalCapillas);
   renderDetalleServiciosParque(mes, totalParque);
   renderNotificacionesDashboard();
@@ -1160,6 +1165,482 @@ function calcularMarketingRoi(mes) {
   const inversion = sumarMarketingInversionTotal(mes);
 
   return inversion > 0 ? ventasGeneradas / inversion : 0;
+}
+
+/* =========================================================
+   DETALLE GENERAL DE MARKETING
+   ========================================================= */
+
+function renderDetalleMarketing() {
+  renderTablaMarketingVentaMeta();
+  renderTablaMarketingMensual();
+
+  if (typeof Chart !== "undefined") {
+    renderGraficaMarketingVentaMeta();
+    renderGraficaMarketingLeads();
+  }
+}
+
+/*
+  Devuelve un resumen seguro de un mes.
+
+  Aunque BI_Marketing debería tener un registro por mes,
+  se suman todos los registros coincidentes para evitar errores
+  en caso de que existiera más de uno.
+*/
+function obtenerResumenMarketingMes(mesClave) {
+  const registros = (state.datos.marketing || [])
+    .filter((item) => coincideMesValor(item.mes, mesClave));
+
+  const resumen = registros.reduce((acumulado, item) => {
+    acumulado.leadsGenerados += Number(item.leadsGenerados || 0);
+    acumulado.leadsEfectivos += Number(item.leadsEfectivos || 0);
+    acumulado.numeroVentas += Number(item.numeroVentas || 0);
+    acumulado.ventaTotalDigital += Number(item.ventaTotalDigital || 0);
+    acumulado.inversionTotalDigital += Number(item.inversionTotalDigital || 0);
+
+    return acumulado;
+  }, {
+    leadsGenerados: 0,
+    leadsEfectivos: 0,
+    numeroVentas: 0,
+    ventaTotalDigital: 0,
+    inversionTotalDigital: 0
+  });
+
+  const conversionLeads = resumen.leadsGenerados > 0
+    ? resumen.leadsEfectivos / resumen.leadsGenerados
+    : 0;
+
+  const costoPorLead = resumen.leadsGenerados > 0
+    ? resumen.inversionTotalDigital / resumen.leadsGenerados
+    : 0;
+
+  const costoPorVenta = resumen.numeroVentas > 0
+    ? resumen.inversionTotalDigital / resumen.numeroVentas
+    : 0;
+
+  const roi = resumen.inversionTotalDigital > 0
+    ? resumen.ventaTotalDigital / resumen.inversionTotalDigital
+    : 0;
+
+  const tieneDatos =
+    resumen.leadsGenerados > 0 ||
+    resumen.leadsEfectivos > 0 ||
+    resumen.numeroVentas > 0 ||
+    resumen.ventaTotalDigital > 0 ||
+    resumen.inversionTotalDigital > 0;
+
+  return {
+    ...resumen,
+    conversionLeads,
+    costoPorLead,
+    costoPorVenta,
+    roi,
+    tieneDatos
+  };
+}
+
+function obtenerMetasMarketingMensuales() {
+  const metaMinima =
+    MARKETING_META_VENTA_TOTAL_MENSUAL *
+    MARKETING_META_DIGITAL_MIN_PCT;
+
+  const metaMaxima =
+    MARKETING_META_VENTA_TOTAL_MENSUAL *
+    MARKETING_META_DIGITAL_MAX_PCT;
+
+  return {
+    metaMinima,
+    metaMaxima
+  };
+}
+
+/* =========================================================
+   TABLA: VENTA DIGITAL VS META
+   ========================================================= */
+
+function renderTablaMarketingVentaMeta() {
+  const tbody = document.getElementById(
+    "tablaMarketingVentaMetaBody"
+  );
+
+  if (!tbody) {
+    return;
+  }
+
+  const meses = obtenerMesesDelAnioSeleccionado();
+  const metas = obtenerMetasMarketingMensuales();
+
+  tbody.innerHTML = meses
+    .map((mes) => {
+      const resumen = obtenerResumenMarketingMes(mes.clave);
+
+      const porcentajeMetaMinima = metas.metaMinima > 0
+        ? resumen.ventaTotalDigital / metas.metaMinima
+        : 0;
+
+      const estatus = obtenerEstatusMetaMarketing(
+        resumen.ventaTotalDigital,
+        resumen.tieneDatos,
+        metas
+      );
+
+      return `
+        <tr>
+          <td>${escaparHtml(mes.nombre)}</td>
+
+          <td>
+            ${
+              resumen.tieneDatos
+                ? formatoMoneda(resumen.ventaTotalDigital)
+                : "—"
+            }
+          </td>
+
+          <td>${formatoMoneda(metas.metaMinima)}</td>
+
+          <td>${formatoMoneda(metas.metaMaxima)}</td>
+
+          <td>
+            ${
+              resumen.tieneDatos
+                ? formatoPorcentaje(porcentajeMetaMinima)
+                : "—"
+            }
+          </td>
+
+          <td>
+            ${renderEstatusMetaMarketing(estatus)}
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function obtenerEstatusMetaMarketing(
+  ventaDigital,
+  tieneDatos,
+  metas
+) {
+  if (!tieneDatos) {
+    return {
+      texto: "Sin datos",
+      clase: ""
+    };
+  }
+
+  if (ventaDigital >= metas.metaMaxima) {
+    return {
+      texto: "Sobre meta",
+      clase: "is-success"
+    };
+  }
+
+  if (ventaDigital >= metas.metaMinima) {
+    return {
+      texto: "En rango",
+      clase: "is-warning"
+    };
+  }
+
+  return {
+    texto: "Bajo meta",
+    clase: "is-danger"
+  };
+}
+
+function renderEstatusMetaMarketing(estatus) {
+  const clase = estatus.clase
+    ? ` ${estatus.clase}`
+    : "";
+
+  return `
+    <span class="marketing-status${clase}">
+      ${escaparHtml(estatus.texto)}
+    </span>
+  `;
+}
+
+/* =========================================================
+   TABLA: RESULTADOS MENSUALES
+   ========================================================= */
+
+function renderTablaMarketingMensual() {
+  const tbody = document.getElementById(
+    "tablaMarketingMensualBody"
+  );
+
+  if (!tbody) {
+    return;
+  }
+
+  const meses = obtenerMesesDelAnioSeleccionado();
+
+  tbody.innerHTML = meses
+    .map((mes) => {
+      const resumen = obtenerResumenMarketingMes(mes.clave);
+
+      if (!resumen.tieneDatos) {
+        return `
+          <tr>
+            <td>${escaparHtml(mes.nombre)}</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+          </tr>
+        `;
+      }
+
+      return `
+        <tr>
+          <td>${escaparHtml(mes.nombre)}</td>
+          <td>${formatoNumero(resumen.leadsGenerados)}</td>
+          <td>${formatoNumero(resumen.leadsEfectivos)}</td>
+          <td>${formatoPorcentaje(resumen.conversionLeads)}</td>
+          <td>${formatoNumero(resumen.numeroVentas)}</td>
+          <td>${formatoMoneda(resumen.inversionTotalDigital)}</td>
+          <td>${formatoMoneda(resumen.costoPorLead)}</td>
+          <td>${formatoMoneda(resumen.costoPorVenta)}</td>
+          <td>${formatoMoneda(resumen.ventaTotalDigital)}</td>
+          <td>${formatoMultiploMarketing(resumen.roi)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+/* =========================================================
+   GRÁFICA: VENTA DIGITAL VS META
+   ========================================================= */
+
+function renderGraficaMarketingVentaMeta() {
+  const canvas = document.getElementById(
+    "chartMarketingVentaMeta"
+  );
+
+  if (!canvas || typeof Chart === "undefined") {
+    return;
+  }
+
+  const meses = obtenerMesesDelAnioSeleccionado();
+  const metas = obtenerMetasMarketingMensuales();
+
+  const labels = meses.map((mes) => mes.nombre);
+
+  const ventasDigitales = meses.map((mes) => {
+    const resumen = obtenerResumenMarketingMes(mes.clave);
+
+    return resumen.tieneDatos
+      ? resumen.ventaTotalDigital
+      : null;
+  });
+
+  const metasMinimas = meses.map(() => metas.metaMinima);
+  const metasMaximas = meses.map(() => metas.metaMaxima);
+
+  destruirGrafica("marketingVentaMeta");
+
+  dashboardCharts.marketingVentaMeta = new Chart(canvas, {
+    type: "line",
+
+    data: {
+      labels,
+
+      datasets: [
+        {
+          label: "Venta digital real",
+          data: ventasDigitales,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          spanGaps: false
+        },
+        {
+          label: "Meta mínima 25%",
+          data: metasMinimas,
+          tension: 0,
+          fill: false,
+          borderWidth: 2,
+          borderDash: [7, 6],
+          pointRadius: 0
+        },
+        {
+          label: "Meta máxima 35%",
+          data: metasMaximas,
+          tension: 0,
+          fill: false,
+          borderWidth: 2,
+          borderDash: [3, 5],
+          pointRadius: 0
+        }
+      ]
+    },
+
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom"
+        },
+
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const etiqueta =
+                context.dataset.label || "Monto";
+
+              const valor = context.parsed.y;
+
+              if (valor === null || valor === undefined) {
+                return `${etiqueta}: Sin datos`;
+              }
+
+              return `${etiqueta}: ${formatoMoneda(valor)}`;
+            }
+          }
+        }
+      },
+
+      scales: {
+        y: {
+          beginAtZero: true,
+
+          ticks: {
+            callback: (value) => formatoMoneda(value)
+          }
+        }
+      }
+    }
+  });
+}
+
+/* =========================================================
+   GRÁFICA: LEADS GENERADOS VS EFECTIVOS
+   ========================================================= */
+
+function renderGraficaMarketingLeads() {
+  const canvas = document.getElementById(
+    "chartMarketingLeads"
+  );
+
+  if (!canvas || typeof Chart === "undefined") {
+    return;
+  }
+
+  const meses = obtenerMesesDelAnioSeleccionado();
+  const labels = meses.map((mes) => mes.nombre);
+
+  const leadsGenerados = meses.map((mes) => {
+    const resumen = obtenerResumenMarketingMes(mes.clave);
+
+    return resumen.tieneDatos
+      ? resumen.leadsGenerados
+      : null;
+  });
+
+  const leadsEfectivos = meses.map((mes) => {
+    const resumen = obtenerResumenMarketingMes(mes.clave);
+
+    return resumen.tieneDatos
+      ? resumen.leadsEfectivos
+      : null;
+  });
+
+  destruirGrafica("marketingLeads");
+
+  dashboardCharts.marketingLeads = new Chart(canvas, {
+    type: "line",
+
+    data: {
+      labels,
+
+      datasets: [
+        {
+          label: "Leads generados",
+          data: leadsGenerados,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          spanGaps: false
+        },
+        {
+          label: "Leads efectivos",
+          data: leadsEfectivos,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          spanGaps: false
+        }
+      ]
+    },
+
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom"
+        },
+
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const etiqueta =
+                context.dataset.label || "Leads";
+
+              const valor = context.parsed.y;
+
+              if (valor === null || valor === undefined) {
+                return `${etiqueta}: Sin datos`;
+              }
+
+              return `${etiqueta}: ${formatoNumero(valor)}`;
+            }
+          }
+        }
+      },
+
+      scales: {
+        y: {
+          beginAtZero: true,
+
+          ticks: {
+            precision: 0,
+            callback: (value) => formatoNumero(value)
+          }
+        }
+      }
+    }
+  });
 }
 
 function sumarIngresoRealCobranza(mes) {
