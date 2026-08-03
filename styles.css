@@ -4451,3 +4451,457 @@ body {
 .dashboard-toolbar .notifications-badge.hidden {
   display: none !important;
 }
+
+/* =========================================================
+   PÁGINA DE MARKETING
+   ========================================================= */
+
+/* Separación general entre los nuevos bloques */
+#pageMarketing .detail-section-card {
+  margin-top: 20px;
+}
+
+/*
+  El primer bloque contiene:
+  - Gráfica Venta digital vs meta
+  - Tabla Venta digital mensual
+*/
+.marketing-main-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+
+.marketing-main-columns > .detail-column {
+  min-width: 0;
+}
+
+.marketing-main-columns .detail-section-card {
+  height: 100%;
+  margin-top: 0;
+}
+
+/* =========================================================
+   GRÁFICAS DE MARKETING
+   ========================================================= */
+
+#pageMarketing .chart-container-line {
+  height: 330px;
+  min-height: 330px;
+}
+
+.marketing-medios-chart {
+  height: 390px;
+  min-height: 390px;
+}
+
+.marketing-redes-chart {
+  height: 360px;
+  min-height: 360px;
+  margin-top: 0;
+}
+
+#pageMarketing .chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* =========================================================
+   TABLAS DE MARKETING — REGLA GENERAL
+   ========================================================= */
+
+.marketing-venta-table,
+.marketing-monthly-table,
+.marketing-medios-table,
+.marketing-redes-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.marketing-venta-table th,
+.marketing-venta-table td,
+.marketing-monthly-table th,
+.marketing-monthly-table td,
+.marketing-medios-table th,
+.marketing-medios-table td,
+.marketing-redes-table th,
+.marketing-redes-table td {
+  font-size: 0.8rem;
+  padding: 10px 8px;
+  vertical-align: middle;
+}
+
+/* Encabezados compactos, permitiendo dos líneas */
+.marketing-venta-table th,
+.marketing-monthly-table th,
+.marketing-medios-table th,
+.marketing-redes-table th {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.15;
+}
+
+/* Datos en una sola línea */
+.marketing-venta-table td,
+.marketing-monthly-table td,
+.marketing-medios-table td,
+.marketing-redes-table td {
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Primera columna siempre alineada a la izquierda */
+.marketing-venta-table th:first-child,
+.marketing-venta-table td:first-child,
+.marketing-monthly-table th:first-child,
+.marketing-monthly-table td:first-child,
+.marketing-medios-table th:first-child,
+.marketing-medios-table td:first-child,
+.marketing-redes-table th:first-child,
+.marketing-redes-table td:first-child {
+  text-align: left !important;
+}
+
+/* Resto de las columnas numéricas alineadas a la derecha */
+.marketing-venta-table th:not(:first-child),
+.marketing-venta-table td:not(:first-child),
+.marketing-monthly-table th:not(:first-child),
+.marketing-monthly-table td:not(:first-child),
+.marketing-medios-table th:not(:first-child),
+.marketing-medios-table td:not(:first-child),
+.marketing-redes-table th:not(:first-child),
+.marketing-redes-table td:not(:first-child) {
+  text-align: right !important;
+}
+
+/* =========================================================
+   TABLA: VENTA DIGITAL MENSUAL
+   6 columnas
+   ========================================================= */
+
+.marketing-venta-table th:nth-child(1),
+.marketing-venta-table td:nth-child(1) {
+  width: 13% !important;
+}
+
+.marketing-venta-table th:nth-child(2),
+.marketing-venta-table td:nth-child(2) {
+  width: 20% !important;
+}
+
+.marketing-venta-table th:nth-child(3),
+.marketing-venta-table td:nth-child(3),
+.marketing-venta-table th:nth-child(4),
+.marketing-venta-table td:nth-child(4) {
+  width: 18% !important;
+}
+
+.marketing-venta-table th:nth-child(5),
+.marketing-venta-table td:nth-child(5) {
+  width: 17% !important;
+}
+
+.marketing-venta-table th:nth-child(6),
+.marketing-venta-table td:nth-child(6) {
+  width: 14% !important;
+  text-align: center !important;
+}
+
+/* =========================================================
+   TABLA: RESULTADOS MENSUALES
+   10 columnas
+   ========================================================= */
+
+.marketing-monthly-card {
+  overflow: hidden;
+}
+
+.marketing-monthly-table {
+  min-width: 1120px;
+}
+
+.marketing-monthly-table th:nth-child(1),
+.marketing-monthly-table td:nth-child(1) {
+  width: 9% !important;
+}
+
+.marketing-monthly-table th:nth-child(2),
+.marketing-monthly-table td:nth-child(2),
+.marketing-monthly-table th:nth-child(3),
+.marketing-monthly-table td:nth-child(3) {
+  width: 10% !important;
+}
+
+.marketing-monthly-table th:nth-child(4),
+.marketing-monthly-table td:nth-child(4) {
+  width: 10% !important;
+}
+
+.marketing-monthly-table th:nth-child(5),
+.marketing-monthly-table td:nth-child(5) {
+  width: 8% !important;
+}
+
+.marketing-monthly-table th:nth-child(6),
+.marketing-monthly-table td:nth-child(6) {
+  width: 12% !important;
+}
+
+.marketing-monthly-table th:nth-child(7),
+.marketing-monthly-table td:nth-child(7),
+.marketing-monthly-table th:nth-child(8),
+.marketing-monthly-table td:nth-child(8) {
+  width: 9% !important;
+}
+
+.marketing-monthly-table th:nth-child(9),
+.marketing-monthly-table td:nth-child(9) {
+  width: 14% !important;
+}
+
+.marketing-monthly-table th:nth-child(10),
+.marketing-monthly-table td:nth-child(10) {
+  width: 9% !important;
+}
+
+/* =========================================================
+   TABLA: DESEMPEÑO POR MEDIO
+   10 columnas
+   ========================================================= */
+
+.marketing-medios-table {
+  min-width: 1140px;
+}
+
+.marketing-medios-table th:nth-child(1),
+.marketing-medios-table td:nth-child(1) {
+  width: 15% !important;
+}
+
+.marketing-medios-table th:nth-child(2),
+.marketing-medios-table td:nth-child(2),
+.marketing-medios-table th:nth-child(3),
+.marketing-medios-table td:nth-child(3) {
+  width: 9% !important;
+}
+
+.marketing-medios-table th:nth-child(4),
+.marketing-medios-table td:nth-child(4) {
+  width: 10% !important;
+}
+
+.marketing-medios-table th:nth-child(5),
+.marketing-medios-table td:nth-child(5) {
+  width: 8% !important;
+}
+
+.marketing-medios-table th:nth-child(6),
+.marketing-medios-table td:nth-child(6) {
+  width: 11% !important;
+}
+
+.marketing-medios-table th:nth-child(7),
+.marketing-medios-table td:nth-child(7) {
+  width: 13% !important;
+}
+
+.marketing-medios-table th:nth-child(8),
+.marketing-medios-table td:nth-child(8),
+.marketing-medios-table th:nth-child(9),
+.marketing-medios-table td:nth-child(9) {
+  width: 8% !important;
+}
+
+.marketing-medios-table th:nth-child(10),
+.marketing-medios-table td:nth-child(10) {
+  width: 9% !important;
+}
+
+/* =========================================================
+   REDES SOCIALES
+   ========================================================= */
+
+.marketing-redes-card {
+  overflow: hidden;
+}
+
+/*
+  Los cinco KPIs de redes permanecen en un solo renglón
+  cuando existe espacio suficiente.
+*/
+.marketing-redes-kpis {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 18px;
+  margin-bottom: 20px;
+}
+
+.marketing-redes-kpis .detail-kpi-card {
+  min-width: 0;
+}
+
+.marketing-redes-kpis .detail-kpi-card strong {
+  font-size: clamp(21px, 1.65vw, 27px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*
+  Gráfica y tabla de redes en dos columnas.
+*/
+.marketing-redes-content {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 20px;
+  align-items: center;
+  min-width: 0;
+}
+
+.marketing-redes-content > * {
+  min-width: 0;
+}
+
+/* Tabla de redes: 6 columnas */
+.marketing-redes-table {
+  min-width: 720px;
+}
+
+.marketing-redes-table th:nth-child(1),
+.marketing-redes-table td:nth-child(1) {
+  width: 20% !important;
+}
+
+.marketing-redes-table th:nth-child(2),
+.marketing-redes-table td:nth-child(2) {
+  width: 16% !important;
+}
+
+.marketing-redes-table th:nth-child(3),
+.marketing-redes-table td:nth-child(3) {
+  width: 16% !important;
+}
+
+.marketing-redes-table th:nth-child(4),
+.marketing-redes-table td:nth-child(4) {
+  width: 17% !important;
+}
+
+.marketing-redes-table th:nth-child(5),
+.marketing-redes-table td:nth-child(5) {
+  width: 18% !important;
+}
+
+.marketing-redes-table th:nth-child(6),
+.marketing-redes-table td:nth-child(6) {
+  width: 13% !important;
+}
+
+/* =========================================================
+   ESTATUS DE META
+   Estas clases se usarán posteriormente desde app.js
+   ========================================================= */
+
+.marketing-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 82px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.marketing-status.is-success {
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+}
+
+.marketing-status.is-warning {
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+}
+
+.marketing-status.is-danger {
+  color: #991b1b;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+}
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 1300px) {
+  .marketing-main-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .marketing-redes-content {
+    grid-template-columns: 1fr;
+  }
+
+  .marketing-redes-chart {
+    height: 330px;
+    min-height: 330px;
+  }
+}
+
+@media (max-width: 1100px) {
+  /*
+    Las tablas conservan el ancho de sus columnas y aparece
+    scroll horizontal, igual que el resto del dashboard.
+  */
+  .marketing-venta-table {
+    min-width: 820px !important;
+  }
+
+  .marketing-monthly-table {
+    min-width: 1120px !important;
+  }
+
+  .marketing-medios-table {
+    min-width: 1140px !important;
+  }
+
+  .marketing-redes-table {
+    min-width: 720px !important;
+  }
+
+  .marketing-redes-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .marketing-redes-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  #pageMarketing .chart-container-line,
+  .marketing-medios-chart,
+  .marketing-redes-chart {
+    height: 290px;
+    min-height: 290px;
+  }
+
+  .marketing-venta-table th,
+  .marketing-venta-table td,
+  .marketing-monthly-table th,
+  .marketing-monthly-table td,
+  .marketing-medios-table th,
+  .marketing-medios-table td,
+  .marketing-redes-table th,
+  .marketing-redes-table td {
+    font-size: 0.76rem;
+  }
+}
