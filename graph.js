@@ -363,6 +363,8 @@ async function cargarDatosSharePoint(opciones = {}) {
     const egresos = await obtenerEgresosSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const ventas = await obtenerVentasSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const marketing = await obtenerMarketingSharePoint(usarFiltroMeses ? mesesRecargados : []);
+    const marketingMedios = await obtenerMarketingMediosSharePoint();
+    const marketingRedes = await obtenerMarketingRedesSharePoint();
     const servicios = await obtenerServiciosSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const metasCobranza = await obtenerMetasCobranzaSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const metasVentas = await obtenerMetasVentasSharePoint(usarFiltroMeses ? mesesRecargados : []);
@@ -376,6 +378,8 @@ async function cargarDatosSharePoint(opciones = {}) {
       ventas,
       servicios,
       marketing,
+      marketingMedios,
+      marketingRedes,
       metasCobranza,
       metasVentas,
       alertas,
@@ -1275,4 +1279,430 @@ async function obtenerMarketingSharePoint(mesesFiltro = []) {
     setAuthStatus("Error al leer BI_Marketing.");
     return [];
   }
+}
+
+async function obtenerMarketingMediosSharePoint() {
+  try {
+    setAuthStatus("Leyendo BI_Marketing_Medios desde SharePoint...");
+
+    const configuracionLista = CONFIG.sharepoint.lists.marketingMedios;
+    const listId = configuracionLista?.listId;
+
+    if (!listId) {
+      throw new Error(
+        "No está configurado el listId de BI_Marketing_Medios."
+      );
+    }
+
+    /*
+      La lista es pequeña, por lo que se lee completa.
+      Esto también evita problemas porque Mes puede venir como:
+      1, 01, ENERO o 2026-01.
+    */
+    const items = await obtenerItemsLista(listId, 5000);
+
+    const marketingMedios = items.map((item) => {
+      const f = item.fields || {};
+
+      const anio = convertirNumero(
+        obtenerCampoSharePoint(f, [
+          "Anio",
+          "A_x00f1_o",
+          "Ano"
+        ])
+      );
+
+      const mesOriginal = limpiarTexto(
+        obtenerCampoSharePoint(f, [
+          "Mes"
+        ])
+      );
+
+      const nombreMes = limpiarTexto(
+        obtenerCampoSharePoint(f, [
+          "Nombre_Mes",
+          "Nombre_x005f_Mes",
+          "NombreMes",
+          "Nombre_x0020_Mes"
+        ])
+      );
+
+      return {
+        id: item.id,
+
+        title: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Title"
+          ])
+        ),
+
+        anio,
+
+        /*
+          El dashboard siempre trabajará con YYYY-MM,
+          aunque SharePoint tenga 1, 2, 3, ENERO, etc.
+        */
+        mes: crearClaveMesMarketing(
+          anio,
+          mesOriginal,
+          nombreMes
+        ),
+
+        nombreMes,
+
+        medio: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Medio"
+          ])
+        ),
+
+        leadsGenerados: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Leads_Generados",
+            "Leads_x005f_Generados",
+            "LeadsGenerados"
+          ])
+        ),
+
+        leadsEfectivos: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Leads_Efectivos",
+            "Leads_x005f_Efectivos",
+            "LeadsEfectivos"
+          ])
+        ),
+
+        conversionLeads: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Conversion_Leads",
+            "Conversion_x005f_Leads",
+            "ConversionLeads"
+          ])
+        ),
+
+        numeroVentas: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Numero_Ventas",
+            "Numero_x005f_Ventas",
+            "NumeroVentas"
+          ])
+        ),
+
+        ventaTotalDigital: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Venta_Total_Digital",
+            "Venta_x005f_Total_x005f_Digital",
+            "VentaTotalDigital"
+          ])
+        ),
+
+        inversionTotalDigital: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Inversion_Total_Digital",
+            "Inversion_x005f_Total_x005f_Digital",
+            "InversionTotalDigital"
+          ])
+        ),
+
+        costoPorLead: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Costo_Por_Lead",
+            "Costo_x005f_Por_x005f_Lead",
+            "CostoPorLead"
+          ])
+        ),
+
+        costoPorVenta: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Costo_Por_Venta",
+            "Costo_x005f_Por_x005f_Venta",
+            "CostoPorVenta"
+          ])
+        ),
+
+        roi: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "ROI"
+          ])
+        ),
+
+        fuente: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Fuente"
+          ])
+        ),
+
+        claveRegistro: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Clave_Registro",
+            "Clave_x005f_Registro",
+            "ClaveRegistro"
+          ])
+        ),
+
+        fechaCarga: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Fecha_Carga",
+            "Fecha_x005f_Carga",
+            "FechaCarga"
+          ])
+        ),
+
+        fechaActualizacion: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Fecha_Actualizacion",
+            "Fecha_x005f_Actualizacion",
+            "FechaActualizacion"
+          ])
+        )
+      };
+    });
+
+    console.log(
+      "BI_Marketing_Medios leído:",
+      marketingMedios
+    );
+
+    console.table(marketingMedios);
+
+    return marketingMedios;
+  } catch (error) {
+    console.error(
+      "Error leyendo BI_Marketing_Medios:",
+      error
+    );
+
+    setAuthStatus(
+      "Error al leer BI_Marketing_Medios."
+    );
+
+    return [];
+  }
+}
+
+async function obtenerMarketingRedesSharePoint() {
+  try {
+    setAuthStatus("Leyendo BI_Marketing_Redes desde SharePoint...");
+
+    const configuracionLista = CONFIG.sharepoint.lists.marketingRedes;
+    const listId = configuracionLista?.listId;
+
+    if (!listId) {
+      throw new Error(
+        "No está configurado el listId de BI_Marketing_Redes."
+      );
+    }
+
+    const items = await obtenerItemsLista(listId, 5000);
+
+    const marketingRedes = items.map((item) => {
+      const f = item.fields || {};
+
+      const anio = convertirNumero(
+        obtenerCampoSharePoint(f, [
+          "Anio",
+          "A_x00f1_o",
+          "Ano"
+        ])
+      );
+
+      const mesOriginal = limpiarTexto(
+        obtenerCampoSharePoint(f, [
+          "Mes"
+        ])
+      );
+
+      const nombreMes = limpiarTexto(
+        obtenerCampoSharePoint(f, [
+          "Nombre_Mes",
+          "Nombre_x005f_Mes",
+          "NombreMes",
+          "Nombre_x0020_Mes"
+        ])
+      );
+
+      return {
+        id: item.id,
+
+        title: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Title"
+          ])
+        ),
+
+        anio,
+
+        mes: crearClaveMesMarketing(
+          anio,
+          mesOriginal,
+          nombreMes
+        ),
+
+        nombreMes,
+
+        red: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Red"
+          ])
+        ),
+
+        alcanceTotal: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Alcance_Total",
+            "Alcance_x005f_Total",
+            "AlcanceTotal"
+          ])
+        ),
+
+        interacciones: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Interacciones"
+          ])
+        ),
+
+        seguidoresGanados: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Seguidores_Ganados",
+            "Seguidores_x005f_Ganados",
+            "SeguidoresGanados"
+          ])
+        ),
+
+        visualizaciones: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Visualizaciones"
+          ])
+        ),
+
+        tasaEngagement: convertirNumero(
+          obtenerCampoSharePoint(f, [
+            "Tasa_Engagement",
+            "Tasa_x005f_Engagement",
+            "TasaEngagement"
+          ])
+        ),
+
+        fuente: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Fuente"
+          ])
+        ),
+
+        claveRegistro: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Clave_Registro",
+            "Clave_x005f_Registro",
+            "ClaveRegistro"
+          ])
+        ),
+
+        fechaCarga: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Fecha_Carga",
+            "Fecha_x005f_Carga",
+            "FechaCarga"
+          ])
+        ),
+
+        fechaActualizacion: limpiarTexto(
+          obtenerCampoSharePoint(f, [
+            "Fecha_Actualizacion",
+            "Fecha_x005f_Actualizacion",
+            "FechaActualizacion"
+          ])
+        )
+      };
+    });
+
+    console.log(
+      "BI_Marketing_Redes leído:",
+      marketingRedes
+    );
+
+    console.table(marketingRedes);
+
+    return marketingRedes;
+  } catch (error) {
+    console.error(
+      "Error leyendo BI_Marketing_Redes:",
+      error
+    );
+
+    setAuthStatus(
+      "Error al leer BI_Marketing_Redes."
+    );
+
+    return [];
+  }
+}
+
+function crearClaveMesMarketing(
+  anioValor,
+  mesValor,
+  nombreMesValor
+) {
+  const mesTexto = limpiarTexto(mesValor).toUpperCase();
+
+  /*
+    Si ya viene en formato 2026-01,
+    no es necesario transformarlo.
+  */
+  if (/^\d{4}-\d{2}$/.test(mesTexto)) {
+    return mesTexto;
+  }
+
+  const anioNumero = convertirNumero(anioValor);
+  const anio = anioNumero > 0
+    ? String(Math.trunc(anioNumero))
+    : "";
+
+  if (!anio) {
+    return "";
+  }
+
+  let numeroMes = "";
+
+  /*
+    Casos: 1, 01, 2, 02...
+  */
+  if (/^\d{1,2}$/.test(mesTexto)) {
+    const numero = Number(mesTexto);
+
+    if (numero >= 1 && numero <= 12) {
+      numeroMes = String(numero).padStart(2, "0");
+    }
+  }
+
+  /*
+    Casos: ENERO, FEBRERO...
+  */
+  if (!numeroMes) {
+    const nombreNormalizado = limpiarTexto(
+      nombreMesValor || mesValor
+    )
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase();
+
+    const mapaMeses = {
+      ENERO: "01",
+      FEBRERO: "02",
+      MARZO: "03",
+      ABRIL: "04",
+      MAYO: "05",
+      JUNIO: "06",
+      JULIO: "07",
+      AGOSTO: "08",
+      SEPTIEMBRE: "09",
+      OCTUBRE: "10",
+      NOVIEMBRE: "11",
+      DICIEMBRE: "12"
+    };
+
+    numeroMes = mapaMeses[nombreNormalizado] || "";
+  }
+
+  return numeroMes
+    ? `${anio}-${numeroMes}`
+    : "";
 }

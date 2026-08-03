@@ -37,6 +37,14 @@ const CONFIG = {
         nombre: "BI_Marketing",
         listId: "c2a2ffe4-76ff-4e43-9887-68c76e1310bb"
       },
+      marketingMedios: {
+        nombre: "BI_Marketing_Medios",
+        listId: "24a7e848-6203-4429-b290-921aca4b2714"
+      },
+      marketingRedes: {
+        nombre: "BI_Marketing_Redes",
+        listId: "424205c2-6421-418c-84bd-9ba9f26a241b"
+      },
       metasCobranza: {
         nombre: "BI_Metas_Cobranza",
         listId: "b114407b-1632-48b5-ad3f-baee26b1a24e"

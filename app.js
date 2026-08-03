@@ -9,6 +9,8 @@ window.state = {
     ventas: [],
     servicios: [],
     marketing: [],
+    marketingMedios: [],
+    marketingRedes: [],
     metasCobranza: [],
     metasVentas: [],
     alertas: [],
@@ -541,6 +543,12 @@ async function actualizarDatosDashboard(opciones = {}) {
       mesesRecargados
     );
 
+    state.datos.marketingMedios =
+      datosSharePoint.marketingMedios || [];
+
+    state.datos.marketingRedes =
+      datosSharePoint.marketingRedes || [];
+
     state.datos.servicios = reemplazarRegistrosPorMes(
       state.datos.servicios,
       datosSharePoint.servicios || [],
@@ -660,6 +668,9 @@ function guardarDatosEnCache() {
         ventas: state.datos.ventas || [],
         servicios: state.datos.servicios || [],
         marketing: state.datos.marketing || [],
+        marketingMedios: state.datos.marketingMedios || [],
+        marketingRedes: state.datos.marketingRedes || [],
+        
         metasCobranza: state.datos.metasCobranza || [],
         metasVentas: state.datos.metasVentas || [],
         parquePropiedades: state.datos.parquePropiedades || []
@@ -694,6 +705,8 @@ function cargarDatosDesdeCache() {
     state.datos.ventas = cache.datos.ventas || [];
     state.datos.servicios = cache.datos.servicios || [];
     state.datos.marketing = cache.datos.marketing || [];
+    state.datos.marketingMedios = cache.datos.marketingMedios || [];
+    state.datos.marketingRedes = cache.datos.marketingRedes || [];
     state.datos.metasCobranza = cache.datos.metasCobranza || [];
     state.datos.metasVentas = cache.datos.metasVentas || [];
     state.datos.alertas = cache.datos.alertas || [];
