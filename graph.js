@@ -1294,54 +1294,44 @@ async function obtenerMarketingMediosSharePoint() {
       );
     }
 
-    /*
-      La lista es pequeña, por lo que se lee completa.
-      Esto también evita problemas porque Mes puede venir como:
-      1, 01, ENERO o 2026-01.
-    */
     const items = await obtenerItemsLista(listId, 5000);
 
     const marketingMedios = items.map((item) => {
       const f = item.fields || {};
 
-      const anio = convertirNumero(
-        obtenerCampoSharePoint(f, [
-          "Anio",
-          "A_x00f1_o",
-          "Ano"
-        ])
-      );
+      /*
+        Nombres internos reales de SharePoint:
 
-      const mesOriginal = limpiarTexto(
-        obtenerCampoSharePoint(f, [
-          "Mes"
-        ])
-      );
+        field_1  = Anio
+        field_2  = Mes
+        field_3  = Nombre_Mes
+        field_4  = Medio
+        field_5  = Leads_Generados
+        field_6  = Leads_Efectivos
+        field_7  = Conversion_Leads
+        field_8  = Numero_Ventas
+        field_9  = Venta_Total_Digital
+        field_10 = Inversion_Total_Digital
+        field_11 = Costo_Por_Lead
+        field_12 = Costo_Por_Venta
+        field_13 = ROI
+        field_14 = Fuente
+        field_15 = Clave_Registro
+        field_16 = Fecha_Carga
+        field_17 = Fecha_Actualizacion
+      */
 
-      const nombreMes = limpiarTexto(
-        obtenerCampoSharePoint(f, [
-          "Nombre_Mes",
-          "Nombre_x005f_Mes",
-          "NombreMes",
-          "Nombre_x0020_Mes"
-        ])
-      );
+      const anio = convertirNumero(f.field_1);
+      const mesOriginal = limpiarTexto(f.field_2);
+      const nombreMes = limpiarTexto(f.field_3);
 
       return {
         id: item.id,
 
-        title: limpiarTexto(
-          obtenerCampoSharePoint(f, [
-            "Title"
-          ])
-        ),
+        title: limpiarTexto(f.Title),
 
         anio,
 
-        /*
-          El dashboard siempre trabajará con YYYY-MM,
-          aunque SharePoint tenga 1, 2, 3, ENERO, etc.
-        */
         mes: crearClaveMesMarketing(
           anio,
           mesOriginal,
@@ -1350,111 +1340,33 @@ async function obtenerMarketingMediosSharePoint() {
 
         nombreMes,
 
-        medio: limpiarTexto(
-          obtenerCampoSharePoint(f, [
-            "Medio"
-          ])
-        ),
+        medio: limpiarTexto(f.field_4),
 
-        leadsGenerados: convertirNumero(
-          obtenerCampoSharePoint(f, [
-            "Leads_Generados",
-            "Leads_x005f_Generados",
-            "LeadsGenerados"
-          ])
-        ),
+        leadsGenerados: convertirNumero(f.field_5),
 
-        leadsEfectivos: convertirNumero(
-          obtenerCampoSharePoint(f, [
-            "Leads_Efectivos",
-            "Leads_x005f_Efectivos",
-            "LeadsEfectivos"
-          ])
-        ),
+        leadsEfectivos: convertirNumero(f.field_6),
 
-        conversionLeads: convertirNumero(
-          obtenerCampoSharePoint(f, [
-            "Conversion_Leads",
-            "Conversion_x005f_Leads",
-            "ConversionLeads"
-          ])
-        ),
+        conversionLeads: convertirNumero(f.field_7),
 
-        numeroVentas: convertirNumero(
-          obtenerCampoSharePoint(f, [
-            "Numero_Ventas",
-            "Numero_x005f_Ventas",
-            "NumeroVentas"
-          ])
-        ),
+        numeroVentas: convertirNumero(f.field_8),
 
-        ventaTotalDigital: convertirNumero(
-          obtenerCampoSharePoint(f, [
-            "Venta_Total_Digital",
-            "Venta_x005f_Total_x005f_Digital",
-            "VentaTotalDigital"
-          ])
-        ),
+        ventaTotalDigital: convertirNumero(f.field_9),
 
-        inversionTotalDigital: convertirNumero(
-          obtenerCampoSharePoint(f, [
-            "Inversion_Total_Digital",
-            "Inversion_x005f_Total_x005f_Digital",
-            "InversionTotalDigital"
-          ])
-        ),
+        inversionTotalDigital: convertirNumero(f.field_10),
 
-        costoPorLead: convertirNumero(
-          obtenerCampoSharePoint(f, [
-            "Costo_Por_Lead",
-            "Costo_x005f_Por_x005f_Lead",
-            "CostoPorLead"
-          ])
-        ),
+        costoPorLead: convertirNumero(f.field_11),
 
-        costoPorVenta: convertirNumero(
-          obtenerCampoSharePoint(f, [
-            "Costo_Por_Venta",
-            "Costo_x005f_Por_x005f_Venta",
-            "CostoPorVenta"
-          ])
-        ),
+        costoPorVenta: convertirNumero(f.field_12),
 
-        roi: convertirNumero(
-          obtenerCampoSharePoint(f, [
-            "ROI"
-          ])
-        ),
+        roi: convertirNumero(f.field_13),
 
-        fuente: limpiarTexto(
-          obtenerCampoSharePoint(f, [
-            "Fuente"
-          ])
-        ),
+        fuente: limpiarTexto(f.field_14),
 
-        claveRegistro: limpiarTexto(
-          obtenerCampoSharePoint(f, [
-            "Clave_Registro",
-            "Clave_x005f_Registro",
-            "ClaveRegistro"
-          ])
-        ),
+        claveRegistro: limpiarTexto(f.field_15),
 
-        fechaCarga: limpiarTexto(
-          obtenerCampoSharePoint(f, [
-            "Fecha_Carga",
-            "Fecha_x005f_Carga",
-            "FechaCarga"
-          ])
-        ),
+        fechaCarga: limpiarTexto(f.field_16),
 
-        fechaActualizacion: limpiarTexto(
-          obtenerCampoSharePoint(f, [
-            "Fecha_Actualizacion",
-            "Fecha_x005f_Actualizacion",
-            "FechaActualizacion"
-          ])
-        )
+        fechaActualizacion: limpiarTexto(f.field_17)
       };
     });
 
@@ -1498,37 +1410,32 @@ async function obtenerMarketingRedesSharePoint() {
     const marketingRedes = items.map((item) => {
       const f = item.fields || {};
 
-      const anio = convertirNumero(
-        obtenerCampoSharePoint(f, [
-          "Anio",
-          "A_x00f1_o",
-          "Ano"
-        ])
-      );
+      /*
+        Nombres internos reales de SharePoint:
 
-      const mesOriginal = limpiarTexto(
-        obtenerCampoSharePoint(f, [
-          "Mes"
-        ])
-      );
+        field_1  = Anio
+        field_2  = Mes
+        field_3  = Nombre_Mes
+        field_4  = Red
+        field_5  = Alcance_Total
+        field_6  = Interacciones
+        field_7  = Seguidores_Ganados
+        field_8  = Visualizaciones
+        field_9  = Tasa_Engagement
+        field_10 = Fuente
+        field_11 = Clave_Registro
+        field_12 = Fecha_Carga
+        field_13 = Fecha_Actualizacion
+      */
 
-      const nombreMes = limpiarTexto(
-        obtenerCampoSharePoint(f, [
-          "Nombre_Mes",
-          "Nombre_x005f_Mes",
-          "NombreMes",
-          "Nombre_x0020_Mes"
-        ])
-      );
+      const anio = convertirNumero(f.field_1);
+      const mesOriginal = limpiarTexto(f.field_2);
+      const nombreMes = limpiarTexto(f.field_3);
 
       return {
         id: item.id,
 
-        title: limpiarTexto(
-          obtenerCampoSharePoint(f, [
-            "Title"
-          ])
-        ),
+        title: limpiarTexto(f.Title),
 
         anio,
 
@@ -1540,77 +1447,25 @@ async function obtenerMarketingRedesSharePoint() {
 
         nombreMes,
 
-        red: limpiarTexto(
-          obtenerCampoSharePoint(f, [
-            "Red"
-          ])
-        ),
+        red: limpiarTexto(f.field_4),
 
-        alcanceTotal: convertirNumero(
-          obtenerCampoSharePoint(f, [
-            "Alcance_Total",
-            "Alcance_x005f_Total",
-            "AlcanceTotal"
-          ])
-        ),
+        alcanceTotal: convertirNumero(f.field_5),
 
-        interacciones: convertirNumero(
-          obtenerCampoSharePoint(f, [
-            "Interacciones"
-          ])
-        ),
+        interacciones: convertirNumero(f.field_6),
 
-        seguidoresGanados: convertirNumero(
-          obtenerCampoSharePoint(f, [
-            "Seguidores_Ganados",
-            "Seguidores_x005f_Ganados",
-            "SeguidoresGanados"
-          ])
-        ),
+        seguidoresGanados: convertirNumero(f.field_7),
 
-        visualizaciones: convertirNumero(
-          obtenerCampoSharePoint(f, [
-            "Visualizaciones"
-          ])
-        ),
+        visualizaciones: convertirNumero(f.field_8),
 
-        tasaEngagement: convertirNumero(
-          obtenerCampoSharePoint(f, [
-            "Tasa_Engagement",
-            "Tasa_x005f_Engagement",
-            "TasaEngagement"
-          ])
-        ),
+        tasaEngagement: convertirNumero(f.field_9),
 
-        fuente: limpiarTexto(
-          obtenerCampoSharePoint(f, [
-            "Fuente"
-          ])
-        ),
+        fuente: limpiarTexto(f.field_10),
 
-        claveRegistro: limpiarTexto(
-          obtenerCampoSharePoint(f, [
-            "Clave_Registro",
-            "Clave_x005f_Registro",
-            "ClaveRegistro"
-          ])
-        ),
+        claveRegistro: limpiarTexto(f.field_11),
 
-        fechaCarga: limpiarTexto(
-          obtenerCampoSharePoint(f, [
-            "Fecha_Carga",
-            "Fecha_x005f_Carga",
-            "FechaCarga"
-          ])
-        ),
+        fechaCarga: limpiarTexto(f.field_12),
 
-        fechaActualizacion: limpiarTexto(
-          obtenerCampoSharePoint(f, [
-            "Fecha_Actualizacion",
-            "Fecha_x005f_Actualizacion",
-            "FechaActualizacion"
-          ])
-        )
+        fechaActualizacion: limpiarTexto(f.field_13)
       };
     });
 
