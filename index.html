@@ -1042,16 +1042,261 @@
           </div>
         </div>
 
-        <article class="detail-section-card">
+        <!-- Venta digital contra metas -->
+        <div class="detail-columns marketing-main-columns">
+          <div class="detail-column">
+            <article class="detail-section-card chart-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Venta digital vs meta</h3>
+                  <p>
+                    Comparativo mensual de la venta generada por Marketing
+                    contra las metas mínima y máxima.
+                  </p>
+                </div>
+              </div>
+
+              <div class="chart-container chart-container-line">
+                <canvas id="chartMarketingVentaMeta"></canvas>
+              </div>
+            </article>
+          </div>
+
+          <div class="detail-column">
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Venta digital mensual</h3>
+                  <p>
+                    Resultado mensual contra la meta mínima y la meta máxima.
+                  </p>
+                </div>
+              </div>
+
+              <div class="table-scroll table-scroll-15">
+                <table class="table detail-table marketing-venta-table">
+                  <thead>
+                    <tr>
+                      <th>Mes</th>
+                      <th>Venta digital</th>
+                      <th>Meta mínima</th>
+                      <th>Meta máxima</th>
+                      <th>% meta mínima</th>
+                      <th>Estatus</th>
+                    </tr>
+                  </thead>
+
+                  <tbody id="tablaMarketingVentaMetaBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <!-- Leads generados contra leads efectivos -->
+        <article class="detail-section-card chart-card chart-card-full">
           <div class="detail-section-header">
             <div>
-              <h3>Detalle de Marketing</h3>
-              <p>Sección pendiente para tablas, gráficas o desglose por campaña.</p>
+              <h3>Leads generados vs leads efectivos</h3>
+              <p>
+                Evolución mensual del volumen de leads y los prospectos
+                considerados efectivos.
+              </p>
             </div>
           </div>
 
-          <div class="placeholder-box">
-            Información pendiente por definir.
+          <div class="chart-container chart-container-line">
+            <canvas id="chartMarketingLeads"></canvas>
+          </div>
+        </article>
+
+        <!-- Tabla mensual de resultados -->
+        <article class="detail-section-card marketing-monthly-card">
+          <div class="detail-section-header">
+            <div>
+              <h3>Resultados mensuales de Marketing</h3>
+              <p>
+                Resumen de leads, conversión, ventas, costos e indicador de retorno.
+              </p>
+            </div>
+          </div>
+
+          <div class="table-scroll">
+            <table class="table detail-table marketing-monthly-table">
+              <thead>
+                <tr>
+                  <th>Mes</th>
+                  <th>Leads generados</th>
+                  <th>Leads efectivos</th>
+                  <th>% conversión</th>
+                  <th>No. ventas</th>
+                  <th>Inversión</th>
+                  <th>CPL</th>
+                  <th>CPV</th>
+                  <th>Venta digital</th>
+                  <th>ROI</th>
+                </tr>
+              </thead>
+
+              <tbody id="tablaMarketingMensualBody">
+                <tr>
+                  <td>Cargando...</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <!-- Comparativo por medio -->
+        <article class="detail-section-card chart-card chart-card-full">
+          <div class="detail-section-header">
+            <div>
+              <h3>Comparativo por medio digital</h3>
+              <p>
+                Comparativo de inversión, venta generada y retorno estimado
+                por plataforma.
+              </p>
+            </div>
+          </div>
+
+          <div class="chart-container chart-container-bar marketing-medios-chart">
+            <canvas id="chartMarketingMedios"></canvas>
+          </div>
+        </article>
+
+        <article class="detail-section-card">
+          <div class="detail-section-header">
+            <div>
+              <h3>Desempeño por medio</h3>
+              <p>
+                Resultados acumulados de Google, Facebook/Instagram,
+                TikTok y YouTube/Video para el periodo seleccionado.
+              </p>
+            </div>
+          </div>
+
+          <div class="table-scroll">
+            <table class="table detail-table marketing-medios-table">
+              <thead>
+                <tr>
+                  <th>Medio</th>
+                  <th>Leads</th>
+                  <th>Leads efectivos</th>
+                  <th>% conversión</th>
+                  <th>No. ventas</th>
+                  <th>Inversión</th>
+                  <th>Venta digital</th>
+                  <th>CPL</th>
+                  <th>CPV</th>
+                  <th>ROI</th>
+                </tr>
+              </thead>
+
+              <tbody id="tablaMarketingMediosBody">
+                <tr>
+                  <td>Cargando...</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <!-- Redes sociales -->
+        <article class="detail-section-card marketing-redes-card">
+          <div class="detail-section-header">
+            <div>
+              <h3>Resultados de redes sociales</h3>
+              <p>
+                Alcance, interacciones, seguidores, visualizaciones
+                y engagement del periodo seleccionado.
+              </p>
+            </div>
+          </div>
+
+          <div class="detail-kpi-grid detail-kpi-grid-5 marketing-redes-kpis">
+            <div class="detail-kpi-card">
+              <span class="detail-kpi-label">Alcance total</span>
+              <strong id="pageMarketingAlcanceTotal">0</strong>
+            </div>
+
+            <div class="detail-kpi-card">
+              <span class="detail-kpi-label">Interacciones</span>
+              <strong id="pageMarketingInteracciones">0</strong>
+            </div>
+
+            <div class="detail-kpi-card">
+              <span class="detail-kpi-label">Seguidores ganados</span>
+              <strong id="pageMarketingSeguidores">0</strong>
+            </div>
+
+            <div class="detail-kpi-card">
+              <span class="detail-kpi-label">Visualizaciones</span>
+              <strong id="pageMarketingVisualizaciones">0</strong>
+            </div>
+
+            <div class="detail-kpi-card">
+              <span class="detail-kpi-label">Engagement</span>
+              <strong id="pageMarketingEngagement">0.0%</strong>
+            </div>
+          </div>
+
+          <div class="marketing-redes-content">
+            <div class="chart-container chart-container-bar marketing-redes-chart">
+              <canvas id="chartMarketingRedes"></canvas>
+            </div>
+
+            <div class="table-scroll">
+              <table class="table detail-table marketing-redes-table">
+                <thead>
+                  <tr>
+                    <th>Red</th>
+                    <th>Alcance</th>
+                    <th>Interacciones</th>
+                    <th>Seguidores ganados</th>
+                    <th>Visualizaciones</th>
+                    <th>Engagement</th>
+                  </tr>
+                </thead>
+
+                <tbody id="tablaMarketingRedesBody">
+                  <tr>
+                    <td>Cargando...</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </article>
       </article>
