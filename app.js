@@ -541,11 +541,8 @@ async function actualizarDatosDashboard(opciones = {}) {
       mesesRecargados
     );
 
-    state.datos.marketing = reemplazarRegistrosPorMes(
-      state.datos.marketing || [],
-      datosSharePoint.marketing || [],
-      mesesRecargados
-    );
+    state.datos.marketing =
+      datosSharePoint.marketing || [];
 
     state.datos.marketingMedios =
       datosSharePoint.marketingMedios || [];
