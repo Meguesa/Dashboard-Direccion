@@ -1091,7 +1091,7 @@ function renderDashboard() {
   renderDetalleIngresos(mes, totalIngresos);
   renderDetalleEgresos(mes, totalEgresos);
   renderDetalleVentas(mes, totalVentas);
-  renderDetalleMarketing();
+  renderDetalleMarketing(mes);
   renderDetalleServiciosCapillas(mes, totalCapillas);
   renderDetalleServiciosParque(mes, totalParque);
   renderNotificacionesDashboard();
@@ -1171,13 +1171,24 @@ function calcularMarketingRoi(mes) {
    DETALLE GENERAL DE MARKETING
    ========================================================= */
 
-function renderDetalleMarketing() {
+function renderDetalleMarketing(periodo) {
+  /*
+    Información general anual proveniente de BI_Marketing.
+  */
   renderTablaMarketingVentaMeta();
   renderTablaMarketingMensual();
+
+  /*
+    Información acumulada del periodo seleccionado.
+  */
+  renderTablaMarketingMedios(periodo);
+  renderResumenMarketingRedes(periodo);
 
   if (typeof Chart !== "undefined") {
     renderGraficaMarketingVentaMeta();
     renderGraficaMarketingLeads();
+    renderGraficaMarketingMedios(periodo);
+    renderGraficaMarketingRedes(periodo);
   }
 }
 
@@ -1636,6 +1647,660 @@ function renderGraficaMarketingLeads() {
           ticks: {
             precision: 0,
             callback: (value) => formatoNumero(value)
+          }
+        }
+      }
+    }
+  });
+}
+
+/* =========================================================
+   MARKETING POR MEDIO DIGITAL
+   ========================================================= */
+
+function obtenerMarketingMediosPeriodo(periodo) {
+  return (state.datos.marketingMedios || [])
+    .filter((item) => coincideMesValor(item.mes, periodo));
+}
+
+function normalizarNombreMedioMarketing(valor) {
+  const texto = normalizarTexto(valor)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (
+    texto === "FACEBOOK/INSTAGRAM" ||
+    texto === "FACEBOOK - INSTAGRAM" ||
+    texto === "FACEBOOK-INSTAGRAM" ||
+    texto === "FACEBOOK E INSTAGRAM"
+  ) {
+    return "FACEBOOK/INSTAGRAM";
+  }
+
+  if (
+    texto === "YOUTUBE/VIDEO" ||
+    texto === "YOUTUBE - VIDEO" ||
+    texto === "YOUTUBE-VIDEO"
+  ) {
+    return "YOUTUBE/VIDEO";
+  }
+
+  return texto || "SIN MEDIO";
+}
+
+function agruparMarketingMedios(periodo) {
+  const registros = obtenerMarketingMediosPeriodo(periodo);
+  const grupos = new Map();
+
+  registros.forEach((item) => {
+    const medio = normalizarNombreMedioMarketing(item.medio);
+
+    if (!grupos.has(medio)) {
+      grupos.set(medio, {
+        medio,
+        leadsGenerados: 0,
+        leadsEfectivos: 0,
+        numeroVentas: 0,
+        ventaTotalDigital: 0,
+        inversionTotalDigital: 0
+      });
+    }
+
+    const grupo = grupos.get(medio);
+
+    grupo.leadsGenerados += Number(
+      item.leadsGenerados || 0
+    );
+
+    grupo.leadsEfectivos += Number(
+      item.leadsEfectivos || 0
+    );
+
+    grupo.numeroVentas += Number(
+      item.numeroVentas || 0
+    );
+
+    grupo.ventaTotalDigital += Number(
+      item.ventaTotalDigital || 0
+    );
+
+    grupo.inversionTotalDigital += Number(
+      item.inversionTotalDigital || 0
+    );
+  });
+
+  const ordenMedios = [
+    "GOOGLE",
+    "FACEBOOK/INSTAGRAM",
+    "TIKTOK",
+    "YOUTUBE/VIDEO"
+  ];
+
+  return Array.from(grupos.values())
+    .map((grupo) => {
+      const conversionLeads = grupo.leadsGenerados > 0
+        ? grupo.leadsEfectivos / grupo.leadsGenerados
+        : 0;
+
+      const costoPorLead = grupo.leadsGenerados > 0
+        ? grupo.inversionTotalDigital / grupo.leadsGenerados
+        : 0;
+
+      const costoPorVenta = grupo.numeroVentas > 0
+        ? grupo.inversionTotalDigital / grupo.numeroVentas
+        : 0;
+
+      const roi = grupo.inversionTotalDigital > 0
+        ? grupo.ventaTotalDigital / grupo.inversionTotalDigital
+        : 0;
+
+      return {
+        ...grupo,
+        conversionLeads,
+        costoPorLead,
+        costoPorVenta,
+        roi
+      };
+    })
+    .sort((a, b) => {
+      const indiceA = ordenMedios.indexOf(a.medio);
+      const indiceB = ordenMedios.indexOf(b.medio);
+
+      const ordenA = indiceA >= 0
+        ? indiceA
+        : ordenMedios.length;
+
+      const ordenB = indiceB >= 0
+        ? indiceB
+        : ordenMedios.length;
+
+      return ordenA - ordenB;
+    });
+}
+
+function formatoNumeroMarketing(
+  valor,
+  maximoDecimales = 2
+) {
+  const numero = Number(valor || 0);
+
+  return new Intl.NumberFormat("es-MX", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: maximoDecimales
+  }).format(numero);
+}
+
+function renderTablaMarketingMedios(periodo) {
+  const tbody = document.getElementById(
+    "tablaMarketingMediosBody"
+  );
+
+  if (!tbody) {
+    return;
+  }
+
+  const filas = agruparMarketingMedios(periodo);
+
+  if (!filas.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="10">
+          Sin información por medio para el periodo seleccionado.
+        </td>
+      </tr>
+    `;
+
+    return;
+  }
+
+  tbody.innerHTML = filas
+    .map((fila) => {
+      return `
+        <tr>
+          <td>${escaparHtml(fila.medio)}</td>
+
+          <td>
+            ${formatoNumeroMarketing(fila.leadsGenerados)}
+          </td>
+
+          <td>
+            ${formatoNumeroMarketing(fila.leadsEfectivos)}
+          </td>
+
+          <td>
+            ${formatoPorcentaje(fila.conversionLeads)}
+          </td>
+
+          <td>
+            ${formatoNumeroMarketing(fila.numeroVentas)}
+          </td>
+
+          <td>
+            ${formatoMoneda(fila.inversionTotalDigital)}
+          </td>
+
+          <td>
+            ${formatoMoneda(fila.ventaTotalDigital)}
+          </td>
+
+          <td>
+            ${formatoMoneda(fila.costoPorLead)}
+          </td>
+
+          <td>
+            ${formatoMoneda(fila.costoPorVenta)}
+          </td>
+
+          <td>
+            ${formatoMultiploMarketing(fila.roi)}
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function renderGraficaMarketingMedios(periodo) {
+  const canvas = document.getElementById(
+    "chartMarketingMedios"
+  );
+
+  if (!canvas || typeof Chart === "undefined") {
+    return;
+  }
+
+  const filas = agruparMarketingMedios(periodo);
+
+  destruirGrafica("marketingMedios");
+
+  if (!filas.length) {
+    return;
+  }
+
+  const labels = filas.map((fila) => fila.medio);
+
+  dashboardCharts.marketingMedios = new Chart(canvas, {
+    data: {
+      labels,
+
+      datasets: [
+        {
+          type: "bar",
+          label: "Venta digital",
+          data: filas.map(
+            (fila) => fila.ventaTotalDigital
+          ),
+          yAxisID: "y",
+          order: 2
+        },
+        {
+          type: "bar",
+          label: "Inversión",
+          data: filas.map(
+            (fila) => fila.inversionTotalDigital
+          ),
+          yAxisID: "y",
+          order: 3
+        },
+        {
+          type: "line",
+          label: "ROI",
+          data: filas.map(
+            (fila) => fila.roi
+          ),
+          yAxisID: "y1",
+          tension: 0.25,
+          borderWidth: 3,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          order: 1
+        }
+      ]
+    },
+
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom"
+        },
+
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const etiqueta =
+                context.dataset.label || "";
+
+              const valor = Number(
+                context.parsed.y || 0
+              );
+
+              if (context.dataset.yAxisID === "y1") {
+                return `${etiqueta}: ${formatoMultiploMarketing(valor)}`;
+              }
+
+              return `${etiqueta}: ${formatoMoneda(valor)}`;
+            }
+          }
+        }
+      },
+
+      scales: {
+        y: {
+          beginAtZero: true,
+          position: "left",
+
+          ticks: {
+            callback: (value) => formatoMoneda(value)
+          },
+
+          title: {
+            display: true,
+            text: "Monto"
+          }
+        },
+
+        y1: {
+          beginAtZero: true,
+          position: "right",
+          grid: {
+            drawOnChartArea: false
+          },
+
+          ticks: {
+            callback: (value) => {
+              return formatoMultiploMarketing(value);
+            }
+          },
+
+          title: {
+            display: true,
+            text: "ROI"
+          }
+        }
+      }
+    }
+  });
+}
+
+/* =========================================================
+   MARKETING — REDES SOCIALES
+   ========================================================= */
+
+function obtenerMarketingRedesPeriodo(periodo) {
+  return (state.datos.marketingRedes || [])
+    .filter((item) => coincideMesValor(item.mes, periodo));
+}
+
+function normalizarNombreRedMarketing(valor) {
+  const texto = normalizarTexto(valor)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (
+    texto === "FACEBOOK/INSTAGRAM" ||
+    texto === "FACEBOOK-INSTAGRAM" ||
+    texto === "FACEBOOK - INSTAGRAM"
+  ) {
+    return "FACEBOOK/INSTAGRAM";
+  }
+
+  return texto || "SIN RED";
+}
+
+function agruparMarketingRedes(periodo) {
+  const registros = obtenerMarketingRedesPeriodo(periodo);
+  const grupos = new Map();
+
+  registros.forEach((item) => {
+    const red = normalizarNombreRedMarketing(item.red);
+
+    if (!grupos.has(red)) {
+      grupos.set(red, {
+        red,
+        alcanceTotal: 0,
+        interacciones: 0,
+        seguidoresGanados: 0,
+        visualizaciones: 0,
+        sumaTasaEngagement: 0,
+        registrosConEngagement: 0
+      });
+    }
+
+    const grupo = grupos.get(red);
+
+    const alcance = Number(item.alcanceTotal || 0);
+    const interacciones = Number(item.interacciones || 0);
+    const tasaEngagement = Number(item.tasaEngagement || 0);
+
+    grupo.alcanceTotal += alcance;
+    grupo.interacciones += interacciones;
+
+    grupo.seguidoresGanados += Number(
+      item.seguidoresGanados || 0
+    );
+
+    grupo.visualizaciones += Number(
+      item.visualizaciones || 0
+    );
+
+    if (tasaEngagement > 0) {
+      grupo.sumaTasaEngagement += tasaEngagement;
+      grupo.registrosConEngagement += 1;
+    }
+  });
+
+  const ordenRedes = [
+    "FACEBOOK/INSTAGRAM",
+    "TIKTOK"
+  ];
+
+  return Array.from(grupos.values())
+    .map((grupo) => {
+      /*
+        Para periodos acumulados, el engagement correcto
+        se calcula con interacciones totales / alcance total.
+
+        El promedio de las tasas mensuales se utiliza
+        únicamente como respaldo si no existe alcance.
+      */
+      const tasaEngagement = grupo.alcanceTotal > 0
+        ? grupo.interacciones / grupo.alcanceTotal
+        : (
+          grupo.registrosConEngagement > 0
+            ? grupo.sumaTasaEngagement /
+              grupo.registrosConEngagement
+            : 0
+        );
+
+      return {
+        ...grupo,
+        tasaEngagement
+      };
+    })
+    .sort((a, b) => {
+      const indiceA = ordenRedes.indexOf(a.red);
+      const indiceB = ordenRedes.indexOf(b.red);
+
+      const ordenA = indiceA >= 0
+        ? indiceA
+        : ordenRedes.length;
+
+      const ordenB = indiceB >= 0
+        ? indiceB
+        : ordenRedes.length;
+
+      return ordenA - ordenB;
+    });
+}
+
+function renderResumenMarketingRedes(periodo) {
+  const filas = agruparMarketingRedes(periodo);
+
+  const totales = filas.reduce((acumulado, fila) => {
+    acumulado.alcanceTotal += Number(
+      fila.alcanceTotal || 0
+    );
+
+    acumulado.interacciones += Number(
+      fila.interacciones || 0
+    );
+
+    acumulado.seguidoresGanados += Number(
+      fila.seguidoresGanados || 0
+    );
+
+    acumulado.visualizaciones += Number(
+      fila.visualizaciones || 0
+    );
+
+    return acumulado;
+  }, {
+    alcanceTotal: 0,
+    interacciones: 0,
+    seguidoresGanados: 0,
+    visualizaciones: 0
+  });
+
+  const engagementTotal = totales.alcanceTotal > 0
+    ? totales.interacciones / totales.alcanceTotal
+    : 0;
+
+  setText(
+    "pageMarketingAlcanceTotal",
+    formatoNumeroMarketing(totales.alcanceTotal, 0)
+  );
+
+  setText(
+    "pageMarketingInteracciones",
+    formatoNumeroMarketing(totales.interacciones, 0)
+  );
+
+  setText(
+    "pageMarketingSeguidores",
+    formatoNumeroMarketing(totales.seguidoresGanados, 0)
+  );
+
+  setText(
+    "pageMarketingVisualizaciones",
+    formatoNumeroMarketing(totales.visualizaciones, 0)
+  );
+
+  setText(
+    "pageMarketingEngagement",
+    filas.length
+      ? formatoPorcentaje(engagementTotal)
+      : "—"
+  );
+
+  renderTablaMarketingRedes(filas);
+}
+
+function renderTablaMarketingRedes(filas) {
+  const tbody = document.getElementById(
+    "tablaMarketingRedesBody"
+  );
+
+  if (!tbody) {
+    return;
+  }
+
+  if (!filas.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6">
+          Sin información de redes sociales para el periodo seleccionado.
+        </td>
+      </tr>
+    `;
+
+    return;
+  }
+
+  tbody.innerHTML = filas
+    .map((fila) => {
+      return `
+        <tr>
+          <td>${escaparHtml(fila.red)}</td>
+
+          <td>
+            ${formatoNumeroMarketing(fila.alcanceTotal, 0)}
+          </td>
+
+          <td>
+            ${formatoNumeroMarketing(fila.interacciones, 0)}
+          </td>
+
+          <td>
+            ${formatoNumeroMarketing(fila.seguidoresGanados, 0)}
+          </td>
+
+          <td>
+            ${formatoNumeroMarketing(fila.visualizaciones, 0)}
+          </td>
+
+          <td>
+            ${formatoPorcentaje(fila.tasaEngagement)}
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function renderGraficaMarketingRedes(periodo) {
+  const canvas = document.getElementById(
+    "chartMarketingRedes"
+  );
+
+  if (!canvas || typeof Chart === "undefined") {
+    return;
+  }
+
+  const filas = agruparMarketingRedes(periodo);
+
+  destruirGrafica("marketingRedes");
+
+  if (!filas.length) {
+    return;
+  }
+
+  dashboardCharts.marketingRedes = new Chart(canvas, {
+    type: "bar",
+
+    data: {
+      labels: filas.map((fila) => fila.red),
+
+      datasets: [
+        {
+          label: "Alcance",
+          data: filas.map(
+            (fila) => fila.alcanceTotal
+          )
+        },
+        {
+          label: "Visualizaciones",
+          data: filas.map(
+            (fila) => fila.visualizaciones
+          )
+        }
+      ]
+    },
+
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+
+      interaction: {
+        mode: "index",
+        intersect: false
+      },
+
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom"
+        },
+
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const etiqueta =
+                context.dataset.label || "";
+
+              const valor = Number(
+                context.parsed.x || 0
+              );
+
+              return `${etiqueta}: ${formatoNumeroMarketing(valor, 0)}`;
+            }
+          }
+        }
+      },
+
+      scales: {
+        x: {
+          beginAtZero: true,
+
+          ticks: {
+            callback: (value) => {
+              return formatoNumeroMarketing(value, 0);
+            }
           }
         }
       }
