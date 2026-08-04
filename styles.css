@@ -4477,8 +4477,46 @@ body {
 }
 
 .marketing-main-columns .detail-section-card {
-  height: 100%;
   margin-top: 0;
+}
+
+/*
+  Columna izquierda con las dos gráficas.
+*/
+.marketing-chart-stack {
+  gap: 20px;
+}
+
+.marketing-chart-stack .detail-section-card {
+  flex: 0 0 auto;
+  height: auto;
+}
+
+/*
+  Ambas gráficas conservan exactamente
+  la misma altura.
+*/
+.marketing-chart-stack .chart-container-line {
+  height: 330px;
+  min-height: 330px;
+}
+
+/*
+  La tabla de la derecha ocupa la altura
+  total generada por las dos gráficas.
+*/
+.marketing-main-columns > .detail-column:last-child
+.detail-section-card {
+  height: 100%;
+}
+
+.marketing-venta-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.marketing-venta-card .table-scroll {
+  flex: 1;
 }
 
 /* =========================================================
