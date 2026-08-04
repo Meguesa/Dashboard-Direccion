@@ -1557,7 +1557,9 @@ function renderGraficaMarketingLeads() {
   const labels = meses.map((mes) => mes.nombre);
 
   const leadsGenerados = meses.map((mes) => {
-    const resumen = obtenerResumenMarketingMes(mes.clave);
+    const resumen = obtenerResumenMarketingMes(
+      mes.clave
+    );
 
     return resumen.tieneDatos
       ? resumen.leadsGenerados
@@ -1565,7 +1567,9 @@ function renderGraficaMarketingLeads() {
   });
 
   const leadsEfectivos = meses.map((mes) => {
-    const resumen = obtenerResumenMarketingMes(mes.clave);
+    const resumen = obtenerResumenMarketingMes(
+      mes.clave
+    );
 
     return resumen.tieneDatos
       ? resumen.leadsEfectivos
@@ -1574,81 +1578,110 @@ function renderGraficaMarketingLeads() {
 
   destruirGrafica("marketingLeads");
 
-  dashboardCharts.marketingLeads = new Chart(canvas, {
-    type: "line",
+  dashboardCharts.marketingLeads = new Chart(
+    canvas,
+    {
+      type: "bar",
 
-    data: {
-      labels,
+      data: {
+        labels,
 
-      datasets: [
-        {
-          label: "Leads generados",
-          data: leadsGenerados,
-          tension: 0.3,
-          fill: false,
-          borderWidth: 3,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          spanGaps: false
-        },
-        {
-          label: "Leads efectivos",
-          data: leadsEfectivos,
-          tension: 0.3,
-          fill: false,
-          borderWidth: 3,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          spanGaps: false
-        }
-      ]
-    },
-
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-
-      interaction: {
-        mode: "index",
-        intersect: false
+        datasets: [
+          {
+            label: "Leads generados",
+            data: leadsGenerados,
+            borderWidth: 1,
+            borderRadius: 4,
+            maxBarThickness: 38,
+            categoryPercentage: 0.72,
+            barPercentage: 0.82
+          },
+          {
+            label: "Leads efectivos",
+            data: leadsEfectivos,
+            borderWidth: 1,
+            borderRadius: 4,
+            maxBarThickness: 38,
+            categoryPercentage: 0.72,
+            barPercentage: 0.82
+          }
+        ]
       },
 
-      plugins: {
-        legend: {
-          display: true,
-          position: "bottom"
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+
+        interaction: {
+          mode: "index",
+          intersect: false
         },
 
-        tooltip: {
-          callbacks: {
-            label: (context) => {
-              const etiqueta =
-                context.dataset.label || "Leads";
+        plugins: {
+          legend: {
+            display: true,
+            position: "bottom"
+          },
 
-              const valor = context.parsed.y;
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const etiqueta =
+                  context.dataset.label || "Leads";
 
-              if (valor === null || valor === undefined) {
-                return `${etiqueta}: Sin datos`;
+                const valor = context.parsed.y;
+
+                if (
+                  valor === null ||
+                  valor === undefined
+                ) {
+                  return `${etiqueta}: Sin datos`;
+                }
+
+                return `${etiqueta}: ${formatoNumero(valor)}`;
               }
-
-              return `${etiqueta}: ${formatoNumero(valor)}`;
             }
           }
-        }
-      },
+        },
 
-      scales: {
-        y: {
-          beginAtZero: true,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: "Mes"
+            },
 
-          ticks: {
-            precision: 0,
-            callback: (value) => formatoNumero(value)
+            ticks: {
+              autoSkip: false,
+              minRotation: 35,
+              maxRotation: 45
+            },
+
+            grid: {
+              display: false
+            }
+          },
+
+          y: {
+            beginAtZero: true,
+
+            title: {
+              display: true,
+              text: "No. de leads"
+            },
+
+            ticks: {
+              precision: 0,
+
+              callback: (value) => {
+                return formatoNumero(value);
+              }
+            }
           }
         }
       }
     }
-  });
+  );
 }
 
 /* =========================================================
