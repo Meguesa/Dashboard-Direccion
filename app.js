@@ -5569,12 +5569,21 @@ function renderGraficaVentasPorAsesor(mes) {
         layout: {
           padding: esVistaMovil
             ? {
-                left: 2,
-                right: 12,
+                /*
+                  Los nombres de asesores ocupan aproximadamente
+                  92 px del lado izquierdo. Se agrega el mismo
+                  espacio a la derecha para centrar visualmente
+                  la gráfica dentro de la tarjeta.
+                */
+                left: 0,
+                right: 92,
                 top: 10,
                 bottom: 10
               }
             : {
+                /*
+                  En computadora no cambia absolutamente nada.
+                */
                 left: 0,
                 right: 0,
                 top: 0,
