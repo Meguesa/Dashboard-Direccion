@@ -61,8 +61,15 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function inicializarDashboard() {
-  cacheCargadoDashboard = cargarDatosDesdeCache();
-  sincronizarAnioConMesSeleccionado();
+  /*
+    Primero recupera los datos guardados,
+    pero después fuerza el periodo al mes actual.
+  */
+  cacheCargadoDashboard =
+    cargarDatosDesdeCache();
+
+  seleccionarMesActual();
+
   cargarSelectorAnios();
   cargarSelectorMeses();
   conectarEventos();
@@ -256,6 +263,115 @@ function sincronizarAnioConMesSeleccionado() {
   normalizarRangoMesesSeleccionado();
 }
 
+/* =========================================================
+   MES ACTUAL DEL DASHBOARD
+   ========================================================= */
+
+function seleccionarMesActual() {
+  /*
+    new Date() utiliza la fecha y hora local
+    del dispositivo que abre el dashboard.
+  */
+  const ahora = new Date();
+
+  const anioActual = String(
+    ahora.getFullYear()
+  );
+
+  const numeroMesActual = String(
+    ahora.getMonth() + 1
+  ).padStart(2, "0");
+
+  const claveMesActual = crearClaveMes(
+    anioActual,
+    numeroMesActual
+  );
+
+  state.anioSeleccionado =
+    anioActual;
+
+  state.mesSeleccionado =
+    claveMesActual;
+
+  state.mesInicioSeleccionado =
+    claveMesActual;
+
+  state.mesFinSeleccionado =
+    claveMesActual;
+}
+
+
+/* =========================================================
+   VERSIÓN Y ÚLTIMA ACTUALIZACIÓN
+   ========================================================= */
+
+function obtenerVersionDashboardDesdeIndex() {
+  const script = document.getElementById(
+    "dashboardAppScript"
+  );
+
+  if (!script) {
+    return CONFIG?.app?.version || "—";
+  }
+
+  try {
+    const urlScript = new URL(
+      script.src,
+      window.location.href
+    );
+
+    return (
+      urlScript.searchParams.get("v") ||
+      CONFIG?.app?.version ||
+      "—"
+    );
+  } catch (error) {
+    console.warn(
+      "No se pudo obtener la versión del dashboard:",
+      error
+    );
+
+    return CONFIG?.app?.version || "—";
+  }
+}
+
+function obtenerTextoUltimaActualizacionDashboard() {
+  if (!dashboardUltimaActualizacionExitosa) {
+    return "Sin actualizar";
+  }
+
+  const fecha = new Date(
+    dashboardUltimaActualizacionExitosa
+  );
+
+  if (Number.isNaN(fecha.getTime())) {
+    return "Sin actualizar";
+  }
+
+  return new Intl.DateTimeFormat(
+    "es-MX",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }
+  ).format(fecha);
+}
+
+function renderInformacionVersionDashboard() {
+  setText(
+    "dashboardVersionValue",
+    obtenerVersionDashboardDesdeIndex()
+  );
+
+  setText(
+    "dashboardLastUpdateValue",
+    obtenerTextoUltimaActualizacionDashboard()
+  );
+}
+
 function normalizarRangoMesesSeleccionado() {
   const numeroInicio = Number(obtenerNumeroMesDesdeClave(state.mesInicioSeleccionado) || 1);
   const numeroFin = Number(obtenerNumeroMesDesdeClave(state.mesFinSeleccionado) || numeroInicio);
@@ -411,11 +527,30 @@ function conectarEventos() {
   }
 
   if (refreshButton) {
-    refreshButton.addEventListener("click", async () => {
-      await actualizarDatosDashboard({
-        mensaje: "Actualizando información manualmente..."
-      });
-    });
+    refreshButton.addEventListener(
+      "click",
+      async () => {
+        /*
+          Cada actualización manual regresa
+          Desde y Hasta al mes local actual.
+        */
+        seleccionarMesActual();
+
+        cargarSelectorAnios();
+        cargarSelectorMeses();
+
+        /*
+          Actualiza inmediatamente la pantalla
+          mientras se consultan los datos nuevos.
+        */
+        renderDashboard();
+
+        await actualizarDatosDashboard({
+          mensaje:
+            "Actualizando información manualmente..."
+        });
+      }
+    );
   }
 
   if (testSharePointButton) {
@@ -1081,6 +1216,7 @@ function renderDashboard() {
 
   setText("lastUpdate", obtenerFechaHoraActual());
 
+  renderInformacionVersionDashboard();
   renderTablaFlujoEfectivo(mes);
   renderAvanceMetasCobranza(mes);
   renderServiciosDelDiaSeguro();

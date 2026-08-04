@@ -10,7 +10,7 @@
   
   <title>Centro de Control Dirección</title>
 
-  <link rel="stylesheet" href="styles.css?v=20260715-2" />
+  <link rel="stylesheet" href="styles.css?v=20260804-2" />
 </head>
 
 <body>
@@ -60,7 +60,8 @@
           <select id="monthEndSelector" class="select select-period"></select>
         </div>
 
-        <div class="dashboard-toolbar">
+        <div class="dashboard-toolbar-block">
+          <div class="dashboard-toolbar">
           <!-- Actualizar -->
           <button
             id="refreshButton"
@@ -161,7 +162,30 @@
               <div id="notificationsList" class="notifications-list">
                 <div class="notifications-empty">Sin notificaciones nuevas.</div>
               </div>
-            </section>
+              </section>
+            </div>
+          </div>
+
+          <div
+            class="dashboard-build-info"
+            aria-label="Información de versión y actualización"
+          >
+            <span class="dashboard-build-item">
+              Versión
+              <strong id="dashboardVersionValue">—</strong>
+            </span>
+
+            <span
+              class="dashboard-build-separator"
+              aria-hidden="true"
+            >
+              •
+            </span>
+
+            <span class="dashboard-build-item">
+              Última actualización
+              <strong id="dashboardLastUpdateValue">—</strong>
+            </span>
           </div>
         </div>
       </div>
@@ -1696,9 +1720,13 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="config.js?v=20260715-2"></script>
-  <script src="auth.js?v=20260715-2"></script>
-  <script src="graph.js?v=20260715-2"></script>
-  <script src="app.js?v=20260715-2"></script>
+  <script src="config.js?v=20260804-2"></script>
+  <script src="auth.js?v=20260804-2"></script>
+  <script src="graph.js?v=20260804-2"></script>
+
+  <script
+    id="dashboardAppScript"
+    src="app.js?v=20260804-2"
+  ></script>
 </body>
 </html>

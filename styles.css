@@ -5187,3 +5187,142 @@ body {
     max-width: 100% !important;
   }
 }
+
+/* =========================================================
+   INFORMACIÓN DE VERSIÓN Y ÚLTIMA ACTUALIZACIÓN
+   ========================================================= */
+
+/*
+  Computadora:
+  - Botones arriba.
+  - Versión y actualización debajo.
+*/
+.dashboard-toolbar-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.dashboard-build-info {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  width: 100%;
+  color: #6b7280;
+  font-size: 10px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.dashboard-build-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.dashboard-build-item strong {
+  color: #475569;
+  font-size: inherit;
+  font-weight: 700;
+}
+
+.dashboard-build-separator {
+  color: #94a3b8;
+}
+
+
+/* =========================================================
+   INFORMACIÓN DE VERSIÓN — MÓVIL
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  /*
+    header-actions ya participa en el grid móvil.
+  */
+  .header-actions {
+    display: contents !important;
+  }
+
+  /*
+    Primera fila completa:
+    - información a la izquierda
+    - botones a la derecha
+  */
+  .dashboard-toolbar-block {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+
+    gap: 12px !important;
+    margin: 0 0 4px !important;
+  }
+
+  /*
+    Parte superior izquierda.
+  */
+  .dashboard-build-info {
+    order: 1;
+
+    width: auto !important;
+    min-width: 0 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+
+    gap: 2px !important;
+
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+    white-space: normal !important;
+  }
+
+  .dashboard-build-item {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 3px !important;
+  }
+
+  /*
+    En móvil no se necesita el punto separador,
+    porque cada dato estará en una línea.
+  */
+  .dashboard-build-separator {
+    display: none !important;
+  }
+
+  /*
+    Parte superior derecha.
+    Neutraliza la posición grid que tenía directamente
+    dashboard-toolbar en las reglas móviles anteriores.
+  */
+  .dashboard-toolbar-block .dashboard-toolbar {
+    order: 2;
+
+    grid-column: auto !important;
+    grid-row: auto !important;
+
+    width: auto !important;
+    max-width: none !important;
+
+    justify-self: auto !important;
+    justify-content: flex-end !important;
+
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+  }
+}
