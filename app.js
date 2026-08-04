@@ -5463,194 +5463,383 @@ function renderGraficaVentasMensuales() {
 }
 
 function renderGraficaVentasPorAsesor(mes) {
-  const canvas = document.getElementById("chartVentasAsesor");
-
-  if (!canvas) {
-    return;
-  }
-
-  const filas = agruparVentasPorAsesor(mes)
-    .filter((fila) => obtenerNombreAsesorAgrupado(fila) !== "Sin asesor")
-    .sort((a, b) => Number(b.total || 0) - Number(a.total || 0));
-  
-  destruirGrafica("ventasAsesor");
-  
-  if (filas.length === 0) {
-    ajustarAlturaGraficaVentasAsesor(8);
-    return;
-  }
-    
-  const labels = filas.map((fila) => obtenerNombreAsesorAgrupado(fila));
-  const valores = filas.map((fila) => Number(fila.total || 0));
-  const metas = filas.map((fila) => obtenerMetaAsesorAgrupado(fila));
-  const maximoEje = calcularMaximoEjeVentasAsesor([...valores, ...metas]);
-  
-  ajustarAlturaGraficaVentasAsesor(labels.length);
-  renderGraficaVentasAsesorAxis(maximoEje);
-  
-  dashboardCharts.ventasAsesor = new Chart(canvas, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Meta mensual",
-          data: metas,
-          backgroundColor: "#e5e7eb",
-          borderColor: "#cbd5e1",
-          borderWidth: 1,
-          barThickness: 30,
-          maxBarThickness: 30,
-          grouped: false,
-          order: 2
-        },
-        {
-          label: "Venta mensual",
-          data: valores,
-          backgroundColor: labels.map((label, index) => obtenerColorGraficaVariado(index)),
-          borderWidth: 1,
-          barThickness: 20,
-          maxBarThickness: 20,
-          grouped: false,
-          order: 1
-        }
-      ]
-    },
-    options: {
-      indexAxis: "y",
-      responsive: true,
-      maintainAspectRatio: false,
-      onClick: (event, elementos) => {
-        if (!elementos || elementos.length === 0) {
-          return;
-        }
-
-        const elemento = elementos[0];
-        const index = elemento.index;
-        const asesor = labels[index];
-
-        if (!asesor) {
-          return;
-        }
-
-        abrirModalVentasAsesor(asesor);
-      },
-      onHover: (event, elementos) => {
-        const canvas = event?.native?.target;
-
-        if (canvas) {
-          canvas.style.cursor = elementos && elementos.length > 0
-            ? "pointer"
-            : "default";
-        }
-      },
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          callbacks: {
-            label: (context) => {
-              const index = context.dataIndex;
-              const venta = Number(valores[index] || 0);
-              const meta = Number(metas[index] || 0);
-              const cumplimiento = meta > 0 ? venta / meta : 0;
-        
-              if (context.dataset.label === "Venta mensual") {
-                return [
-                  `Venta: ${formatoMoneda(venta)}`,
-                  `Meta: ${meta > 0 ? formatoMoneda(meta) : "Sin meta"}`,
-                  `Cumplimiento: ${meta > 0 ? formatoPorcentaje(cumplimiento) : "—"}`
-                ];
-              }
-        
-              return `Meta: ${meta > 0 ? formatoMoneda(meta) : "Sin meta"}`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          beginAtZero: true,
-          max: maximoEje,
-          ticks: {
-            display: false,
-            callback: (value) => formatoMoneda(value)
-          },
-          grid: {
-            display: true
-          }
-        },
-        y: {
-          ticks: {
-            autoSkip: false
-          }
-        }
-      }
-    }
-  });
-}
-
-function renderGraficaVentasAsesorAxis(maximoEje) {
-  const canvas = document.getElementById("chartVentasAsesorAxis");
+  const canvas = document.getElementById(
+    "chartVentasAsesor"
+  );
 
   if (!canvas || typeof Chart === "undefined") {
     return;
   }
 
-  destruirGrafica("ventasAsesorAxis");
+  const filas = agruparVentasPorAsesor(mes)
+    .filter(
+      (fila) =>
+        obtenerNombreAsesorAgrupado(fila) !== "Sin asesor"
+    )
+    .sort(
+      (a, b) =>
+        Number(b.total || 0) - Number(a.total || 0)
+    );
 
-  dashboardCharts.ventasAsesorAxis = new Chart(canvas, {
-    type: "bar",
-    data: {
-      labels: [""],
-      datasets: [
-        {
-          data: [0],
-          backgroundColor: "rgba(0, 0, 0, 0)",
-          borderWidth: 0
-        }
-      ]
-    },
-    options: {
-      indexAxis: "y",
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      layout: {
-        padding: {
-          left: 92,
-          right: 24,
-          top: 0,
-          bottom: 0
-        }
-      },
-      plugins: {
-        legend: {
-          display: false
-        },
-        tooltip: {
-          enabled: false
-        }
-      },
-      scales: {
-        x: {
-          beginAtZero: true,
-          max: maximoEje,
-          position: "bottom",
-          ticks: {
-            callback: (value) => formatoMoneda(value)
+  destruirGrafica("ventasAsesor");
+
+  if (filas.length === 0) {
+    ajustarAlturaGraficaVentasAsesor(8);
+    return;
+  }
+
+  const labels = filas.map((fila) =>
+    obtenerNombreAsesorAgrupado(fila)
+  );
+
+  const valores = filas.map((fila) =>
+    Number(fila.total || 0)
+  );
+
+  const metas = filas.map((fila) =>
+    obtenerMetaAsesorAgrupado(fila)
+  );
+
+  const maximoEje = calcularMaximoEjeVentasAsesor([
+    ...valores,
+    ...metas
+  ]);
+
+  /*
+    Este valor solamente será true en pantallas
+    con un ancho máximo de 700 px.
+  */
+  const esVistaMovil = window.matchMedia(
+    "(max-width: 700px)"
+  ).matches;
+
+  ajustarAlturaGraficaVentasAsesor(labels.length);
+
+  /*
+    En computadora crea el eje auxiliar.
+    En móvil la propia función auxiliar se detendrá.
+  */
+  renderGraficaVentasAsesorAxis(maximoEje);
+
+  dashboardCharts.ventasAsesor = new Chart(
+    canvas,
+    {
+      type: "bar",
+
+      data: {
+        labels,
+
+        datasets: [
+          {
+            label: "Meta mensual",
+            data: metas,
+            backgroundColor: "#e5e7eb",
+            borderColor: "#cbd5e1",
+            borderWidth: 1,
+            barThickness: 30,
+            maxBarThickness: 30,
+            grouped: false,
+            order: 2
           },
-          grid: {
-            display: true
+          {
+            label: "Venta mensual",
+            data: valores,
+            backgroundColor: labels.map(
+              (label, index) =>
+                obtenerColorGraficaVariado(index)
+            ),
+            borderWidth: 1,
+            barThickness: 20,
+            maxBarThickness: 20,
+            grouped: false,
+            order: 1
+          }
+        ]
+      },
+
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+
+        /*
+          El ajuste solamente se aplica en móvil.
+          En computadora conserva padding en cero.
+        */
+        layout: {
+          padding: esVistaMovil
+            ? {
+                left: 2,
+                right: 12,
+                top: 10,
+                bottom: 10
+              }
+            : {
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0
+              }
+        },
+
+        onClick: (event, elementos) => {
+          if (
+            !elementos ||
+            elementos.length === 0
+          ) {
+            return;
+          }
+
+          const elemento = elementos[0];
+          const index = elemento.index;
+          const asesor = labels[index];
+
+          if (!asesor) {
+            return;
+          }
+
+          abrirModalVentasAsesor(asesor);
+        },
+
+        onHover: (event, elementos) => {
+          const canvasObjetivo =
+            event?.native?.target;
+
+          if (canvasObjetivo) {
+            canvasObjetivo.style.cursor =
+              elementos && elementos.length > 0
+                ? "pointer"
+                : "default";
           }
         },
-        y: {
-          display: false
+
+        plugins: {
+          legend: {
+            display: false
+          },
+
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const index = context.dataIndex;
+
+                const venta = Number(
+                  valores[index] || 0
+                );
+
+                const meta = Number(
+                  metas[index] || 0
+                );
+
+                const cumplimiento =
+                  meta > 0
+                    ? venta / meta
+                    : 0;
+
+                if (
+                  context.dataset.label ===
+                  "Venta mensual"
+                ) {
+                  return [
+                    `Venta: ${formatoMoneda(venta)}`,
+                    `Meta: ${
+                      meta > 0
+                        ? formatoMoneda(meta)
+                        : "Sin meta"
+                    }`,
+                    `Cumplimiento: ${
+                      meta > 0
+                        ? formatoPorcentaje(
+                            cumplimiento
+                          )
+                        : "—"
+                    }`
+                  ];
+                }
+
+                return `Meta: ${
+                  meta > 0
+                    ? formatoMoneda(meta)
+                    : "Sin meta"
+                }`;
+              }
+            }
+          }
+        },
+
+        scales: {
+          x: {
+            beginAtZero: true,
+            max: maximoEje,
+
+            /*
+              Computadora:
+              - El eje se mantiene oculto.
+              - Se utiliza el eje auxiliar actual.
+
+              Móvil:
+              - El eje se muestra arriba de las barras.
+            */
+            position: esVistaMovil
+              ? "top"
+              : "bottom",
+
+            ticks: {
+              display: esVistaMovil,
+
+              maxTicksLimit: esVistaMovil
+                ? 3
+                : undefined,
+
+              font: esVistaMovil
+                ? {
+                    size: 9
+                  }
+                : undefined,
+
+              callback: (value) =>
+                formatoMoneda(value)
+            },
+
+            grid: {
+              display: true
+            }
+          },
+
+          y: {
+            ticks: {
+              autoSkip: false,
+
+              /*
+                Reduce solamente en móvil el espacio
+                ocupado por los nombres.
+              */
+              font: esVistaMovil
+                ? {
+                    size: 10
+                  }
+                : undefined,
+
+              padding: esVistaMovil
+                ? 3
+                : 8
+            },
+
+            grid: {
+              offset: true
+            }
+          }
         }
       }
     }
-  });
+  );
+}
+
+function renderGraficaVentasAsesorAxis(
+  maximoEje
+) {
+  const canvas = document.getElementById(
+    "chartVentasAsesorAxis"
+  );
+
+  if (
+    !canvas ||
+    typeof Chart === "undefined"
+  ) {
+    return;
+  }
+
+  const esVistaMovil = window.matchMedia(
+    "(max-width: 700px)"
+  ).matches;
+
+  /*
+    En móvil no se necesita el eje independiente,
+    porque ahora el eje está dentro de la gráfica.
+  */
+  if (esVistaMovil) {
+    destruirGrafica(
+      "ventasAsesorAxis"
+    );
+
+    return;
+  }
+
+  /*
+    A partir de aquí permanece exactamente
+    el comportamiento de computadora.
+  */
+  destruirGrafica(
+    "ventasAsesorAxis"
+  );
+
+  dashboardCharts.ventasAsesorAxis =
+    new Chart(
+      canvas,
+      {
+        type: "bar",
+
+        data: {
+          labels: [""],
+
+          datasets: [
+            {
+              data: [0],
+              backgroundColor:
+                "rgba(0, 0, 0, 0)",
+              borderWidth: 0
+            }
+          ]
+        },
+
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+
+          layout: {
+            padding: {
+              left: 92,
+              right: 24,
+              top: 0,
+              bottom: 0
+            }
+          },
+
+          plugins: {
+            legend: {
+              display: false
+            },
+
+            tooltip: {
+              enabled: false
+            }
+          },
+
+          scales: {
+            x: {
+              beginAtZero: true,
+              max: maximoEje,
+              position: "bottom",
+
+              ticks: {
+                callback: (value) =>
+                  formatoMoneda(value)
+              },
+
+              grid: {
+                display: true
+              }
+            },
+
+            y: {
+              display: false
+            }
+          }
+        }
+      }
+    );
 }
 
 function obtenerHistoricoVentasAsesor(nombreAsesor) {

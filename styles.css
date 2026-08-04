@@ -4943,3 +4943,247 @@ body {
     font-size: 0.76rem;
   }
 }
+
+/* =========================================================
+   AJUSTES EXCLUSIVOS PARA MÓVIL
+   No modifica la presentación de escritorio
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  /* =======================================================
+     1. HEADER: ICONOS ARRIBA DEL TÍTULO
+     ======================================================= */
+
+  .app {
+    padding: 18px 16px 28px;
+  }
+
+  .header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: 14px !important;
+    width: 100%;
+  }
+
+  /*
+    Permite que los filtros y la barra de botones
+    participen directamente en el grid del header.
+  */
+  .header-actions {
+    display: contents !important;
+  }
+
+  /*
+    Primera fila:
+    refrescar, usuario y notificaciones.
+  */
+  .dashboard-toolbar {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: auto !important;
+    max-width: none !important;
+    justify-self: end !important;
+    justify-content: flex-end !important;
+    margin: 0 0 2px !important;
+  }
+
+  /*
+    Segunda fila:
+    título y descripción.
+  */
+  .header-title {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+  }
+
+  .header-title h1 {
+    font-size: 32px !important;
+    line-height: 1.08 !important;
+  }
+
+  .header-title p {
+    font-size: 15px !important;
+    line-height: 1.4 !important;
+  }
+
+  /*
+    Filas tercera, cuarta y quinta:
+    Año, Desde y Hasta.
+  */
+  .header-actions .period-filter:nth-child(1) {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+  }
+
+  .header-actions .period-filter:nth-child(2) {
+    grid-column: 1 !important;
+    grid-row: 4 !important;
+  }
+
+  .header-actions .period-filter:nth-child(3) {
+    grid-column: 1 !important;
+    grid-row: 5 !important;
+  }
+
+  .header-actions .period-filter {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .header-actions .period-filter .select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /*
+    Mantiene los tres botones juntos.
+  */
+  .dashboard-toolbar .toolbar-icon-button,
+  .dashboard-toolbar .notifications-button {
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    flex: 0 0 44px !important;
+  }
+
+
+  /* =======================================================
+     2. TODAS LAS SECCIONES DE DOS COLUMNAS PASAN A UNA
+     ======================================================= */
+
+  .grid-main,
+  .detail-columns,
+  .detail-section-grid,
+  .servicios-dia-grid,
+  .servicios-agenda-grid,
+  .servicios-resumen-groups,
+  .servicios-resumen-group .servicios-dia-resumen,
+  .marketing-main-columns,
+  .marketing-redes-content {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .grid-main > *,
+  .detail-columns > *,
+  .detail-section-grid > *,
+  .servicios-dia-grid > *,
+  .servicios-agenda-grid > *,
+  .servicios-resumen-groups > *,
+  .marketing-main-columns > *,
+  .marketing-redes-content > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /*
+    Evita que la columna de Flujo y la columna de Metas
+    permanezcan una junto a la otra.
+  */
+  .grid-main {
+    display: grid !important;
+    gap: 18px !important;
+  }
+
+  /*
+    Las columnas internas de Ingresos, Egresos,
+    Ventas y Servicios quedan apiladas.
+  */
+  .detail-columns {
+    display: grid !important;
+    gap: 18px !important;
+  }
+
+  /*
+    Cada tarjeta conserva su ancho completo.
+  */
+  .detail-column,
+  .detail-section-card,
+  .home-right-stack {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+
+  /* =======================================================
+     3. KPIs DE INGRESOS: EVITAR DESBORDAMIENTO
+     ======================================================= */
+
+  #pageIngresos .detail-kpi-card {
+    padding: 14px 12px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #pageIngresos .detail-kpi-label {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+  }
+
+  /*
+    Valores monetarios largos.
+  */
+  #pageIngresos .detail-kpi-card strong {
+    font-size: clamp(18px, 5vw, 20px) !important;
+    line-height: 1.1 !important;
+    letter-spacing: -0.04em !important;
+    white-space: nowrap !important;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+    Los valores más cortos pueden permanecer un poco mayores.
+  */
+  #pageIngresos #pageIngresosCumplimiento,
+  #pageIngresos #pageIngresosRegistros {
+    font-size: 24px !important;
+  }
+
+
+  /* =======================================================
+     4. GRÁFICA DE VENTAS POR ASESOR
+     ======================================================= */
+
+  /*
+    En móvil se oculta el eje independiente.
+    El eje se mostrará dentro de la gráfica principal
+    mediante el ajuste de app.js.
+  */
+  .chart-ventas-asesor-axis {
+    display: none !important;
+  }
+
+  .chart-ventas-asesor-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .chart-container-bar-ventas-asesor {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    overflow-x: visible !important;
+  }
+
+  .chart-scroll-inner-ventas-asesor {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  #chartVentasAsesor {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
