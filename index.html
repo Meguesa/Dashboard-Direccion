@@ -10,7 +10,7 @@
   
   <title>Centro de Control Dirección</title>
 
-  <link rel="stylesheet" href="styles.css?v=20260804-2" />
+  <link rel="stylesheet" href="styles.css?v=20260804-3" />
 </head>
 
 <body>
@@ -159,34 +159,36 @@
                 </div>
               </div>
 
-              <div id="notificationsList" class="notifications-list">
-                <div class="notifications-empty">Sin notificaciones nuevas.</div>
-              </div>
+                <div id="notificationsList" class="notifications-list">
+                  <div class="notifications-empty">
+                    Sin notificaciones nuevas.
+                  </div>
+                </div>
               </section>
             </div>
           </div>
+        </div>
 
-          <div
-            class="dashboard-build-info"
-            aria-label="Información de versión y actualización"
+        <div
+          class="dashboard-build-info"
+          aria-label="Información de versión y actualización"
+        >
+          <span class="dashboard-build-item">
+            Versión
+            <strong id="dashboardVersionValue">—</strong>
+          </span>
+
+          <span
+            class="dashboard-build-separator"
+            aria-hidden="true"
           >
-            <span class="dashboard-build-item">
-              Versión
-              <strong id="dashboardVersionValue">—</strong>
-            </span>
+            •
+          </span>
 
-            <span
-              class="dashboard-build-separator"
-              aria-hidden="true"
-            >
-              •
-            </span>
-
-            <span class="dashboard-build-item">
-              Última actualización
-              <strong id="dashboardLastUpdateValue">—</strong>
-            </span>
-          </div>
+          <span class="dashboard-build-item">
+            Última actualización
+            <strong id="dashboardLastUpdateValue">—</strong>
+          </span>
         </div>
       </div>
     </header>
@@ -1720,13 +1722,13 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="config.js?v=20260804-2"></script>
-  <script src="auth.js?v=20260804-2"></script>
-  <script src="graph.js?v=20260804-2"></script>
+  <script src="config.js?v=20260804-3"></script>
+  <script src="auth.js?v=20260804-3"></script>
+  <script src="graph.js?v=20260804-3"></script>
 
   <script
     id="dashboardAppScript"
-    src="app.js?v=20260804-2"
+    src="app.js?v=20260804-3"
   ></script>
 </body>
 </html>
