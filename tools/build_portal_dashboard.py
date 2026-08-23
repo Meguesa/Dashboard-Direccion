@@ -106,6 +106,12 @@ def build_auth() -> None:
       return;
     }
 
+    // Espera a que IndexedDB confirme si existe una fotografia previa antes
+    // de decidir entre carga completa o incremental.
+    if (window.dashboardCacheReady && typeof window.dashboardCacheReady.then === "function") {
+      await window.dashboardCacheReady;
+    }
+
     if (typeof window.actualizarDatosDashboard === "function") {
       await window.actualizarDatosDashboard({
         mensaje: window.cacheCargadoDashboard
@@ -153,7 +159,10 @@ def build_app() -> None:
         source,
         'const DASHBOARD_CACHE_KEY = "dashboardDireccionUltimosDatos";',
         '''const DASHBOARD_CACHE_KEY_BASE = "dashboardDireccionUltimosDatos";
-const DASHBOARD_CACHE_VERSION = 2;
+const DASHBOARD_CACHE_VERSION = 3;
+const DASHBOARD_CACHE_DB_NAME = "dashboardDireccionCacheDB";
+const DASHBOARD_CACHE_DB_VERSION = 1;
+const DASHBOARD_CACHE_STORE = "dashboardCache";
 
 function obtenerDashboardCacheKey() {
   const usuario = String(window.PORTAL_USER_EMAIL || "anonimo")
@@ -164,8 +173,96 @@ function obtenerDashboardCacheKey() {
   return `${DASHBOARD_CACHE_KEY_BASE}:v${DASHBOARD_CACHE_VERSION}:${usuario}`;
 }
 
-const DASHBOARD_CACHE_KEY = obtenerDashboardCacheKey();''',
-        "cache por usuario",
+const DASHBOARD_CACHE_KEY = obtenerDashboardCacheKey();
+
+function abrirDashboardCacheDb() {
+  return new Promise((resolve, reject) => {
+    if (!("indexedDB" in window)) {
+      reject(new Error("IndexedDB no esta disponible en este navegador."));
+      return;
+    }
+
+    const request = indexedDB.open(
+      DASHBOARD_CACHE_DB_NAME,
+      DASHBOARD_CACHE_DB_VERSION
+    );
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+
+      if (!db.objectStoreNames.contains(DASHBOARD_CACHE_STORE)) {
+        db.createObjectStore(DASHBOARD_CACHE_STORE);
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("No se pudo abrir IndexedDB."));
+  });
+}
+
+async function leerDashboardCacheIndexedDb(key) {
+  const db = await abrirDashboardCacheDb();
+
+  try {
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(DASHBOARD_CACHE_STORE, "readonly");
+      const request = tx.objectStore(DASHBOARD_CACHE_STORE).get(key);
+
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error || new Error("No se pudo leer la cache."));
+      tx.onerror = () => reject(tx.error || new Error("Fallo la lectura de la cache."));
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function escribirDashboardCacheIndexedDb(key, payload) {
+  const db = await abrirDashboardCacheDb();
+
+  try {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(DASHBOARD_CACHE_STORE, "readwrite");
+      tx.objectStore(DASHBOARD_CACHE_STORE).put(payload, key);
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error || new Error("No se pudo guardar la cache."));
+      tx.onabort = () => reject(tx.error || new Error("Se aborto el guardado de la cache."));
+    });
+  } finally {
+    db.close();
+  }
+}''',
+        "cache por usuario en IndexedDB",
+    )
+
+    source = require_replace(
+        source,
+        '''document.addEventListener("DOMContentLoaded", () => {
+  inicializarDashboard();
+});
+
+function inicializarDashboard() {
+  /*
+    Primero recupera los datos guardados,
+    pero después fuerza el periodo al mes actual.
+  */
+  cacheCargadoDashboard =
+    cargarDatosDesdeCache();''',
+        '''window.dashboardCacheReady = Promise.resolve(false);
+
+document.addEventListener("DOMContentLoaded", () => {
+  window.dashboardCacheReady = inicializarDashboard();
+});
+
+async function inicializarDashboard() {
+  /*
+    Primero recupera la ultima fotografia desde IndexedDB. Esto permite
+    conservar decenas de miles de registros sin el limite reducido de
+    localStorage.
+  */
+  cacheCargadoDashboard = await cargarDatosDesdeCache();''',
+        "inicializacion asincrona de cache",
     )
 
     source = require_replace(
@@ -184,6 +281,123 @@ const DASHBOARD_CACHE_KEY = obtenerDashboardCacheKey();''',
   cargarSelectorAnios();''',
         "conservar ultimo periodo visualizado",
     )
+
+    cache_runtime = '''async function guardarDatosEnCache() {
+  const payload = {
+    fechaGuardado: new Date().toISOString(),
+    anioSeleccionado: state.anioSeleccionado,
+    mesSeleccionado: state.mesSeleccionado,
+    mesInicioSeleccionado: state.mesInicioSeleccionado,
+    mesFinSeleccionado: state.mesFinSeleccionado,
+    datos: {
+      ingresos: state.datos.ingresos || [],
+      egresos: state.datos.egresos || [],
+      ventas: state.datos.ventas || [],
+      servicios: state.datos.servicios || [],
+      marketing: state.datos.marketing || [],
+      marketingMedios: state.datos.marketingMedios || [],
+      marketingRedes: state.datos.marketingRedes || [],
+      metasCobranza: state.datos.metasCobranza || [],
+      metasVentas: state.datos.metasVentas || [],
+      alertas: state.datos.alertas || [],
+      parquePropiedades: state.datos.parquePropiedades || []
+    }
+  };
+
+  try {
+    await escribirDashboardCacheIndexedDb(DASHBOARD_CACHE_KEY, payload);
+
+    // El cache grande ya no debe ocupar localStorage. Solo se eliminan las
+    // llaves antiguas del Dashboard; MSAL y el resto del portal quedan intactos.
+    try {
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith(DASHBOARD_CACHE_KEY_BASE))
+        .forEach((key) => localStorage.removeItem(key));
+    } catch (storageError) {
+      console.warn("No se pudo limpiar la cache antigua de localStorage:", storageError);
+    }
+
+    console.log(
+      "Cache del Dashboard guardada en IndexedDB:",
+      DASHBOARD_CACHE_KEY,
+      {
+        ingresos: payload.datos.ingresos.length,
+        egresos: payload.datos.egresos.length,
+        ventas: payload.datos.ventas.length,
+        servicios: payload.datos.servicios.length
+      }
+    );
+
+    return true;
+  } catch (error) {
+    console.warn("No se pudo guardar cache IndexedDB del dashboard:", error);
+    return false;
+  }
+}
+
+async function cargarDatosDesdeCache() {
+  try {
+    const cache = await leerDashboardCacheIndexedDb(DASHBOARD_CACHE_KEY);
+
+    if (!cache || !cache.datos) {
+      console.log("No existe cache IndexedDB previa para el Dashboard.");
+      return false;
+    }
+
+    dashboardUltimaActualizacionExitosa = cache.fechaGuardado || "";
+
+    state.datos.ingresos = cache.datos.ingresos || [];
+    state.datos.egresos = cache.datos.egresos || [];
+    state.datos.ventas = cache.datos.ventas || [];
+    state.datos.servicios = cache.datos.servicios || [];
+    state.datos.marketing = cache.datos.marketing || [];
+    state.datos.marketingMedios = cache.datos.marketingMedios || [];
+    state.datos.marketingRedes = cache.datos.marketingRedes || [];
+    state.datos.metasCobranza = cache.datos.metasCobranza || [];
+    state.datos.metasVentas = cache.datos.metasVentas || [];
+    state.datos.alertas = cache.datos.alertas || [];
+    state.datos.parquePropiedades = cache.datos.parquePropiedades || [];
+
+    if (cache.anioSeleccionado) {
+      state.anioSeleccionado = cache.anioSeleccionado;
+    }
+
+    if (cache.mesSeleccionado) {
+      state.mesSeleccionado = cache.mesSeleccionado;
+    }
+
+    if (cache.mesInicioSeleccionado) {
+      state.mesInicioSeleccionado = cache.mesInicioSeleccionado;
+    }
+
+    if (cache.mesFinSeleccionado) {
+      state.mesFinSeleccionado = cache.mesFinSeleccionado;
+    }
+
+    console.log(
+      "Cache del Dashboard recuperada desde IndexedDB:",
+      DASHBOARD_CACHE_KEY,
+      cache.fechaGuardado || "sin fecha"
+    );
+
+    return true;
+  } catch (error) {
+    console.warn("No se pudo cargar cache IndexedDB del dashboard:", error);
+    return false;
+  }
+}
+
+'''
+
+    source, replacements = re.subn(
+        r"function guardarDatosEnCache\(\) \{.*?\n\}\n\nfunction cargarDatosDesdeCache\(\) \{.*?\n\}\n\n(?=function iniciarActualizacionAutomatica\(\))",
+        cache_runtime,
+        source,
+        count=1,
+        flags=re.S,
+    )
+    if replacements != 1:
+        raise RuntimeError("No se encontraron las funciones de cache esperadas")
 
     source = require_replace(
         source,
@@ -250,9 +464,9 @@ const DASHBOARD_CACHE_KEY = obtenerDashboardCacheKey();''',
     cacheCargadoDashboard = true;
 
     renderDashboard();''',
-        '''    guardarDatosEnCache();
-    cacheCargadoDashboard = true;
-    window.cacheCargadoDashboard = true;
+        '''    const cacheGuardada = await guardarDatosEnCache();
+    cacheCargadoDashboard = cacheGuardada || cacheCargadoDashboard;
+    window.cacheCargadoDashboard = cacheCargadoDashboard;
 
     renderDashboard();''',
         "publicar estado de cache",
@@ -332,7 +546,7 @@ def build_index() -> None:
         app_script,
         '''  <script
     id="dashboardAppScript"
-    src="app.js?v=20260823-2"
+    src="app.js?v=20260823-4"
   ></script>
   <script src="dashboard-role-access.js?v=20260823-2"></script>''',
         "control de acceso por rol",
