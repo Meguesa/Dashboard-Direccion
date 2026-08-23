@@ -110,7 +110,10 @@ body.dashboard-portal-page {
   max-width: none;
 }
 
-/* KPIs principales: titulo arriba, numero abajo y tipografia compacta. */
+/*
+  KPIs principales: se conserva la posicion original del contenido.
+  Solo el tamano del numero cambia cuando no cabe en el ancho disponible.
+*/
 .dashboard-portal-page .grid-kpis {
   grid-template-columns: repeat(7, minmax(0, 1fr));
   align-items: stretch;
@@ -118,48 +121,23 @@ body.dashboard-portal-page {
 
 .dashboard-portal-page .grid-kpis .card {
   min-width: 0;
-  min-height: 138px;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 18px 16px;
 }
 
 .dashboard-portal-page .grid-kpis .kpi-label {
   min-width: 0;
-  margin: 0;
-  min-height: 38px;
-  display: flex;
-  align-items: flex-start;
-  line-height: 1.12;
-  font-size: 12.5px;
   overflow-wrap: anywhere;
-  align-self: stretch;
 }
 
 .dashboard-portal-page .grid-kpis .kpi-value {
   min-width: 0;
   max-width: 100%;
-  margin-top: auto;
-  font-size: 26px;
-  line-height: 1;
-  letter-spacing: -0.045em;
+  font-size: 30px;
+  line-height: 1.15;
+  letter-spacing: normal;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  align-self: stretch;
-}
-
-@media (max-width: 1450px) {
-  .dashboard-portal-page .grid-kpis .card {
-    padding-left: 14px;
-    padding-right: 14px;
-  }
-
-  .dashboard-portal-page .grid-kpis .kpi-value {
-    font-size: 24px;
-  }
+  display: block;
 }
 
 @media (max-width: 1200px) {
