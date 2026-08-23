@@ -304,8 +304,8 @@ def build_index() -> None:
     source = require_replace(
         source,
         '<link rel="stylesheet" href="styles.css?v=20260804-3" />',
-        '<link rel="stylesheet" href="styles.css?v=20260804-3" />\n'
-        '  <link rel="stylesheet" href="portal-integration.css?v=20260823-2" />\n'
+        '<link rel="stylesheet" href="styles.css?v=20260823-3" />\n'
+        '  <link rel="stylesheet" href="portal-integration.css?v=20260823-3" />\n'
         '  <link rel="stylesheet" href="account-menu.css?v=20260823-2" />\n'
         '  <link rel="stylesheet" href="dashboard-role-access.css?v=20260823-2" />',
         "estilos propios de integracion",
