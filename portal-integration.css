@@ -1,4 +1,4 @@
-/* Integracion del Dashboard de Direccion con Portal Interno JdJP. */
+/* Integracion del Dashboard de Direccion al Portal Interno JdJP */
 :root {
   --portal-blue: #225b8a;
   --portal-brown: #3a1109;
@@ -50,18 +50,10 @@ body.dashboard-portal-page {
   gap: 15px;
 }
 
-.dashboard-portal-mark {
-  width: 54px;
-  height: 54px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
-  color: #fff;
-  background: var(--portal-brown);
-  border: 3px solid rgba(253, 187, 45, .62);
-  font-size: 24px;
-  font-weight: 900;
-  line-height: 1;
+.dashboard-portal-logo {
+  width: auto;
+  height: 58px;
+  object-fit: contain;
 }
 
 .dashboard-portal-title-text {
@@ -111,7 +103,7 @@ body.dashboard-portal-page {
 }
 
 .dashboard-portal-page #loginPage {
-  display: none !important;
+  min-height: calc(100vh - 123px);
 }
 
 .dashboard-portal-page #dashboardPage {
@@ -141,9 +133,7 @@ body.dashboard-portal-page {
     justify-content: space-between;
   }
 
-  .dashboard-portal-mark {
-    width: 48px;
-    height: 48px;
-    font-size: 21px;
+  .dashboard-portal-logo {
+    height: 52px;
   }
 }
