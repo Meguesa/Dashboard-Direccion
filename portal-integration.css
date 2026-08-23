@@ -50,19 +50,10 @@ body.dashboard-portal-page {
   gap: 15px;
 }
 
-.dashboard-portal-mark {
-  width: 54px;
-  height: 54px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
-  color: #fff;
-  background: var(--portal-brown);
-  border: 3px solid rgba(253, 187, 45, .62);
-  box-shadow: 0 5px 14px rgba(58, 17, 9, .16);
-  font-size: 16px;
-  font-weight: 900;
-  letter-spacing: -.4px;
+.dashboard-portal-logo {
+  width: auto;
+  height: 58px;
+  object-fit: contain;
 }
 
 .dashboard-portal-title-text {
@@ -119,6 +110,37 @@ body.dashboard-portal-page {
   max-width: none;
 }
 
+/*
+  Los siete KPIs principales nunca deben comprimirse hasta sacar el texto
+  del recuadro. En pantallas anchas se conservan en una sola fila y, al
+  reducir el ancho disponible, se acomodan automaticamente en nuevas filas.
+*/
+.dashboard-portal-page .grid-kpis {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  align-items: stretch;
+}
+
+.dashboard-portal-page .grid-kpis .card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dashboard-portal-page .grid-kpis .kpi-label {
+  min-width: 0;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-portal-page .grid-kpis .kpi-value {
+  min-width: 0;
+  max-width: 100%;
+  font-size: clamp(22px, 1.7vw, 30px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 @media (max-width: 720px) {
   .dashboard-portal-toolbar {
     border-top-width: 42px;
@@ -142,9 +164,15 @@ body.dashboard-portal-page {
     justify-content: space-between;
   }
 
-  .dashboard-portal-mark {
-    width: 48px;
-    height: 48px;
-    font-size: 15px;
+  .dashboard-portal-logo {
+    height: 52px;
+  }
+
+  .dashboard-portal-page .grid-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-portal-page .grid-kpis .kpi-value {
+    font-size: clamp(24px, 8vw, 30px);
   }
 }
