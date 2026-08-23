@@ -108,7 +108,10 @@ def build_auth() -> None:
 
     if (typeof window.actualizarDatosDashboard === "function") {
       await window.actualizarDatosDashboard({
-        mensaje: "Cargando información autorizada desde SharePoint..."
+        mensaje: window.cacheCargadoDashboard
+          ? "Actualizando solo información reciente desde SharePoint..."
+          : "Cargando información inicial desde SharePoint...",
+        modoCarga: window.cacheCargadoDashboard ? "incremental" : "completa"
       });
     }
   } else {
@@ -142,6 +145,152 @@ def build_auth() -> None:
     path.write_text(source, encoding="utf-8")
 
 
+def build_app() -> None:
+    path = TARGET / "app.js"
+    source = path.read_text(encoding="utf-8")
+
+    source = require_replace(
+        source,
+        'const DASHBOARD_CACHE_KEY = "dashboardDireccionUltimosDatos";',
+        '''const DASHBOARD_CACHE_KEY_BASE = "dashboardDireccionUltimosDatos";
+const DASHBOARD_CACHE_VERSION = 2;
+
+function obtenerDashboardCacheKey() {
+  const usuario = String(window.PORTAL_USER_EMAIL || "anonimo")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9@._-]+/g, "_");
+
+  return `${DASHBOARD_CACHE_KEY_BASE}:v${DASHBOARD_CACHE_VERSION}:${usuario}`;
+}
+
+const DASHBOARD_CACHE_KEY = obtenerDashboardCacheKey();''',
+        "cache por usuario",
+    )
+
+    source = require_replace(
+        source,
+        '''  seleccionarMesActual();
+
+  cargarSelectorAnios();''',
+        '''  // Si existe cache valida, conserva el ultimo periodo visualizado.
+  // Solo las instalaciones sin cache arrancan en el mes local actual.
+  if (!cacheCargadoDashboard) {
+    seleccionarMesActual();
+  }
+
+  window.cacheCargadoDashboard = cacheCargadoDashboard;
+
+  cargarSelectorAnios();''',
+        "conservar ultimo periodo visualizado",
+    )
+
+    source = require_replace(
+        source,
+        '''      state.mesSeleccionado = state.mesFinSeleccionado;
+
+      cargarSelectorAnios();
+      cargarSelectorMeses();
+      renderDashboard();''',
+        '''      state.mesSeleccionado = state.mesFinSeleccionado;
+
+      cargarSelectorAnios();
+      cargarSelectorMeses();
+      guardarDatosEnCache();
+      renderDashboard();''',
+        "guardar cambio de anio",
+    )
+
+    source = source.replace(
+        '''      cargarSelectorAnios();
+      cargarSelectorMeses();
+      renderDashboard();''',
+        '''      cargarSelectorAnios();
+      cargarSelectorMeses();
+      guardarDatosEnCache();
+      renderDashboard();''',
+        3,
+    )
+
+    source = require_replace(
+        source,
+        '''    state.datos.parquePropiedades = datosSharePoint.parquePropiedades || [];
+
+    cargarSelectorAnios();''',
+        '''    if (modoCargaSolicitado === "completa" || !cacheCargadoDashboard) {
+      state.datos.parquePropiedades = datosSharePoint.parquePropiedades || [];
+      state.datos.marketing = datosSharePoint.marketing || [];
+      state.datos.marketingMedios = datosSharePoint.marketingMedios || [];
+      state.datos.marketingRedes = datosSharePoint.marketingRedes || [];
+    } else {
+      // Estas fuentes no se segmentan por Mes en todos los registros. Para una
+      // apertura normal se conserva la ultima fotografia local y solo se
+      // sustituyen si SharePoint devuelve datos nuevos.
+      if ((datosSharePoint.parquePropiedades || []).length > 0) {
+        state.datos.parquePropiedades = datosSharePoint.parquePropiedades;
+      }
+      if ((datosSharePoint.marketing || []).length > 0) {
+        state.datos.marketing = datosSharePoint.marketing;
+      }
+      if ((datosSharePoint.marketingMedios || []).length > 0) {
+        state.datos.marketingMedios = datosSharePoint.marketingMedios;
+      }
+      if ((datosSharePoint.marketingRedes || []).length > 0) {
+        state.datos.marketingRedes = datosSharePoint.marketingRedes;
+      }
+    }
+
+    cargarSelectorAnios();''',
+        "preservar fuentes no mensuales en incremental",
+    )
+
+    source = require_replace(
+        source,
+        '''    guardarDatosEnCache();
+    cacheCargadoDashboard = true;
+
+    renderDashboard();''',
+        '''    guardarDatosEnCache();
+    cacheCargadoDashboard = true;
+    window.cacheCargadoDashboard = true;
+
+    renderDashboard();''',
+        "publicar estado de cache",
+    )
+
+    path.write_text(source, encoding="utf-8")
+
+
+def build_graph() -> None:
+    path = TARGET / "graph.js"
+    source = path.read_text(encoding="utf-8")
+
+    source = require_replace(
+        source,
+        '''    const marketing = await obtenerMarketingSharePoint();
+    const marketingMedios = await obtenerMarketingMediosSharePoint();
+    const marketingRedes = await obtenerMarketingRedesSharePoint();''',
+        '''    // En aperturas con cache no necesitamos volver a descargar toda la
+    // informacion historica de Marketing. La fotografia almacenada se conserva
+    // localmente y una carga manual/completa puede reconstruirla cuando se requiera.
+    const marketing = modoCarga === "completa" ? await obtenerMarketingSharePoint() : [];
+    const marketingMedios = modoCarga === "completa" ? await obtenerMarketingMediosSharePoint() : [];
+    const marketingRedes = modoCarga === "completa" ? await obtenerMarketingRedesSharePoint() : [];''',
+        "evitar historia completa de marketing",
+    )
+
+    source = require_replace(
+        source,
+        '''    const parquePropiedades = await obtenerParquePropiedadesSharePoint();''',
+        '''    const parquePropiedades = modoCarga === "completa"
+      ? await obtenerParquePropiedadesSharePoint()
+      : [];''',
+        "evitar recarga completa de parque",
+    )
+
+    path.write_text(source, encoding="utf-8")
+
+
 def build_index() -> None:
     source = (ROOT / "index.html").read_text(encoding="utf-8")
 
@@ -156,9 +305,9 @@ def build_index() -> None:
         source,
         '<link rel="stylesheet" href="styles.css?v=20260804-3" />',
         '<link rel="stylesheet" href="styles.css?v=20260804-3" />\n'
-        '  <link rel="stylesheet" href="portal-integration.css?v=20260823-1" />\n'
-        '  <link rel="stylesheet" href="account-menu.css?v=20260823-1" />\n'
-        '  <link rel="stylesheet" href="dashboard-role-access.css?v=20260823-1" />',
+        '  <link rel="stylesheet" href="portal-integration.css?v=20260823-2" />\n'
+        '  <link rel="stylesheet" href="account-menu.css?v=20260823-2" />\n'
+        '  <link rel="stylesheet" href="dashboard-role-access.css?v=20260823-2" />',
         "estilos propios de integracion",
     )
 
@@ -181,15 +330,20 @@ def build_index() -> None:
     source = require_replace(
         source,
         app_script,
-        app_script + '\n  <script src="dashboard-role-access.js?v=20260823-1"></script>',
+        '''  <script
+    id="dashboardAppScript"
+    src="app.js?v=20260823-2"
+  ></script>
+  <script src="dashboard-role-access.js?v=20260823-2"></script>''',
         "control de acceso por rol",
     )
+
+    source = source.replace('src="graph.js?v=20260804-3"', 'src="graph.js?v=20260823-2"', 1)
 
     toolbar = '''<body class="dashboard-portal-page">
   <nav class="dashboard-portal-toolbar" aria-label="Navegación del Portal Interno">
     <div class="dashboard-portal-toolbar-inner">
       <div class="dashboard-portal-title">
-        <div class="dashboard-portal-mark" aria-hidden="true">JdJP</div>
         <div class="dashboard-portal-title-text">
           <strong>Dashboard de Dirección</strong>
           <span>Portal Interno JdJP · Jardines de Juan Pablo</span>
@@ -200,7 +354,10 @@ def build_index() -> None:
         <a class="dashboard-portal-back" href="/">Regresar al portal</a>
         <details class="account-menu">
           <summary class="account-trigger" aria-label="Abrir menú de usuario" title="<?= $name ?>">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4Z"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="8" r="4" fill="currentColor" />
+              <path d="M4 20c0-4.1 3.6-6 8-6s8 1.9 8 6v1H4z" fill="currentColor" />
+            </svg>
           </summary>
           <div class="account-menu-panel">
             <div class="account-menu-info">
@@ -239,6 +396,8 @@ def main() -> None:
     copy_runtime_files()
     build_config()
     build_auth()
+    build_app()
+    build_graph()
     build_index()
     print("Dashboard de Direccion preparado autonomamente para /dashboard/")
 
