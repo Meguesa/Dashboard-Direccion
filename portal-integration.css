@@ -111,8 +111,10 @@ body.dashboard-portal-page {
 }
 
 /*
-  KPIs principales: se conserva la posicion original del contenido.
-  Solo el tamano del numero cambia cuando no cabe en el ancho disponible.
+  KPIs principales:
+  - todos los titulos ocupan exactamente el mismo alto;
+  - todos los valores comienzan en la misma linea horizontal;
+  - el JS solo reduce font-size cuando un valor no cabe.
 */
 .dashboard-portal-page .grid-kpis {
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -126,12 +128,20 @@ body.dashboard-portal-page {
 
 .dashboard-portal-page .grid-kpis .kpi-label {
   min-width: 0;
+  height: 38px;
+  min-height: 38px;
+  margin: 0 0 10px;
+  display: flex;
+  align-items: flex-start;
+  line-height: 1.12;
   overflow-wrap: anywhere;
 }
 
 .dashboard-portal-page .grid-kpis .kpi-value {
   min-width: 0;
+  width: 100%;
   max-width: 100%;
+  margin: 0;
   font-size: 30px;
   line-height: 1.15;
   letter-spacing: normal;
