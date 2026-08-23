@@ -89,56 +89,59 @@ jobs:
         run: |
           set -euo pipefail
 
-          upload_file() {
-            local local_file="$1"
-            local remote_file="$2"
-            local label="$3"
+          files=(
+            index.php
+            app.js
+            auth.js
+            config.js
+            graph.js
+            styles.css
+            portal-integration.css
+            account-menu.css
+            dashboard-role-access.css
+            dashboard-role-access.js
+          )
 
-            if [ ! -f "$local_file" ]; then
-              echo "[$label] ERROR: no existe $local_file"
-              return 1
+          for file in "${files[@]}"; do
+            test -s "deploy/$file"
+          done
+
+          for attempt in 1 2 3; do
+            echo "[Dashboard] intento ${attempt} de 3 usando una sola sesion FTPS"
+
+            if timeout --kill-after=10s 180s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://${FTP_SERVER}:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ftp:sync-mode false;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 30;
+              set net:max-retries 1;
+              lcd deploy;
+              put index.php -o index.php;
+              put app.js -o app.js;
+              put auth.js -o auth.js;
+              put config.js -o config.js;
+              put graph.js -o graph.js;
+              put styles.css -o styles.css;
+              put portal-integration.css -o portal-integration.css;
+              put account-menu.css -o account-menu.css;
+              put dashboard-role-access.css -o dashboard-role-access.css;
+              put dashboard-role-access.js -o dashboard-role-access.js;
+              bye;
+            "; then
+              echo '[Dashboard] publicacion FTPS completada correctamente.'
+              exit 0
             fi
 
-            for attempt in 1 2 3; do
-              echo "[$label] intento ${attempt} de 3 -> ${remote_file}"
+            if [ "$attempt" -lt 3 ]; then
+              echo '[Dashboard] la sesion FTPS se interrumpio. Reintentando el paquete completo en 12 segundos...'
+              sleep 12
+            fi
+          done
 
-              if timeout --kill-after=8s 45s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://${FTP_SERVER}:21" -e "
-                set cmd:fail-exit yes;
-                set ftp:passive-mode true;
-                set ftp:ssl-force true;
-                set ftp:ssl-protect-data true;
-                set ftp:ssl-auth TLS;
-                set ftp:sync-mode false;
-                set ssl:verify-certificate yes;
-                set ssl:check-hostname yes;
-                set net:timeout 20;
-                set net:max-retries 0;
-                put '$local_file' -o '$remote_file';
-                bye;
-              "; then
-                echo "[$label] OK"
-                return 0
-              fi
-
-              if [ "$attempt" -lt 3 ]; then
-                echo "[$label] transferencia fallida. Reintento en 8 segundos..."
-                sleep 8
-              fi
-            done
-
-            echo "[$label] ERROR despues de 3 intentos"
-            return 1
-          }
-
-          upload_file "deploy/index.php" "index.php" "index.php"
-          upload_file "deploy/app.js" "app.js" "app.js"
-          upload_file "deploy/auth.js" "auth.js" "auth.js"
-          upload_file "deploy/config.js" "config.js" "config.js"
-          upload_file "deploy/graph.js" "graph.js" "graph.js"
-          upload_file "deploy/styles.css" "styles.css" "styles.css"
-          upload_file "deploy/portal-integration.css" "portal-integration.css" "portal-integration.css"
-          upload_file "deploy/account-menu.css" "account-menu.css" "account-menu.css"
-          upload_file "deploy/dashboard-role-access.css" "dashboard-role-access.css" "dashboard-role-access.css"
-          upload_file "deploy/dashboard-role-access.js" "dashboard-role-access.js" "dashboard-role-access.js"
-
-          echo 'Dashboard de Direccion publicado desde su repositorio propio.'
+          echo '[Dashboard] ERROR: no fue posible publicar el paquete completo despues de 3 intentos.'
+          exit 1
