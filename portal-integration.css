@@ -1,0 +1,149 @@
+/* Integracion del Dashboard de Direccion con Portal Interno JdJP. */
+:root {
+  --portal-blue: #225b8a;
+  --portal-brown: #3a1109;
+  --portal-gold: #fdbb2d;
+  --portal-line: #e8e1d8;
+}
+
+body.dashboard-portal-page {
+  padding-top: 0;
+}
+
+.dashboard-portal-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  color: var(--portal-brown);
+  background: #fff;
+  border-top: 38px solid var(--portal-blue);
+  border-bottom: 3px solid var(--portal-gold);
+  box-shadow: 0 7px 22px rgba(58, 17, 9, .08);
+}
+
+.dashboard-portal-toolbar::before {
+  content: "Portal empresarial seguro para colaboradores";
+  position: absolute;
+  top: -38px;
+  left: max(18px, calc((100% - 1500px) / 2));
+  height: 38px;
+  display: flex;
+  align-items: center;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dashboard-portal-toolbar-inner {
+  width: min(1500px, calc(100% - 36px));
+  min-height: 82px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.dashboard-portal-title {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.dashboard-portal-mark {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: #fff;
+  background: var(--portal-brown);
+  border: 3px solid rgba(253, 187, 45, .62);
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.dashboard-portal-title-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dashboard-portal-title-text strong {
+  color: var(--portal-brown);
+  font-size: 20px;
+}
+
+.dashboard-portal-title-text span {
+  color: var(--portal-blue);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dashboard-portal-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-portal-back {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 15px;
+  color: var(--portal-brown);
+  background: #fff;
+  border: 1px solid #d9ccc5;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.dashboard-portal-back:hover,
+.dashboard-portal-back:focus-visible {
+  color: var(--portal-brown);
+  background: var(--portal-gold);
+  border-color: var(--portal-gold);
+  outline: none;
+}
+
+.dashboard-portal-page #loginPage {
+  display: none !important;
+}
+
+.dashboard-portal-page #dashboardPage {
+  max-width: none;
+}
+
+@media (max-width: 720px) {
+  .dashboard-portal-toolbar {
+    border-top-width: 42px;
+  }
+
+  .dashboard-portal-toolbar::before {
+    top: -42px;
+    height: 42px;
+    left: 14px;
+  }
+
+  .dashboard-portal-toolbar-inner {
+    min-height: 0;
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 13px 0;
+  }
+
+  .dashboard-portal-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dashboard-portal-mark {
+    width: 48px;
+    height: 48px;
+    font-size: 21px;
+  }
+}
