@@ -50,10 +50,19 @@ body.dashboard-portal-page {
   gap: 15px;
 }
 
-.dashboard-portal-logo {
-  width: auto;
-  height: 58px;
-  object-fit: contain;
+.dashboard-portal-mark {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: #fff;
+  background: var(--portal-brown);
+  border: 3px solid rgba(253, 187, 45, .62);
+  box-shadow: 0 5px 14px rgba(58, 17, 9, .16);
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: -.4px;
 }
 
 .dashboard-portal-title-text {
@@ -133,7 +142,9 @@ body.dashboard-portal-page {
     justify-content: space-between;
   }
 
-  .dashboard-portal-logo {
-    height: 52px;
+  .dashboard-portal-mark {
+    width: 48px;
+    height: 48px;
+    font-size: 15px;
   }
 }
