@@ -34,7 +34,6 @@ def copy_runtime_files() -> None:
         "account-menu.css",
         "dashboard-role-access.css",
         "dashboard-role-access.js",
-        "kpi-fit.js",
     ]
 
     for name in names:
@@ -224,6 +223,9 @@ const DASHBOARD_CACHE_KEY = obtenerDashboardCacheKey();''',
       state.datos.marketingMedios = datosSharePoint.marketingMedios || [];
       state.datos.marketingRedes = datosSharePoint.marketingRedes || [];
     } else {
+      // Estas fuentes no se segmentan por Mes en todos los registros. Para una
+      // apertura normal se conserva la ultima fotografia local y solo se
+      // sustituyen si SharePoint devuelve datos nuevos.
       if ((datosSharePoint.parquePropiedades || []).length > 0) {
         state.datos.parquePropiedades = datosSharePoint.parquePropiedades;
       }
@@ -268,7 +270,10 @@ def build_graph() -> None:
         '''    const marketing = await obtenerMarketingSharePoint();
     const marketingMedios = await obtenerMarketingMediosSharePoint();
     const marketingRedes = await obtenerMarketingRedesSharePoint();''',
-        '''    const marketing = modoCarga === "completa" ? await obtenerMarketingSharePoint() : [];
+        '''    // En aperturas con cache no necesitamos volver a descargar toda la
+    // informacion historica de Marketing. La fotografia almacenada se conserva
+    // localmente y una carga manual/completa puede reconstruirla cuando se requiera.
+    const marketing = modoCarga === "completa" ? await obtenerMarketingSharePoint() : [];
     const marketingMedios = modoCarga === "completa" ? await obtenerMarketingMediosSharePoint() : [];
     const marketingRedes = modoCarga === "completa" ? await obtenerMarketingRedesSharePoint() : [];''',
         "evitar historia completa de marketing",
@@ -300,7 +305,7 @@ def build_index() -> None:
         source,
         '<link rel="stylesheet" href="styles.css?v=20260804-3" />',
         '<link rel="stylesheet" href="styles.css?v=20260804-3" />\n'
-        '  <link rel="stylesheet" href="portal-integration.css?v=20260823-6" />\n'
+        '  <link rel="stylesheet" href="portal-integration.css?v=20260823-2" />\n'
         '  <link rel="stylesheet" href="account-menu.css?v=20260823-2" />\n'
         '  <link rel="stylesheet" href="dashboard-role-access.css?v=20260823-2" />',
         "estilos propios de integracion",
@@ -329,9 +334,8 @@ def build_index() -> None:
     id="dashboardAppScript"
     src="app.js?v=20260823-2"
   ></script>
-  <script src="kpi-fit.js?v=20260823-4"></script>
   <script src="dashboard-role-access.js?v=20260823-2"></script>''',
-        "control de acceso por rol y ajuste de KPIs",
+        "control de acceso por rol",
     )
 
     source = source.replace('src="graph.js?v=20260804-3"', 'src="graph.js?v=20260823-2"', 1)
@@ -374,6 +378,7 @@ def build_index() -> None:
 
 declare(strict_types=1);
 
+// Unica dependencia compartida con el Portal: autenticacion/sesion.
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 portal_require_authentication();
 
