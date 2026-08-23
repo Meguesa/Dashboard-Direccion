@@ -5424,3 +5424,67 @@ body {
   line-height: 1.2;
   white-space: nowrap;
 }
+
+/* =========================================================
+   HOME - KPIs PRINCIPALES
+   Tamaño uniforme + alineación + sin desbordamiento
+   ========================================================= */
+
+.dashboard-portal-page #dashboardPage .grid-kpis {
+  align-items: stretch !important;
+}
+
+/* Todas las tarjetas mantienen la misma estructura */
+.dashboard-portal-page #dashboardPage .grid-kpis > .card {
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  padding: 20px 18px !important;
+}
+
+/* Todos los títulos ocupan exactamente la misma zona */
+.dashboard-portal-page #dashboardPage .grid-kpis > .card .kpi-label {
+  display: block !important;
+  width: 100% !important;
+
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+
+  margin: 0 !important;
+
+  font-size: 14px !important;
+  line-height: 1.15 !important;
+  font-weight: 700 !important;
+
+  overflow: hidden !important;
+}
+
+/* Todos los números quedan sobre la misma línea inferior */
+.dashboard-portal-page #dashboardPage .grid-kpis > .card .kpi-value {
+  display: flex !important;
+  align-items: flex-end !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  min-height: 34px !important;
+
+  margin-top: auto !important;
+
+  /*
+    Todos usan EXACTAMENTE el mismo tamaño.
+    El tamaño disminuye automáticamente cuando
+    la pantalla tiene menos espacio.
+  */
+  font-size: clamp(16px, 1.3vw, 30px) !important;
+
+  line-height: 1 !important;
+  letter-spacing: -0.035em !important;
+  font-weight: 800 !important;
+
+  white-space: nowrap !important;
+
+  font-variant-numeric: tabular-nums !important;
+}
