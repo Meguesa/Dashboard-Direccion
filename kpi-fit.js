@@ -4,8 +4,28 @@
   const SELECTOR = ".grid-kpis .kpi-value";
   const MIN_FONT_SIZE = 12;
   const MAX_FONT_SIZE = 30;
-  const SAFETY_PX = 6;
+  const SAFETY_PX = 4;
   let scheduled = false;
+
+  function measureWidth(element, fontSize) {
+    const styles = window.getComputedStyle(element);
+    const canvas = measureWidth.canvas || (measureWidth.canvas = document.createElement("canvas"));
+    const context = canvas.getContext("2d");
+
+    context.font = [
+      styles.fontStyle,
+      styles.fontVariant,
+      styles.fontWeight,
+      `${fontSize}px`,
+      styles.fontFamily,
+    ].join(" ");
+
+    const textWidth = context.measureText(element.textContent || "").width;
+    const letterSpacing = parseFloat(styles.letterSpacing || "0");
+    const chars = Math.max(0, (element.textContent || "").length - 1);
+
+    return textWidth + Math.max(0, letterSpacing) * chars;
+  }
 
   function fitElement(element) {
     if (!(element instanceof HTMLElement)) return;
@@ -24,22 +44,15 @@
 
     if (!availableWidth) return;
 
-    // Solo ajustamos font-size. No tocamos margenes, altura, alineacion ni posicion.
-    element.style.fontSize = `${MAX_FONT_SIZE}px`;
-
-    // clientWidth puede reflejar el ancho disponible del bloque; scrollWidth nos
-    // indica el ancho real que necesita el contenido sin envolver.
-    if (element.scrollWidth <= availableWidth) return;
-
     let low = MIN_FONT_SIZE;
     let high = MAX_FONT_SIZE;
     let best = MIN_FONT_SIZE;
 
-    for (let i = 0; i < 12; i += 1) {
+    for (let i = 0; i < 14; i += 1) {
       const mid = (low + high) / 2;
-      element.style.fontSize = `${mid}px`;
+      const width = measureWidth(element, mid);
 
-      if (element.scrollWidth <= availableWidth) {
+      if (width <= availableWidth) {
         best = mid;
         low = mid;
       } else {
@@ -47,7 +60,7 @@
       }
     }
 
-    element.style.fontSize = `${Math.max(MIN_FONT_SIZE, best - 0.25).toFixed(2)}px`;
+    element.style.fontSize = `${Math.max(MIN_FONT_SIZE, best - 0.35).toFixed(2)}px`;
   }
 
   function fitAll() {
@@ -62,7 +75,9 @@
   }
 
   function runDelayedFits() {
-    [0, 60, 180, 400, 900].forEach((delay) => window.setTimeout(scheduleFit, delay));
+    [0, 50, 150, 350, 800, 1500].forEach((delay) => {
+      window.setTimeout(scheduleFit, delay);
+    });
   }
 
   function start() {
@@ -86,6 +101,7 @@
 
     window.addEventListener("resize", runDelayedFits, { passive: true });
     window.addEventListener("load", runDelayedFits, { once: true });
+    window.addEventListener("focus", runDelayedFits, { passive: true });
   }
 
   if (document.readyState === "loading") {
