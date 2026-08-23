@@ -300,7 +300,7 @@ def build_index() -> None:
         source,
         '<link rel="stylesheet" href="styles.css?v=20260804-3" />',
         '<link rel="stylesheet" href="styles.css?v=20260804-3" />\n'
-        '  <link rel="stylesheet" href="portal-integration.css?v=20260823-5" />\n'
+        '  <link rel="stylesheet" href="portal-integration.css?v=20260823-6" />\n'
         '  <link rel="stylesheet" href="account-menu.css?v=20260823-2" />\n'
         '  <link rel="stylesheet" href="dashboard-role-access.css?v=20260823-2" />',
         "estilos propios de integracion",
@@ -329,7 +329,7 @@ def build_index() -> None:
     id="dashboardAppScript"
     src="app.js?v=20260823-2"
   ></script>
-  <script src="kpi-fit.js?v=20260823-3"></script>
+  <script src="kpi-fit.js?v=20260823-4"></script>
   <script src="dashboard-role-access.js?v=20260823-2"></script>''',
         "control de acceso por rol y ajuste de KPIs",
     )
