@@ -111,13 +111,12 @@ body.dashboard-portal-page {
 }
 
 /*
-  KPIs principales:
-  - todos los titulos ocupan exactamente el mismo alto;
-  - todos los valores comienzan en la misma linea horizontal;
-  - el JS solo reduce font-size cuando un valor no cabe.
+  Los siete KPIs principales nunca deben comprimirse hasta sacar el texto
+  del recuadro. En pantallas anchas se conservan en una sola fila y, al
+  reducir el ancho disponible, se acomodan automaticamente en nuevas filas.
 */
 .dashboard-portal-page .grid-kpis {
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   align-items: stretch;
 }
 
@@ -128,38 +127,18 @@ body.dashboard-portal-page {
 
 .dashboard-portal-page .grid-kpis .kpi-label {
   min-width: 0;
-  height: 38px;
-  min-height: 38px;
-  margin: 0 0 10px;
-  display: flex;
-  align-items: flex-start;
-  line-height: 1.12;
+  line-height: 1.15;
   overflow-wrap: anywhere;
 }
 
 .dashboard-portal-page .grid-kpis .kpi-value {
   min-width: 0;
-  width: 100%;
   max-width: 100%;
-  margin: 0;
-  font-size: 30px;
-  line-height: 1.15;
-  letter-spacing: normal;
+  font-size: clamp(22px, 1.7vw, 30px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  display: block;
-}
-
-@media (max-width: 1200px) {
-  .dashboard-portal-page .grid-kpis {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 900px) {
-  .dashboard-portal-page .grid-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 720px) {
@@ -191,5 +170,9 @@ body.dashboard-portal-page {
 
   .dashboard-portal-page .grid-kpis {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-portal-page .grid-kpis .kpi-value {
+    font-size: clamp(24px, 8vw, 30px);
   }
 }
