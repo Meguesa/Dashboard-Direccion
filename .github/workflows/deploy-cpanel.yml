@@ -1,0 +1,144 @@
+name: Publicar Dashboard de Direccion independiente en cPanel
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dashboard-direccion
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Validar y publicar Dashboard de Direccion
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Preparar PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Construir paquete autonomo del Dashboard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/build_portal_dashboard.py
+
+      - name: Validar paquete de produccion
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s deploy/index.php
+          test -s deploy/app.js
+          test -s deploy/auth.js
+          test -s deploy/config.js
+          test -s deploy/graph.js
+          test -s deploy/styles.css
+          test -s deploy/portal-integration.css
+          test -s deploy/account-menu.css
+          test -s deploy/dashboard-role-access.css
+          test -s deploy/dashboard-role-access.js
+
+          php -l deploy/index.php
+          grep -q 'portal_require_authentication' deploy/index.php
+          grep -q 'Dashboard de Dirección' deploy/index.php
+          grep -q 'https://portal.juanpablo.com.mx/dashboard/' deploy/config.js
+          grep -q 'dashboard-role-access.js' deploy/index.php
+          grep -q 'PORTAL_USER_EMAIL' deploy/index.php
+
+          if grep -q 'meguesa.github.io/Dashboard-Direccion' deploy/config.js; then
+            echo 'ERROR: config.js conserva redirectUri de GitHub Pages.'
+            exit 1
+          fi
+
+          echo 'Paquete autonomo del Dashboard validado correctamente.'
+
+      - name: Validar credenciales de publicacion
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$FTP_SERVER"
+          test -n "$FTP_USERNAME"
+          test -n "$FTP_PASSWORD"
+          echo 'Credenciales FTPS presentes.'
+
+      - name: Instalar cliente FTPS resiliente
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lftp
+
+      - name: Publicar Dashboard exclusivamente en su carpeta
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          upload_file() {
+            local local_file="$1"
+            local remote_file="$2"
+            local label="$3"
+
+            if [ ! -f "$local_file" ]; then
+              echo "[$label] ERROR: no existe $local_file"
+              return 1
+            fi
+
+            for attempt in 1 2 3; do
+              echo "[$label] intento ${attempt} de 3 -> ${remote_file}"
+
+              if timeout --kill-after=8s 45s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://${FTP_SERVER}:21" -e "
+                set cmd:fail-exit yes;
+                set ftp:passive-mode true;
+                set ftp:ssl-force true;
+                set ftp:ssl-protect-data true;
+                set ftp:ssl-auth TLS;
+                set ftp:sync-mode false;
+                set ssl:verify-certificate yes;
+                set ssl:check-hostname yes;
+                set net:timeout 20;
+                set net:max-retries 0;
+                put '$local_file' -o '$remote_file';
+                bye;
+              "; then
+                echo "[$label] OK"
+                return 0
+              fi
+
+              if [ "$attempt" -lt 3 ]; then
+                echo "[$label] transferencia fallida. Reintento en 8 segundos..."
+                sleep 8
+              fi
+            done
+
+            echo "[$label] ERROR despues de 3 intentos"
+            return 1
+          }
+
+          upload_file "deploy/index.php" "index.php" "index.php"
+          upload_file "deploy/app.js" "app.js" "app.js"
+          upload_file "deploy/auth.js" "auth.js" "auth.js"
+          upload_file "deploy/config.js" "config.js" "config.js"
+          upload_file "deploy/graph.js" "graph.js" "graph.js"
+          upload_file "deploy/styles.css" "styles.css" "styles.css"
+          upload_file "deploy/portal-integration.css" "portal-integration.css" "portal-integration.css"
+          upload_file "deploy/account-menu.css" "account-menu.css" "account-menu.css"
+          upload_file "deploy/dashboard-role-access.css" "dashboard-role-access.css" "dashboard-role-access.css"
+          upload_file "deploy/dashboard-role-access.js" "dashboard-role-access.js" "dashboard-role-access.js"
+
+          echo 'Dashboard de Direccion publicado desde su repositorio propio.'
