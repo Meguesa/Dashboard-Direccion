@@ -40,8 +40,32 @@ jobs:
           python3 <<'PY'
           from pathlib import Path
 
-          path = Path('deploy/index.php')
-          source = path.read_text(encoding='utf-8')
+          graph_path = Path('deploy/graph.js')
+          graph_source = graph_path.read_text(encoding='utf-8')
+
+          old_marketing = '''    // En aperturas con cache no necesitamos volver a descargar toda la
+    // informacion historica de Marketing. La fotografia almacenada se conserva
+    // localmente y una carga manual/completa puede reconstruirla cuando se requiera.
+    const marketing = modoCarga === "completa" ? await obtenerMarketingSharePoint() : [];
+    const marketingMedios = modoCarga === "completa" ? await obtenerMarketingMediosSharePoint() : [];
+    const marketingRedes = modoCarga === "completa" ? await obtenerMarketingRedesSharePoint() : [];'''
+
+          new_marketing = '''    // Marketing es una fuente pequena y debe refrescarse en cada carga.
+    // Esto evita conservar una cache vacia cuando las listas se poblaron despues.
+    const marketing = await obtenerMarketingSharePoint();
+    const marketingMedios = await obtenerMarketingMediosSharePoint();
+    const marketingRedes = await obtenerMarketingRedesSharePoint();'''
+
+          if old_marketing not in graph_source:
+              raise RuntimeError('No se encontro el bloque incremental de Marketing esperado')
+
+          graph_source = graph_source.replace(old_marketing, new_marketing, 1)
+          graph_path.write_text(graph_source, encoding='utf-8')
+
+          index_path = Path('deploy/index.php')
+          source = index_path.read_text(encoding='utf-8')
+          source = source.replace('src="graph.js?v=20260823-2"', 'src="graph.js?v=20260824-1"', 1)
+
           marker = '</body>'
           script = '  <script src="dashboard-table-tools.js?v=20260824-1"></script>\n'
 
@@ -50,7 +74,7 @@ jobs:
                   raise RuntimeError('No se encontro </body> para insertar dashboard-table-tools.js')
               source = source.replace(marker, script + marker, 1)
 
-          path.write_text(source, encoding='utf-8')
+          index_path.write_text(source, encoding='utf-8')
           PY
 
       - name: Validar paquete de produccion
@@ -75,10 +99,14 @@ jobs:
           grep -q 'https://portal.juanpablo.com.mx/dashboard/' deploy/config.js
           grep -q 'dashboard-role-access.js' deploy/index.php
           grep -q 'dashboard-table-tools.js' deploy/index.php
+          grep -q 'graph.js?v=20260824-1' deploy/index.php
           grep -q 'PORTAL_USER_EMAIL' deploy/index.php
           grep -q 'Indicadores financieros, comerciales y operativos' deploy/styles.css
           grep -q 'data-dashboard-sortable' deploy/dashboard-table-tools.js
           grep -q 'Generar PDF' deploy/dashboard-table-tools.js
+          grep -q 'const marketing = await obtenerMarketingSharePoint();' deploy/graph.js
+          grep -q 'const marketingMedios = await obtenerMarketingMediosSharePoint();' deploy/graph.js
+          grep -q 'const marketingRedes = await obtenerMarketingRedesSharePoint();' deploy/graph.js
 
           if grep -q 'meguesa.github.io/Dashboard-Direccion' deploy/config.js; then
             echo 'ERROR: config.js conserva redirectUri de GitHub Pages.'
