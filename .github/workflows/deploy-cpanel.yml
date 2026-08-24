@@ -43,23 +43,20 @@ jobs:
           graph_path = Path('deploy/graph.js')
           graph_source = graph_path.read_text(encoding='utf-8')
 
-          old_marketing = '''    // En aperturas con cache no necesitamos volver a descargar toda la
-    // informacion historica de Marketing. La fotografia almacenada se conserva
-    // localmente y una carga manual/completa puede reconstruirla cuando se requiera.
-    const marketing = modoCarga === "completa" ? await obtenerMarketingSharePoint() : [];
-    const marketingMedios = modoCarga === "completa" ? await obtenerMarketingMediosSharePoint() : [];
-    const marketingRedes = modoCarga === "completa" ? await obtenerMarketingRedesSharePoint() : [];'''
+          replacements = {
+              'const marketing = modoCarga === "completa" ? await obtenerMarketingSharePoint() : [];':
+                  'const marketing = await obtenerMarketingSharePoint();',
+              'const marketingMedios = modoCarga === "completa" ? await obtenerMarketingMediosSharePoint() : [];':
+                  'const marketingMedios = await obtenerMarketingMediosSharePoint();',
+              'const marketingRedes = modoCarga === "completa" ? await obtenerMarketingRedesSharePoint() : [];':
+                  'const marketingRedes = await obtenerMarketingRedesSharePoint();',
+          }
 
-          new_marketing = '''    // Marketing es una fuente pequena y debe refrescarse en cada carga.
-    // Esto evita conservar una cache vacia cuando las listas se poblaron despues.
-    const marketing = await obtenerMarketingSharePoint();
-    const marketingMedios = await obtenerMarketingMediosSharePoint();
-    const marketingRedes = await obtenerMarketingRedesSharePoint();'''
+          for old, new in replacements.items():
+              if old not in graph_source:
+                  raise RuntimeError(f'No se encontro el bloque esperado: {old}')
+              graph_source = graph_source.replace(old, new, 1)
 
-          if old_marketing not in graph_source:
-              raise RuntimeError('No se encontro el bloque incremental de Marketing esperado')
-
-          graph_source = graph_source.replace(old_marketing, new_marketing, 1)
           graph_path.write_text(graph_source, encoding='utf-8')
 
           index_path = Path('deploy/index.php')
