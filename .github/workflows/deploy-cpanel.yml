@@ -33,9 +33,11 @@ jobs:
           python3 tools/build_portal_dashboard.py
           test -s dashboard-header-map.css
           test -s dashboard-table-tools.js
+          test -s dashboard-history-refresh.js
           printf '\n\n' >> deploy/styles.css
           cat dashboard-header-map.css >> deploy/styles.css
           cp dashboard-table-tools.js deploy/dashboard-table-tools.js
+          cp dashboard-history-refresh.js deploy/dashboard-history-refresh.js
 
           python3 <<'PY'
           from pathlib import Path
@@ -64,12 +66,15 @@ jobs:
           source = source.replace('src="graph.js?v=20260823-2"', 'src="graph.js?v=20260824-1"', 1)
 
           marker = '</body>'
-          script = '  <script src="dashboard-table-tools.js?v=20260824-1"></script>\n'
+          scripts = (
+              '  <script src="dashboard-table-tools.js?v=20260824-1"></script>\n'
+              '  <script src="dashboard-history-refresh.js?v=20260824-1"></script>\n'
+          )
 
-          if 'dashboard-table-tools.js' not in source:
+          if 'dashboard-table-tools.js' not in source or 'dashboard-history-refresh.js' not in source:
               if marker not in source:
-                  raise RuntimeError('No se encontro </body> para insertar dashboard-table-tools.js')
-              source = source.replace(marker, script + marker, 1)
+                  raise RuntimeError('No se encontro </body> para insertar scripts auxiliares del Dashboard')
+              source = source.replace(marker, scripts + marker, 1)
 
           index_path.write_text(source, encoding='utf-8')
           PY
@@ -89,6 +94,7 @@ jobs:
           test -s deploy/dashboard-role-access.css
           test -s deploy/dashboard-role-access.js
           test -s deploy/dashboard-table-tools.js
+          test -s deploy/dashboard-history-refresh.js
 
           php -l deploy/index.php
           grep -q 'portal_require_authentication' deploy/index.php
@@ -96,11 +102,13 @@ jobs:
           grep -q 'https://portal.juanpablo.com.mx/dashboard/' deploy/config.js
           grep -q 'dashboard-role-access.js' deploy/index.php
           grep -q 'dashboard-table-tools.js' deploy/index.php
+          grep -q 'dashboard-history-refresh.js' deploy/index.php
           grep -q 'graph.js?v=20260824-1' deploy/index.php
           grep -q 'PORTAL_USER_EMAIL' deploy/index.php
           grep -q 'Indicadores financieros, comerciales y operativos' deploy/styles.css
           grep -q 'data-dashboard-sortable' deploy/dashboard-table-tools.js
           grep -q 'Generar PDF' deploy/dashboard-table-tools.js
+          grep -q 'modoCarga: "completa"' deploy/dashboard-history-refresh.js
           grep -q 'const marketing = await obtenerMarketingSharePoint();' deploy/graph.js
           grep -q 'const marketingMedios = await obtenerMarketingMediosSharePoint();' deploy/graph.js
           grep -q 'const marketingRedes = await obtenerMarketingRedesSharePoint();' deploy/graph.js
@@ -152,6 +160,7 @@ jobs:
             dashboard-role-access.css
             dashboard-role-access.js
             dashboard-table-tools.js
+            dashboard-history-refresh.js
           )
 
           for file in "${files[@]}"; do
@@ -184,6 +193,7 @@ jobs:
               put dashboard-role-access.css -o dashboard-role-access.css;
               put dashboard-role-access.js -o dashboard-role-access.js;
               put dashboard-table-tools.js -o dashboard-table-tools.js;
+              put dashboard-history-refresh.js -o dashboard-history-refresh.js;
               bye;
             "; then
               echo '[Dashboard] publicacion FTPS completada correctamente.'
