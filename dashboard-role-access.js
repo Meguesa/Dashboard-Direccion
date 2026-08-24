@@ -9,6 +9,35 @@
     console.warn("No fue posible limpiar la cache anterior del Dashboard.", error);
   }
 
+  /*
+    auth.js registra su listener DOMContentLoaded antes que app.js. Sin esta
+    barrera, auth.js puede decidir "completa" antes de que app.js termine de
+    recuperar IndexedDB, aunque la cache exista. Envolvemos la inicializacion
+    para que dashboardCacheReady permanezca pendiente hasta que la lectura real
+    de cache haya terminado.
+  */
+  if (typeof window.inicializarDashboard === "function") {
+    const inicializarDashboardBase = window.inicializarDashboard;
+    let resolverDashboardCacheReady = null;
+
+    const dashboardCacheReadyReal = new Promise((resolve) => {
+      resolverDashboardCacheReady = resolve;
+    });
+
+    window.dashboardCacheReady = dashboardCacheReadyReal;
+
+    window.inicializarDashboard = async function (...args) {
+      try {
+        const result = await inicializarDashboardBase(...args);
+        resolverDashboardCacheReady(Boolean(window.cacheCargadoDashboard));
+        return result;
+      } catch (error) {
+        resolverDashboardCacheReady(false);
+        throw error;
+      }
+    };
+  }
+
   const ROLE_ACCESS = Object.freeze({
     Direccion: {
       label: "Dirección",
