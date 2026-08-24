@@ -32,8 +32,26 @@ jobs:
           set -euo pipefail
           python3 tools/build_portal_dashboard.py
           test -s dashboard-header-map.css
+          test -s dashboard-table-tools.js
           printf '\n\n' >> deploy/styles.css
           cat dashboard-header-map.css >> deploy/styles.css
+          cp dashboard-table-tools.js deploy/dashboard-table-tools.js
+
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path('deploy/index.php')
+          source = path.read_text(encoding='utf-8')
+          marker = '</body>'
+          script = '  <script src="dashboard-table-tools.js?v=20260824-1"></script>\n'
+
+          if 'dashboard-table-tools.js' not in source:
+              if marker not in source:
+                  raise RuntimeError('No se encontro </body> para insertar dashboard-table-tools.js')
+              source = source.replace(marker, script + marker, 1)
+
+          path.write_text(source, encoding='utf-8')
+          PY
 
       - name: Validar paquete de produccion
         shell: bash
@@ -49,14 +67,18 @@ jobs:
           test -s deploy/account-menu.css
           test -s deploy/dashboard-role-access.css
           test -s deploy/dashboard-role-access.js
+          test -s deploy/dashboard-table-tools.js
 
           php -l deploy/index.php
           grep -q 'portal_require_authentication' deploy/index.php
           grep -q 'Dashboard de Dirección' deploy/index.php
           grep -q 'https://portal.juanpablo.com.mx/dashboard/' deploy/config.js
           grep -q 'dashboard-role-access.js' deploy/index.php
+          grep -q 'dashboard-table-tools.js' deploy/index.php
           grep -q 'PORTAL_USER_EMAIL' deploy/index.php
           grep -q 'Indicadores financieros, comerciales y operativos' deploy/styles.css
+          grep -q 'data-dashboard-sortable' deploy/dashboard-table-tools.js
+          grep -q 'Generar PDF' deploy/dashboard-table-tools.js
 
           if grep -q 'meguesa.github.io/Dashboard-Direccion' deploy/config.js; then
             echo 'ERROR: config.js conserva redirectUri de GitHub Pages.'
@@ -104,6 +126,7 @@ jobs:
             account-menu.css
             dashboard-role-access.css
             dashboard-role-access.js
+            dashboard-table-tools.js
           )
 
           for file in "${files[@]}"; do
@@ -135,6 +158,7 @@ jobs:
               put account-menu.css -o account-menu.css;
               put dashboard-role-access.css -o dashboard-role-access.css;
               put dashboard-role-access.js -o dashboard-role-access.js;
+              put dashboard-table-tools.js -o dashboard-table-tools.js;
               bye;
             "; then
               echo '[Dashboard] publicacion FTPS completada correctamente.'
