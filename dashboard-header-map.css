@@ -1,0 +1,145 @@
+/* Este fragmento se concatena a deploy/styles.css durante el workflow.
+   Los cambios visuales del encabezado quedan finalmente dentro de styles.css. */
+body.dashboard-portal-page .dashboard-portal-toolbar-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 86px;
+  gap: 24px;
+}
+
+body.dashboard-portal-page .dashboard-portal-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+body.dashboard-portal-page .dashboard-portal-title::before {
+  content: "";
+  display: block;
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  background: url('/mapa/assets/logo.jpg') center / contain no-repeat;
+}
+
+body.dashboard-portal-page .dashboard-portal-title-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+body.dashboard-portal-page .dashboard-portal-title-text strong {
+  order: 0;
+  color: #3a1109;
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+body.dashboard-portal-page .dashboard-portal-title-text span {
+  order: 1;
+  color: #0b4e7d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+body.dashboard-portal-page .dashboard-portal-toolbar-inner::before {
+  content: "Indicadores financieros, comerciales y operativos";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: #5f554f;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+body.dashboard-portal-page .dashboard-portal-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+body.dashboard-portal-page .dashboard-portal-back {
+  min-height: 44px;
+  padding: 0 17px;
+  color: #3a1109;
+  background: #fff;
+  border: 1px solid #e3d3c8;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+body.dashboard-portal-page .dashboard-portal-back:hover,
+body.dashboard-portal-page .dashboard-portal-back:focus-visible {
+  background: #fff8e6;
+  border-color: #fdbb2d;
+  outline: none;
+}
+
+body.dashboard-portal-page .dashboard-portal-toolbar .account-trigger {
+  width: 46px !important;
+  min-width: 46px !important;
+  max-width: 46px !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  max-height: 46px !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  color: #fff !important;
+  background: #3a1109 !important;
+  border: 3px solid rgba(253,187,45,.55) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 5px 14px rgba(58,17,9,.18) !important;
+  overflow: hidden !important;
+}
+
+body.dashboard-portal-page .dashboard-portal-toolbar .account-trigger svg {
+  width: 23px !important;
+  height: 23px !important;
+  display: block !important;
+}
+
+@media (max-width: 1000px) {
+  body.dashboard-portal-page .dashboard-portal-toolbar-inner::before {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  body.dashboard-portal-page .dashboard-portal-toolbar-inner {
+    min-height: 78px;
+    padding: 0;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  body.dashboard-portal-page .dashboard-portal-title::before {
+    width: 46px;
+    height: 46px;
+    flex-basis: 46px;
+  }
+
+  body.dashboard-portal-page .dashboard-portal-title-text strong {
+    font-size: 19px;
+  }
+
+  body.dashboard-portal-page .dashboard-portal-title-text span {
+    display: none;
+  }
+
+  body.dashboard-portal-page .dashboard-portal-back {
+    min-height: 38px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+}
