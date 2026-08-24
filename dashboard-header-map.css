@@ -199,6 +199,26 @@ body.dashboard-portal-page .dashboard-pdf-button[hidden] {
   display: none !important;
 }
 
+/* Carga historica completa: visualmente distinta del refresh incremental */
+body.dashboard-portal-page #fullRefreshButton {
+  color: #3a1109;
+  background: #fff8e6;
+  border-color: #f0c65c;
+}
+
+body.dashboard-portal-page #fullRefreshButton:hover,
+body.dashboard-portal-page #fullRefreshButton:focus-visible {
+  color: #3a1109;
+  background: #ffefbd;
+  border-color: #d8a829;
+  outline: none;
+}
+
+body.dashboard-portal-page #fullRefreshButton[aria-busy="true"] {
+  opacity: .7;
+  cursor: wait;
+}
+
 @media (max-width: 1000px) {
   body.dashboard-portal-page .dashboard-portal-toolbar-inner {
     grid-template-columns: minmax(0, 1fr) auto;
