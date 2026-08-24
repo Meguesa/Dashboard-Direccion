@@ -31,6 +31,9 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/build_portal_dashboard.py
+          test -s dashboard-header-map.css
+          printf '\n\n' >> deploy/styles.css
+          cat dashboard-header-map.css >> deploy/styles.css
 
       - name: Validar paquete de produccion
         shell: bash
@@ -53,6 +56,7 @@ jobs:
           grep -q 'https://portal.juanpablo.com.mx/dashboard/' deploy/config.js
           grep -q 'dashboard-role-access.js' deploy/index.php
           grep -q 'PORTAL_USER_EMAIL' deploy/index.php
+          grep -q 'Indicadores financieros, comerciales y operativos' deploy/styles.css
 
           if grep -q 'meguesa.github.io/Dashboard-Direccion' deploy/config.js; then
             echo 'ERROR: config.js conserva redirectUri de GitHub Pages.'
