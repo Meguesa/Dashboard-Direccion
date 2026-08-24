@@ -1,16 +1,25 @@
 /* Este fragmento se concatena a deploy/styles.css durante el workflow.
-   Los cambios visuales del encabezado quedan finalmente dentro de styles.css. */
+   Los cambios visuales del encabezado quedan finalmente dentro de styles.css.
+   La referencia visual oficial es la barra superior de Mapa del Panteon. */
+body.dashboard-portal-page .dashboard-portal-toolbar {
+  background: #fff;
+  border-bottom: 2px solid #fdbb2d;
+  box-shadow: 0 6px 20px rgba(58,17,9,.06);
+}
+
 body.dashboard-portal-page .dashboard-portal-toolbar-inner {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  width: min(1180px, calc(100% - 36px));
   min-height: 86px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
   gap: 24px;
 }
 
 body.dashboard-portal-page .dashboard-portal-title {
   min-width: 0;
+  justify-self: start;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -37,21 +46,22 @@ body.dashboard-portal-page .dashboard-portal-title-text strong {
   color: #3a1109;
   font-size: 24px;
   line-height: 1.15;
+  font-weight: 700;
 }
 
 body.dashboard-portal-page .dashboard-portal-title-text span {
   order: 1;
   color: #0b4e7d;
   font-size: 13px;
+  line-height: 1.2;
   font-weight: 700;
 }
 
 body.dashboard-portal-page .dashboard-portal-toolbar-inner::before {
   content: "Indicadores financieros, comerciales y operativos";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
   color: #5f554f;
   font-size: 13px;
   font-weight: 700;
@@ -61,7 +71,10 @@ body.dashboard-portal-page .dashboard-portal-toolbar-inner::before {
 }
 
 body.dashboard-portal-page .dashboard-portal-actions {
-  margin-left: auto;
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  margin-left: 0;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -69,11 +82,15 @@ body.dashboard-portal-page .dashboard-portal-actions {
 
 body.dashboard-portal-page .dashboard-portal-back {
   min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0 17px;
   color: #3a1109;
   background: #fff;
   border: 1px solid #e3d3c8;
   border-radius: 10px;
+  text-decoration: none;
   font-size: 14px;
   font-weight: 800;
 }
@@ -110,17 +127,24 @@ body.dashboard-portal-page .dashboard-portal-toolbar .account-trigger svg {
 }
 
 @media (max-width: 1000px) {
+  body.dashboard-portal-page .dashboard-portal-toolbar-inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
   body.dashboard-portal-page .dashboard-portal-toolbar-inner::before {
     display: none;
+  }
+
+  body.dashboard-portal-page .dashboard-portal-actions {
+    grid-column: 2;
   }
 }
 
 @media (max-width: 720px) {
   body.dashboard-portal-page .dashboard-portal-toolbar-inner {
+    width: calc(100% - 24px);
     min-height: 78px;
-    padding: 0;
-    flex-direction: row;
-    align-items: center;
+    gap: 10px;
   }
 
   body.dashboard-portal-page .dashboard-portal-title::before {
