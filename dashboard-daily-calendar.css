@@ -1,33 +1,35 @@
 .servicios-calendario-section {
-  margin-top: 28px;
   width: 100%;
+  margin-top: 1.5rem;
 }
 
 .servicios-calendario-card {
   width: 100%;
-  padding: 28px 26px 26px;
-  box-sizing: border-box;
+  padding: 1.35rem 1.4rem 1.45rem;
+  overflow: visible;
 }
 
 .servicios-calendario-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 20px;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .servicios-calendario-header h2 {
-  margin: 0 0 5px;
-  font-size: clamp(1.55rem, 2vw, 2rem);
-  line-height: 1.15;
-  color: #10253a;
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .servicios-calendario-header p {
-  margin: 0;
-  color: #526b83;
-  font-size: 1rem;
+  margin: 0.3rem 0 0;
+  color: #64748b;
+  font-size: 0.92rem;
+  line-height: 1.4;
 }
 
 .servicios-calendario-legend {
@@ -35,82 +37,108 @@
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 8px 14px;
-  padding-top: 2px;
-  color: #3d5268;
-  font-size: .86rem;
-  font-weight: 700;
+  gap: 0.5rem;
+  padding-top: 0.05rem;
 }
 
 .servicios-calendario-legend-item {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 0.42rem;
+  min-height: 30px;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
   white-space: nowrap;
+  font-size: 0.77rem;
+  font-weight: 800;
 }
 
 .servicios-calendario-legend-item i,
 .servicios-calendario-location-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
   flex: 0 0 auto;
 }
 
+.servicios-calendario-legend-item.is-churubusco {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #bbf7d0;
+}
+
 .servicios-calendario-legend-item.is-churubusco i,
 .servicios-calendario-row-label.is-churubusco .servicios-calendario-location-dot {
-  background: #28ba65;
+  background: #22c55e;
+}
+
+.servicios-calendario-legend-item.is-agua-fria {
+  color: #92400e;
+  background: #fef3c7;
+  border-color: #fde68a;
 }
 
 .servicios-calendario-legend-item.is-agua-fria i,
 .servicios-calendario-row-label.is-agua-fria .servicios-calendario-location-dot {
-  background: #f4a100;
+  background: #f59e0b;
+}
+
+.servicios-calendario-legend-item.is-parque {
+  color: #1d4ed8;
+  background: #dbeafe;
+  border-color: #bfdbfe;
 }
 
 .servicios-calendario-legend-item.is-parque i,
 .servicios-calendario-row-label.is-parque .servicios-calendario-location-dot {
-  background: #2f7bc1;
+  background: #3b82f6;
 }
 
 .servicios-calendario-row-label.is-capillas-otro .servicios-calendario-location-dot {
-  background: #6c7a89;
+  background: #64748b;
 }
 
 .servicios-calendario-scroll {
   width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
   overflow-x: auto;
   overflow-y: visible;
-  padding-bottom: 4px;
+  padding: 0.15rem 0 0.25rem;
   scrollbar-width: thin;
-  scrollbar-color: #aab7c4 #edf1f4;
+  scrollbar-color: #cbd5e1 #f1f5f9;
 }
 
 .servicios-calendario-scroll::-webkit-scrollbar {
-  height: 9px;
+  height: 8px;
 }
 
 .servicios-calendario-scroll::-webkit-scrollbar-track {
-  background: #edf1f4;
+  background: #f1f5f9;
   border-radius: 999px;
 }
 
 .servicios-calendario-scroll::-webkit-scrollbar-thumb {
-  background: #aab7c4;
+  background: #cbd5e1;
   border-radius: 999px;
 }
 
 .servicios-calendario-grid {
-  min-width: 1180px;
-  border: 1px solid #dde5ec;
-  border-radius: 14px;
+  width: 100%;
+  min-width: 1120px;
+  margin: 0 auto;
   overflow: hidden;
-  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
 }
 
 .servicios-calendario-row {
   display: grid;
-  grid-template-columns: 220px minmax(940px, 1fr);
-  border-bottom: 1px solid #e6ecf1;
+  grid-template-columns: 250px minmax(0, 1fr);
+  width: 100%;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .servicios-calendario-row:last-child {
@@ -118,35 +146,73 @@
 }
 
 .servicios-calendario-row-label {
-  min-height: 54px;
+  min-height: 58px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
-  border-right: 1px solid #dde5ec;
-  background: #fbfcfd;
-  color: #172a3e;
-  font-size: .9rem;
+  gap: 0.55rem;
+  padding: 0.7rem 0.9rem;
+  border-right: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.83rem;
   font-weight: 800;
-  box-sizing: border-box;
+  line-height: 1.25;
+}
+
+.servicios-calendario-row-label > span:last-child {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0.32rem 0.62rem;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.servicios-calendario-row-label.is-churubusco > span:last-child {
+  color: #166534;
+  background: #f0fdf4;
+  border-color: #dcfce7;
+}
+
+.servicios-calendario-row-label.is-agua-fria > span:last-child {
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fef3c7;
+}
+
+.servicios-calendario-row-label.is-parque > span:last-child {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #dbeafe;
 }
 
 .servicios-calendario-hours-row {
-  background: #f6f8fa;
+  background: #f8fafc;
 }
 
 .servicios-calendario-hours-label {
-  min-height: 48px;
+  min-height: 54px;
+  color: #64748b;
+  background: #f8fafc;
+  font-size: 0.72rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: .04em;
-  font-size: .75rem;
-  color: #61758a;
+  letter-spacing: 0.045em;
+}
+
+.servicios-calendario-hours-label > span:last-child {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .servicios-calendario-hours {
   position: relative;
-  min-height: 48px;
-  background: #f6f8fa;
+  min-height: 54px;
+  background: #f8fafc;
 }
 
 .servicios-calendario-hour-mark {
@@ -154,115 +220,112 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  border-left: 1px solid #d7e0e7;
-  pointer-events: none;
-}
-
-.servicios-calendario-hour-mark::after {
-  content: attr(data-label);
-}
-
-.servicios-calendario-hour-mark {
-  color: #5f7387;
-  font-size: .72rem;
-  font-weight: 700;
+  padding-top: 17px;
+  border-left: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
   white-space: nowrap;
-  padding-top: 14px;
-  box-sizing: border-box;
-  text-indent: 6px;
+  pointer-events: none;
+  transform: translateX(-50%);
 }
 
 .servicios-calendario-hour-mark[data-edge="start"] {
-  text-indent: 5px;
+  transform: none;
+  padding-left: 0.45rem;
 }
 
 .servicios-calendario-hour-mark[data-edge="end"] {
-  transform: translateX(-1px);
-  text-indent: -62px;
+  transform: translateX(-100%);
+  padding-right: 0.45rem;
 }
 
 .servicios-calendario-track {
   --calendar-lanes: 1;
   position: relative;
-  min-height: calc(50px + ((var(--calendar-lanes) - 1) * 30px));
-  background-color: #fff;
+  min-height: calc(58px + ((var(--calendar-lanes) - 1) * 34px));
+  background-color: #ffffff;
   background-image: repeating-linear-gradient(
     to right,
     transparent 0,
     transparent calc((100% / 15) - 1px),
-    #e8edf2 calc((100% / 15) - 1px),
-    #e8edf2 calc(100% / 15)
+    #eef2f7 calc((100% / 15) - 1px),
+    #eef2f7 calc(100% / 15)
   );
-  box-sizing: border-box;
 }
 
 .servicios-calendario-bar {
+  appearance: none;
+  -webkit-appearance: none;
   position: absolute;
-  height: 24px;
-  min-width: 6px;
-  padding: 0 8px;
+  height: 30px;
+  min-width: 8px;
+  padding: 0 0.7rem;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: 999px;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   overflow: hidden;
+  font: inherit;
   cursor: pointer;
-  box-sizing: border-box;
-  box-shadow: 0 2px 5px rgba(23, 42, 62, .12);
-  transition: transform .14s ease, box-shadow .14s ease, filter .14s ease;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.10);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
   z-index: 2;
 }
 
 .servicios-calendario-bar span {
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #fff;
-  font-size: .74rem;
+  color: #ffffff;
+  font-size: 0.72rem;
   font-weight: 800;
   line-height: 1;
 }
 
 .servicios-calendario-bar.is-churubusco {
-  background: #2fbe6d;
-  border-color: #1d9d55;
+  background: #22c55e;
+  border-color: #16a34a;
 }
 
 .servicios-calendario-bar.is-agua-fria {
-  background: #f2a400;
-  border-color: #d68f00;
+  background: #f59e0b;
+  border-color: #d97706;
 }
 
 .servicios-calendario-bar.is-parque {
-  background: #3b82c4;
-  border-color: #276ca9;
+  background: #3b82f6;
+  border-color: #2563eb;
 }
 
 .servicios-calendario-bar.is-capillas-otro {
-  background: #74889a;
-  border-color: #5f7283;
+  background: #64748b;
+  border-color: #475569;
 }
 
 .servicios-calendario-bar:hover,
 .servicios-calendario-bar:focus-visible {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(23, 42, 62, .22);
-  filter: saturate(1.08);
-  z-index: 4;
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+  filter: saturate(1.05);
   outline: none;
+  z-index: 5;
 }
 
 .servicios-calendario-tooltip {
   position: fixed;
   z-index: 100000;
-  width: min(340px, calc(100vw - 24px));
-  padding: 14px;
-  border: 1px solid #d8e1e9;
-  border-radius: 13px;
-  background: rgba(255, 255, 255, .985);
-  box-shadow: 0 16px 38px rgba(25, 42, 58, .2);
-  color: #172a3e;
+  width: min(350px, calc(100vw - 24px));
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.18);
+  color: #0f172a;
   pointer-events: none;
 }
 
@@ -274,88 +337,101 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 9px;
+  gap: 0.5rem;
+  margin-bottom: 0.7rem;
 }
 
 .servicios-calendario-tooltip-status,
 .servicios-calendario-tooltip-origin {
   display: inline-flex;
   align-items: center;
-  min-height: 23px;
-  padding: 3px 8px;
+  min-height: 26px;
+  padding: 0.3rem 0.65rem;
   border-radius: 999px;
-  font-size: .7rem;
+  font-size: 0.7rem;
   font-weight: 800;
 }
 
 .servicios-calendario-tooltip-status {
-  background: #edf3f7;
-  color: #36516c;
+  color: #334155;
+  background: #f1f5f9;
 }
 
 .servicios-calendario-tooltip-origin.is-churubusco {
-  background: #e4f8ec;
-  color: #11733b;
+  color: #166534;
+  background: #dcfce7;
 }
 
 .servicios-calendario-tooltip-origin.is-agua-fria {
-  background: #fff0c9;
-  color: #985b00;
+  color: #92400e;
+  background: #fef3c7;
 }
 
 .servicios-calendario-tooltip-origin.is-parque {
-  background: #e5f0fb;
-  color: #1d5f9d;
+  color: #1d4ed8;
+  background: #dbeafe;
 }
 
 .servicios-calendario-tooltip-origin.is-capillas-otro {
-  background: #edf0f3;
-  color: #526474;
+  color: #475569;
+  background: #e2e8f0;
 }
 
 .servicios-calendario-tooltip-title {
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 0.7rem;
+  color: #0f172a;
   font-size: 1rem;
+  font-weight: 800;
   line-height: 1.3;
-  color: #0d2236;
 }
 
 .servicios-calendario-tooltip-row {
   display: grid;
-  grid-template-columns: 78px 1fr;
-  gap: 10px;
-  padding: 6px 0;
-  border-top: 1px solid #edf1f4;
-  font-size: .78rem;
+  grid-template-columns: 82px 1fr;
+  gap: 0.7rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid #f1f5f9;
+  font-size: 0.78rem;
   line-height: 1.35;
 }
 
 .servicios-calendario-tooltip-row span {
-  color: #718295;
+  color: #64748b;
 }
 
 .servicios-calendario-tooltip-row b {
-  color: #23384d;
-  font-weight: 750;
+  color: #0f172a;
+  font-weight: 700;
 }
 
-@media (max-width: 900px) {
+@media (min-width: 1500px) {
+  .servicios-calendario-grid {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 1100px) {
+  .servicios-calendario-grid {
+    min-width: 1080px;
+  }
+
+  .servicios-calendario-row {
+    grid-template-columns: 220px minmax(860px, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
   .servicios-calendario-card {
-    padding: 22px 16px;
+    padding: 1rem;
   }
 
   .servicios-calendario-header {
     flex-direction: column;
-    gap: 12px;
+    gap: 0.8rem;
   }
 
   .servicios-calendario-legend {
     justify-content: flex-start;
-  }
-
-  .servicios-calendario-row {
-    grid-template-columns: 190px minmax(940px, 1fr);
   }
 }
