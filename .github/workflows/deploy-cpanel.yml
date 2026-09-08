@@ -36,13 +36,14 @@ jobs:
           test -s dashboard-history-refresh.js
           test -s dashboard-daily-calendar.css
           test -s dashboard-daily-calendar.js
+
           printf '\n\n' >> deploy/styles.css
           cat dashboard-header-map.css >> deploy/styles.css
-          printf '\n\n' >> deploy/styles.css
-          cat dashboard-daily-calendar.css >> deploy/styles.css
+
           cp dashboard-table-tools.js deploy/dashboard-table-tools.js
           cp dashboard-history-refresh.js deploy/dashboard-history-refresh.js
           cp dashboard-daily-calendar.js deploy/dashboard-daily-calendar.js
+          cp dashboard-daily-calendar.css deploy/dashboard-daily-calendar.css
 
           python3 <<'PY'
           from pathlib import Path
@@ -70,11 +71,26 @@ jobs:
           source = index_path.read_text(encoding='utf-8')
           source = source.replace('src="graph.js?v=20260823-2"', 'src="graph.js?v=20260824-1"', 1)
 
+          head_marker = '</head>'
+          calendar_css = '  <link rel="stylesheet" href="dashboard-daily-calendar.css?v=20260908-2">\n'
+          if 'dashboard-daily-calendar.css' not in source:
+              if head_marker not in source:
+                  raise RuntimeError('No se encontro </head> para insertar CSS del calendario')
+              source = source.replace(head_marker, calendar_css + head_marker, 1)
+          else:
+              import re
+              source = re.sub(
+                  r'<link[^>]+dashboard-daily-calendar\.css[^>]*>\s*',
+                  calendar_css,
+                  source,
+                  count=1,
+              )
+
           marker = '</body>'
           scripts = (
               '  <script src="dashboard-table-tools.js?v=20260824-1"></script>\n'
               '  <script src="dashboard-history-refresh.js?v=20260824-1"></script>\n'
-              '  <script src="dashboard-daily-calendar.js?v=20260908-1"></script>\n'
+              '  <script src="dashboard-daily-calendar.js?v=20260908-2"></script>\n'
           )
 
           required_scripts = [
@@ -87,16 +103,22 @@ jobs:
               if marker not in source:
                   raise RuntimeError('No se encontro </body> para insertar scripts auxiliares del Dashboard')
 
+              import re
               for script in required_scripts:
-                  source = source.replace(
-                      f'  <script src="{script}?v=20260824-1"></script>\n',
-                      '',
+                  source = re.sub(
+                      rf'\s*<script src="{re.escape(script)}\?v=[^"]+"></script>\s*',
+                      '\n',
+                      source,
                   )
-              source = source.replace(
-                  '  <script src="dashboard-daily-calendar.js?v=20260908-1"></script>\n',
-                  '',
-              )
               source = source.replace(marker, scripts + marker, 1)
+          else:
+              import re
+              source = re.sub(
+                  r'<script src="dashboard-daily-calendar\.js\?v=[^"]+"></script>',
+                  '<script src="dashboard-daily-calendar.js?v=20260908-2"></script>',
+                  source,
+                  count=1,
+              )
 
           index_path.write_text(source, encoding='utf-8')
           PY
@@ -118,6 +140,7 @@ jobs:
           test -s deploy/dashboard-table-tools.js
           test -s deploy/dashboard-history-refresh.js
           test -s deploy/dashboard-daily-calendar.js
+          test -s deploy/dashboard-daily-calendar.css
 
           php -l deploy/index.php
           grep -q 'portal_require_authentication' deploy/index.php
@@ -126,11 +149,13 @@ jobs:
           grep -q 'dashboard-role-access.js' deploy/index.php
           grep -q 'dashboard-table-tools.js' deploy/index.php
           grep -q 'dashboard-history-refresh.js' deploy/index.php
-          grep -q 'dashboard-daily-calendar.js' deploy/index.php
+          grep -q 'dashboard-daily-calendar.js?v=20260908-2' deploy/index.php
+          grep -q 'dashboard-daily-calendar.css?v=20260908-2' deploy/index.php
           grep -q 'graph.js?v=20260824-1' deploy/index.php
           grep -q 'PORTAL_USER_EMAIL' deploy/index.php
           grep -q 'Indicadores financieros, comerciales y operativos' deploy/styles.css
-          grep -q 'servicios-calendario-section' deploy/styles.css
+          grep -q 'servicios-calendario-section' deploy/dashboard-daily-calendar.css
+          grep -q 'servicios-calendario-bar' deploy/dashboard-daily-calendar.css
           grep -q 'data-dashboard-sortable' deploy/dashboard-table-tools.js
           grep -q 'Generar PDF' deploy/dashboard-table-tools.js
           grep -q 'modoCarga: "completa"' deploy/dashboard-history-refresh.js
@@ -189,6 +214,7 @@ jobs:
             dashboard-table-tools.js
             dashboard-history-refresh.js
             dashboard-daily-calendar.js
+            dashboard-daily-calendar.css
           )
 
           for file in "${files[@]}"; do
@@ -223,6 +249,7 @@ jobs:
               put dashboard-table-tools.js -o dashboard-table-tools.js;
               put dashboard-history-refresh.js -o dashboard-history-refresh.js;
               put dashboard-daily-calendar.js -o dashboard-daily-calendar.js;
+              put dashboard-daily-calendar.css -o dashboard-daily-calendar.css;
               bye;
             "; then
               echo '[Dashboard] publicacion FTPS completada correctamente.'
