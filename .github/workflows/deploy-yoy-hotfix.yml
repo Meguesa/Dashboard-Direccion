@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   deploy-yoy:
-    name: Publicar comparativo Ingresos y Ventas
+    name: Publicar comparativo Ingresos, Ventas y Servicios Capillas
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -36,10 +36,12 @@ jobs:
           cp dashboard-yoy-comparison.js deploy/dashboard-yoy-comparison.js
           test -s deploy/auth.js
           test -s deploy/dashboard-yoy-comparison.js
-          grep -q 'dashboard-yoy-comparison.js?v=20260910-1' deploy/auth.js
+          grep -q 'dashboard-yoy-comparison.js?v=20260910-2' deploy/auth.js
           grep -q 'yoyIngresosBlock' deploy/dashboard-yoy-comparison.js
           grep -q 'yoyVentasBlock' deploy/dashboard-yoy-comparison.js
-          echo 'Hotfix interanual validado.'
+          grep -q 'yoyServiciosBlock' deploy/dashboard-yoy-comparison.js
+          grep -q 'Comparativo mensual de Servicios Capillas' deploy/dashboard-yoy-comparison.js
+          echo 'Comparativos mensuales validados.'
 
       - name: Validar credenciales FTPS
         shell: bash
