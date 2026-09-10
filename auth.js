@@ -36,6 +36,12 @@ async function cargarComparativoInteranual() {
     const scriptExistente = document.getElementById("dashboardYoyComparisonScript");
 
     if (scriptExistente) {
+      if (typeof window.instalarComparativoInteranualDashboard === "function") {
+        window.instalarComparativoInteranualDashboard();
+        resolve();
+        return;
+      }
+
       scriptExistente.addEventListener("load", resolve, { once: true });
       scriptExistente.addEventListener("error", resolve, { once: true });
       return;
@@ -53,6 +59,10 @@ async function cargarComparativoInteranual() {
 
     document.head.appendChild(script);
   });
+
+  if (typeof window.instalarComparativoInteranualDashboard === "function") {
+    window.instalarComparativoInteranualDashboard();
+  }
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
