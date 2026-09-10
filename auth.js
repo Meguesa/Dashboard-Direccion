@@ -49,7 +49,7 @@ async function cargarComparativoInteranual() {
 
     const script = document.createElement("script");
     script.id = "dashboardYoyComparisonScript";
-    script.src = "dashboard-yoy-comparison.js?v=20260910-1";
+    script.src = "dashboard-yoy-comparison.js?v=20260910-2";
     script.async = true;
     script.onload = resolve;
     script.onerror = () => {
