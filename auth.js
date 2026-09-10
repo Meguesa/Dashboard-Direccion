@@ -26,7 +26,37 @@ const graphRequest = {
 let msalInstance = null;
 let currentAccount = null;
 
+async function cargarComparativoInteranual() {
+  if (typeof window.instalarComparativoInteranualDashboard === "function") {
+    window.instalarComparativoInteranualDashboard();
+    return;
+  }
+
+  await new Promise((resolve) => {
+    const scriptExistente = document.getElementById("dashboardYoyComparisonScript");
+
+    if (scriptExistente) {
+      scriptExistente.addEventListener("load", resolve, { once: true });
+      scriptExistente.addEventListener("error", resolve, { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "dashboardYoyComparisonScript";
+    script.src = "dashboard-yoy-comparison.js?v=20260910-1";
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = () => {
+      console.warn("No se pudo cargar el comparativo interanual.");
+      resolve();
+    };
+
+    document.head.appendChild(script);
+  });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
+  await cargarComparativoInteranual();
   inicializarAuth();
 });
 
@@ -65,7 +95,6 @@ async function inicializarAuth() {
 
   configurarBotonesAuth();
 }
-
 
 function configurarBotonesAuth() {
   const loginButton = document.getElementById("loginButton");
@@ -131,7 +160,6 @@ async function logoutMicrosoft() {
     actualizarEstadoLogin("Error al cerrar sesión.");
   }
 }
-
 
 async function obtenerAccessToken() {
   if (!msalInstance) {
