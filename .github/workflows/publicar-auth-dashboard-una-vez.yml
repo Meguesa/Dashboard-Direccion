@@ -1,0 +1,24 @@
+name: Publicar correccion auth Dashboard una vez
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/publicar-auth-dashboard-una-vez.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lanzar despliegue independiente del Dashboard
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Publicando correccion de autenticacion Graph del Dashboard."
+          gh workflow run deploy-cpanel.yml --repo Meguesa/Dashboard-Direccion --ref main
