@@ -25,6 +25,37 @@ const graphRequest = {
 
 let msalInstance = null;
 let currentAccount = null;
+let graphAccessToken = null;
+let graphAccessTokenExpiresAt = 0;
+let graphTokenPromise = null;
+const GRAPH_REDIRECT_GUARD = "dashboardGraphRedirectAttempted";
+
+function registrarGraphTokenRespuesta(response) {
+  if (!response || !response.accessToken) {
+    return false;
+  }
+
+  graphAccessToken = response.accessToken;
+
+  const expiresOn = response.expiresOn instanceof Date
+    ? response.expiresOn.getTime()
+    : Date.now() + (45 * 60 * 1000);
+
+  graphAccessTokenExpiresAt = expiresOn;
+
+  try {
+    sessionStorage.removeItem(GRAPH_REDIRECT_GUARD);
+  } catch (_) {}
+
+  return true;
+}
+
+function graphTokenEnMemoriaValido() {
+  return Boolean(
+    graphAccessToken &&
+    graphAccessTokenExpiresAt > Date.now() + 120000
+  );
+}
 
 async function cargarComparativoInteranual() {
   if (typeof window.instalarComparativoInteranualDashboard === "function") {
@@ -123,22 +154,10 @@ async function loginMicrosoft() {
   try {
     actualizarEstadoLogin("Iniciando sesión con Microsoft...");
 
-    const response = await msalInstance.loginPopup(loginRequest);
-
-    currentAccount = response.account;
-
-    mostrarDashboard();
-    setAuthStatus(`Sesión activa: ${currentAccount.username}`);
-    actualizarEstadoLogin(`Sesión activa: ${currentAccount.username}`);
-    mostrarUsuario(currentAccount.username);
-
-    console.log("Login correcto:", currentAccount);
-
-    if (typeof window.actualizarDatosDashboard === "function") {
-      await window.actualizarDatosDashboard({
-        mensaje: "Cargando información inicial desde SharePoint..."
-      });
-    }
+    await msalInstance.loginRedirect({
+      ...loginRequest,
+      loginHint: window.PORTAL_USER_EMAIL || undefined
+    });
   } catch (error) {
     console.error("Error en login:", error);
     actualizarEstadoLogin("Error al iniciar sesión con Microsoft.");
@@ -159,6 +178,8 @@ async function logoutMicrosoft() {
     });
 
     currentAccount = null;
+    graphAccessToken = null;
+    graphAccessTokenExpiresAt = 0;
 
     mostrarLogin();
     setAuthStatus("Sin sesión iniciada.");
@@ -176,6 +197,10 @@ async function obtenerAccessToken() {
     throw new Error("MSAL no está inicializado.");
   }
 
+  if (graphTokenEnMemoriaValido()) {
+    return graphAccessToken;
+  }
+
   if (!currentAccount) {
     const cuentas = msalInstance.getAllAccounts();
 
@@ -186,18 +211,69 @@ async function obtenerAccessToken() {
     currentAccount = cuentas[0];
   }
 
+  if (graphTokenPromise) {
+    return graphTokenPromise;
+  }
+
+  graphTokenPromise = (async () => {
+    try {
+      const response = await msalInstance.acquireTokenSilent({
+        ...graphRequest,
+        account: currentAccount
+      });
+
+      registrarGraphTokenRespuesta(response);
+      return response.accessToken;
+    } catch (error) {
+      console.warn(
+        "No se pudo obtener token silencioso. Se usará redirección segura de Microsoft.",
+        error
+      );
+
+      let redirectYaIntentado = false;
+      try {
+        redirectYaIntentado = sessionStorage.getItem(GRAPH_REDIRECT_GUARD) === "1";
+      } catch (_) {}
+
+      if (redirectYaIntentado) {
+        try {
+          sessionStorage.removeItem(GRAPH_REDIRECT_GUARD);
+        } catch (_) {}
+        throw new Error(
+          "Microsoft no pudo completar la autorización de SharePoint después de la redirección. " +
+          "Revisa el consentimiento de Sites.Read.All y la Redirect URI de la aplicación."
+        );
+      }
+
+      try {
+        sessionStorage.setItem(GRAPH_REDIRECT_GUARD, "1");
+      } catch (_) {}
+
+      setAuthStatus("Renovando autorización de Microsoft 365...");
+
+      try {
+        await msalInstance.acquireTokenRedirect({
+          ...graphRequest,
+          account: currentAccount,
+          loginHint: currentAccount?.username || window.PORTAL_USER_EMAIL || undefined
+        });
+      } catch (redirectError) {
+        try {
+          sessionStorage.removeItem(GRAPH_REDIRECT_GUARD);
+        } catch (_) {}
+        throw redirectError;
+      }
+
+      // acquireTokenRedirect navega fuera de la página. Esta promesa evita que
+      // las llamadas Graph continúen con un token nulo antes de la navegación.
+      return await new Promise(() => {});
+    }
+  })();
+
   try {
-    const response = await msalInstance.acquireTokenSilent({
-      ...graphRequest,
-      account: currentAccount
-    });
-
-    return response.accessToken;
-  } catch (error) {
-    console.warn("No se pudo obtener token silencioso. Intentando popup.", error);
-
-    const response = await msalInstance.acquireTokenPopup(graphRequest);
-    return response.accessToken;
+    return await graphTokenPromise;
+  } finally {
+    graphTokenPromise = null;
   }
 }
 
