@@ -37,6 +37,7 @@ jobs:
           test -s dashboard-daily-calendar.css
           test -s dashboard-daily-calendar.js
           test -s dashboard-current-time.js
+          test -s dashboard-annual-history.js
 
           printf '\n\n' >> deploy/styles.css
           cat dashboard-header-map.css >> deploy/styles.css
@@ -46,6 +47,7 @@ jobs:
           cp dashboard-daily-calendar.js deploy/dashboard-daily-calendar.js
           cp dashboard-daily-calendar.css deploy/dashboard-daily-calendar.css
           cp dashboard-current-time.js deploy/dashboard-current-time.js
+          cp dashboard-annual-history.js deploy/dashboard-annual-history.js
 
           python3 <<'PY'
           from pathlib import Path
@@ -70,9 +72,22 @@ jobs:
 
           graph_path.write_text(graph_source, encoding='utf-8')
 
+          # La version 4 invalida fotografias parciales v3 creadas durante las
+          # pruebas de autenticacion. Cada navegador hara una sola carga completa
+          # y despues volvera a trabajar de forma incremental.
+          app_path = Path('deploy/app.js')
+          app_source = app_path.read_text(encoding='utf-8')
+          old_cache = 'const DASHBOARD_CACHE_VERSION = 3;'
+          new_cache = 'const DASHBOARD_CACHE_VERSION = 4;'
+          if old_cache not in app_source and new_cache not in app_source:
+              raise RuntimeError('No se encontro la version de cache del Dashboard')
+          app_source = app_source.replace(old_cache, new_cache, 1)
+          app_path.write_text(app_source, encoding='utf-8')
+
           index_path = Path('deploy/index.php')
           source = index_path.read_text(encoding='utf-8')
-          source = source.replace('src="graph.js?v=20260823-2"', 'src="graph.js?v=20260824-1"', 1)
+          source = source.replace('src="graph.js?v=20260823-2"', 'src="graph.js?v=20260914-1"', 1)
+          source = source.replace('src="app.js?v=20260823-4"', 'src="app.js?v=20260914-1"', 1)
 
           head_marker = '</head>'
           calendar_css = '  <link rel="stylesheet" href="dashboard-daily-calendar.css?v=20260908-2">\n'
@@ -94,6 +109,7 @@ jobs:
               '  <script src="dashboard-history-refresh.js?v=20260824-1"></script>\n'
               '  <script src="dashboard-daily-calendar.js?v=20260908-2"></script>\n'
               '  <script src="dashboard-current-time.js?v=20260908-1"></script>\n'
+              '  <script src="dashboard-annual-history.js?v=20260914-1"></script>\n'
           )
 
           required_scripts = [
@@ -101,6 +117,7 @@ jobs:
               'dashboard-history-refresh.js',
               'dashboard-daily-calendar.js',
               'dashboard-current-time.js',
+              'dashboard-annual-history.js',
           ]
 
           for script in required_scripts:
@@ -136,6 +153,7 @@ jobs:
           test -s deploy/dashboard-daily-calendar.js
           test -s deploy/dashboard-daily-calendar.css
           test -s deploy/dashboard-current-time.js
+          test -s deploy/dashboard-annual-history.js
 
           php -l deploy/index.php
           grep -q 'portal_require_authentication' deploy/index.php
@@ -146,9 +164,12 @@ jobs:
           grep -q 'dashboard-history-refresh.js' deploy/index.php
           grep -q 'dashboard-daily-calendar.js?v=20260908-2' deploy/index.php
           grep -q 'dashboard-current-time.js?v=20260908-1' deploy/index.php
+          grep -q 'dashboard-annual-history.js?v=20260914-1' deploy/index.php
           grep -q 'dashboard-daily-calendar.css?v=20260908-2' deploy/index.php
-          grep -q 'graph.js?v=20260824-1' deploy/index.php
+          grep -q 'graph.js?v=20260914-1' deploy/index.php
+          grep -q 'app.js?v=20260914-1' deploy/index.php
           grep -q 'PORTAL_USER_EMAIL' deploy/index.php
+          grep -q 'DASHBOARD_CACHE_VERSION = 4' deploy/app.js
           grep -q 'Indicadores financieros, comerciales y operativos' deploy/styles.css
           grep -q 'servicios-calendario-section' deploy/dashboard-daily-calendar.css
           grep -q 'servicios-calendario-bar' deploy/dashboard-daily-calendar.css
@@ -159,6 +180,8 @@ jobs:
           grep -q 'Calendario diario de servicios' deploy/dashboard-daily-calendar.js
           grep -q '__dashboardCurrentTimeActivo' deploy/dashboard-current-time.js
           grep -q 'Ahora ·' deploy/dashboard-current-time.js
+          grep -q '__annualHistoryGuard' deploy/dashboard-annual-history.js
+          grep -q 'modoCarga: "completa"' deploy/dashboard-annual-history.js
           grep -q 'const marketing = await obtenerMarketingSharePoint();' deploy/graph.js
           grep -q 'const marketingMedios = await obtenerMarketingMediosSharePoint();' deploy/graph.js
           grep -q 'const marketingRedes = await obtenerMarketingRedesSharePoint();' deploy/graph.js
@@ -214,6 +237,7 @@ jobs:
             dashboard-daily-calendar.js
             dashboard-daily-calendar.css
             dashboard-current-time.js
+            dashboard-annual-history.js
           )
 
           for file in "${files[@]}"; do
@@ -250,6 +274,7 @@ jobs:
               put dashboard-daily-calendar.js -o dashboard-daily-calendar.js;
               put dashboard-daily-calendar.css -o dashboard-daily-calendar.css;
               put dashboard-current-time.js -o dashboard-current-time.js;
+              put dashboard-annual-history.js -o dashboard-annual-history.js;
               bye;
             "; then
               echo '[Dashboard] publicacion FTPS completada correctamente.'
