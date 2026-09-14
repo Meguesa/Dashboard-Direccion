@@ -1,0 +1,245 @@
+name: Agregar KPIs de sucursales en Servicios Capillas
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/agregar-kpis-sucursales-capillas.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    name: Agregar Servicios Churubusco y Servicios Agua Fria
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Agregar KPIs al codigo fuente
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          # --------------------------------------------------------------
+          # app.js: conteo por sucursal + render de los dos nuevos KPIs.
+          # --------------------------------------------------------------
+          app_path = Path('app.js')
+          app = app_path.read_text(encoding='utf-8')
+
+          old_totals = '''  const totalCapillas = contarServiciosPorOrigen(mes, "CAPILLA");
+          const totalCapillasUsoInmediato = contarServiciosCapillasPorTipoContrato(mes, "USO INMEDIATO");
+          const totalCapillasPrevision = contarServiciosCapillasPorTipoContrato(mes, "PREVISION");
+          const totalParque = contarServiciosPorOrigen(mes, "PARQUE");'''
+
+          new_totals = '''  const totalCapillas = contarServiciosPorOrigen(mes, "CAPILLA");
+          const totalCapillasUsoInmediato = contarServiciosCapillasPorTipoContrato(mes, "USO INMEDIATO");
+          const totalCapillasPrevision = contarServiciosCapillasPorTipoContrato(mes, "PREVISION");
+          const totalCapillasChurubusco = contarServiciosCapillasPorSucursal(mes, "CHURUBUSCO");
+          const totalCapillasAguaFria = contarServiciosCapillasPorSucursal(mes, "AGUA FRIA");
+          const totalParque = contarServiciosPorOrigen(mes, "PARQUE");'''
+
+          if new_totals not in app:
+              if app.count(old_totals) != 1:
+                  raise RuntimeError('No se encontro exactamente una vez el bloque de totales de Servicios Capillas')
+              app = app.replace(old_totals, new_totals, 1)
+
+          old_render = '''  setText("pageServiciosCapillasTotal", formatoNumero(totalCapillas));
+          setText("pageServiciosCapillasUsoInmediato", formatoNumero(totalCapillasUsoInmediato));
+          setText("pageServiciosCapillasPrevision", formatoNumero(totalCapillasPrevision));
+          setText("pageServiciosParqueTotal", formatoNumero(totalParque));'''
+
+          new_render = '''  setText("pageServiciosCapillasTotal", formatoNumero(totalCapillas));
+          setText("pageServiciosCapillasUsoInmediato", formatoNumero(totalCapillasUsoInmediato));
+          setText("pageServiciosCapillasPrevision", formatoNumero(totalCapillasPrevision));
+          setText("pageServiciosCapillasChurubusco", formatoNumero(totalCapillasChurubusco));
+          setText("pageServiciosCapillasAguaFria", formatoNumero(totalCapillasAguaFria));
+          setText("pageServiciosParqueTotal", formatoNumero(totalParque));'''
+
+          if new_render not in app:
+              if app.count(old_render) != 1:
+                  raise RuntimeError('No se encontro exactamente una vez el render de KPIs de Servicios Capillas')
+              app = app.replace(old_render, new_render, 1)
+
+          helper = '''function contarServiciosCapillasPorSucursal(mes, sucursalBuscada) {
+            const sucursalNormalizada = normalizarClaveComparacion(sucursalBuscada);
+
+            return (state.datos.servicios || [])
+              .filter((item) => {
+                if (!coincidePeriodoServicio(item, mes)) {
+                  return false;
+                }
+
+                if (obtenerOrigenServicio(item) !== "Capillas") {
+                  return false;
+                }
+
+                const ubicacion = normalizarClaveComparacion([
+                  item.sucursal,
+                  item.ubicacionServicio,
+                  item.ubicacion
+                ].filter(Boolean).join(" "));
+
+                if (sucursalNormalizada === "CHURUBUSCO") {
+                  return ubicacion.includes("CHURUBUSCO");
+                }
+
+                if (sucursalNormalizada === "AGUA FRIA") {
+                  return ubicacion.includes("AGUA FRIA")
+                    || ubicacion.includes("APODACA")
+                    || ubicacion === "AF";
+                }
+
+                return ubicacion.includes(sucursalNormalizada);
+              })
+              .length;
+          }
+
+          '''
+
+          helper_marker = 'function contarServiciosCapillasPorTipoContrato(mes, tipoBuscado) {'
+          if 'function contarServiciosCapillasPorSucursal(' not in app:
+              if app.count(helper_marker) != 1:
+                  raise RuntimeError('No se encontro el punto para insertar contarServiciosCapillasPorSucursal')
+              app = app.replace(helper_marker, helper + helper_marker, 1)
+
+          app_path.write_text(app, encoding='utf-8')
+
+          # --------------------------------------------------------------
+          # index.html: dos tarjetas nuevas dentro de Servicios Capillas.
+          # --------------------------------------------------------------
+          index_path = Path('index.html')
+          index = index_path.read_text(encoding='utf-8')
+
+          section_start = index.find('<section id="pageServiciosCapillas"')
+          if section_start < 0:
+              raise RuntimeError('No se encontro pageServiciosCapillas en index.html')
+
+          section_end = index.find('</section>', section_start)
+          if section_end < 0:
+              raise RuntimeError('No se pudo delimitar pageServiciosCapillas')
+
+          section = index[section_start:section_end]
+          section = section.replace(
+              'class="detail-kpi-grid detail-kpi-grid-5"',
+              'class="detail-kpi-grid detail-kpi-grid-7"',
+              1,
+          )
+
+          if 'pageServiciosCapillasChurubusco' not in section:
+              marker_id = 'id="pageServiciosCapillasPrevision"'
+              marker_pos = section.find(marker_id)
+              if marker_pos < 0:
+                  raise RuntimeError('No se encontro KPI Capillas Prevision')
+
+              card_end = section.find('</div>', marker_pos)
+              if card_end < 0:
+                  raise RuntimeError('No se encontro cierre de tarjeta Capillas Prevision')
+              card_end += len('</div>')
+
+              cards = '''
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Servicios Churubusco</span>
+            <strong id="pageServiciosCapillasChurubusco">0</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Servicios Agua Fría</span>
+            <strong id="pageServiciosCapillasAguaFria">0</strong>
+          </div>'''
+              section = section[:card_end] + cards + section[card_end:]
+
+          index = index[:section_start] + section + index[section_end:]
+          index_path.write_text(index, encoding='utf-8')
+
+          # --------------------------------------------------------------
+          # styles.css: 7 columnas en escritorio y responsive consistente.
+          # --------------------------------------------------------------
+          styles_path = Path('styles.css')
+          styles = styles_path.read_text(encoding='utf-8')
+
+          css = '''
+
+/* ================================
+   KPIs de Servicios Capillas en 7 columnas
+================================ */
+.detail-kpi-grid-7 {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+@media (max-width: 1400px) {
+  .detail-kpi-grid-7 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .detail-kpi-grid-7 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .detail-kpi-grid-7 {
+    grid-template-columns: 1fr;
+  }
+}
+'''
+
+          if '.detail-kpi-grid-7 {' not in styles:
+              styles += css
+              styles_path.write_text(styles, encoding='utf-8')
+
+          # Barreras de integridad.
+          app_check = app_path.read_text(encoding='utf-8')
+          index_check = index_path.read_text(encoding='utf-8')
+          styles_check = styles_path.read_text(encoding='utf-8')
+
+          for marker in [
+              'function contarServiciosCapillasPorSucursal(',
+              'pageServiciosCapillasChurubusco',
+              'pageServiciosCapillasAguaFria',
+              'totalCapillasChurubusco',
+              'totalCapillasAguaFria',
+          ]:
+              if marker not in app_check and marker not in index_check:
+                  raise RuntimeError(f'Falta marcador de KPI: {marker}')
+
+          if 'detail-kpi-grid-7' not in index_check or '.detail-kpi-grid-7 {' not in styles_check:
+              raise RuntimeError('No quedo aplicada la distribucion de 7 KPIs')
+          PY
+
+      - name: Validar JavaScript y paquete del Dashboard
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check app.js
+          python3 tools/build_portal_dashboard.py
+          php -l deploy/index.php
+          grep -q 'pageServiciosCapillasChurubusco' deploy/index.php
+          grep -q 'pageServiciosCapillasAguaFria' deploy/index.php
+          grep -q 'contarServiciosCapillasPorSucursal' deploy/app.js
+          grep -q 'detail-kpi-grid-7' deploy/index.php
+          grep -q 'detail-kpi-grid-7' deploy/styles.css
+
+      - name: Retirar workflow temporal y guardar cambio
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/agregar-kpis-sucursales-capillas.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "Agregar KPIs de Churubusco y Agua Fria en Servicios Capillas"
+          git push origin HEAD:main
