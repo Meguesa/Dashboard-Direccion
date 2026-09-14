@@ -63,6 +63,23 @@
       .${CLASE_ETIQUETA}.is-edge-end {
         transform: translateX(-100%);
       }
+
+      /* KPIs adicionales de Servicios Capillas por sucursal. */
+      #pageServiciosCapillas .detail-kpi-grid.kpi-capillas-sucursales {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      @media (max-width: 1200px) {
+        #pageServiciosCapillas .detail-kpi-grid.kpi-capillas-sucursales {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 800px) {
+        #pageServiciosCapillas .detail-kpi-grid.kpi-capillas-sucursales {
+          grid-template-columns: 1fr;
+        }
+      }
     `;
     document.head.appendChild(style);
   }
@@ -153,8 +170,154 @@
     });
   }
 
+  function normalizarClave(valor) {
+    return String(valor ?? "")
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase();
+  }
+
+  function obtenerPeriodoServiciosCapillas() {
+    if (typeof window.obtenerMesesRangoSeleccionado === "function") {
+      const meses = window.obtenerMesesRangoSeleccionado();
+      if (Array.isArray(meses) && meses.length > 0) return meses;
+    }
+
+    const state = window.state || {};
+    return [state.mesSeleccionado].filter(Boolean);
+  }
+
+  function coincidePeriodo(item, periodo) {
+    if (typeof window.coincidePeriodoServicio === "function") {
+      try {
+        return window.coincidePeriodoServicio(item, periodo);
+      } catch (_) {}
+    }
+
+    const mesItem = normalizarClave(item?.mes);
+    const meses = Array.isArray(periodo) ? periodo : [periodo];
+    return meses.some((mes) => mesItem === normalizarClave(mes));
+  }
+
+  function esServicioCapillas(item) {
+    if (typeof window.obtenerOrigenServicio === "function") {
+      try {
+        return window.obtenerOrigenServicio(item) === "Capillas";
+      } catch (_) {}
+    }
+
+    const texto = normalizarClave([
+      item?.origen,
+      item?.tipoOrigen,
+      item?.sucursal,
+      item?.ubicacionServicio
+    ].filter(Boolean).join(" "));
+
+    return texto.includes("CAPILLA")
+      || texto.includes("CHURUBUSCO")
+      || texto.includes("APODACA")
+      || texto.includes("AGUA FRIA");
+  }
+
+  function obtenerSucursalCapillas(item) {
+    const texto = normalizarClave([
+      item?.sucursal,
+      item?.ubicacionServicio
+    ].filter(Boolean).join(" "));
+
+    if (texto.includes("CHURUBUSCO")) {
+      return "CHURUBUSCO";
+    }
+
+    if (
+      texto.includes("AGUA FRIA")
+      || texto.includes("APODACA")
+      || texto === "AF"
+    ) {
+      return "AGUA FRIA";
+    }
+
+    return "";
+  }
+
+  function contarServiciosSucursal(sucursal) {
+    const periodo = obtenerPeriodoServiciosCapillas();
+    const servicios = window.state?.datos?.servicios || [];
+
+    return servicios.filter((item) =>
+      coincidePeriodo(item, periodo)
+      && esServicioCapillas(item)
+      && obtenerSucursalCapillas(item) === sucursal
+    ).length;
+  }
+
+  function crearKpiSucursal(id, etiqueta) {
+    const card = document.createElement("div");
+    card.className = "detail-kpi-card";
+    card.dataset.kpiSucursalCapillas = id;
+    card.innerHTML = `
+      <span class="detail-kpi-label">${etiqueta}</span>
+      <strong id="${id}">0</strong>
+    `;
+    return card;
+  }
+
+  function asegurarKpisSucursalesCapillas() {
+    const pagina = document.getElementById("pageServiciosCapillas");
+    if (!pagina) return false;
+
+    const grid = pagina.querySelector(".detail-kpi-grid");
+    if (!grid) return false;
+
+    grid.classList.add("kpi-capillas-sucursales");
+
+    if (!document.getElementById("pageServiciosCapillasChurubusco")) {
+      grid.appendChild(
+        crearKpiSucursal("pageServiciosCapillasChurubusco", "Servicios Churubusco")
+      );
+    }
+
+    if (!document.getElementById("pageServiciosCapillasAguaFria")) {
+      grid.appendChild(
+        crearKpiSucursal("pageServiciosCapillasAguaFria", "Servicios Agua Fría")
+      );
+    }
+
+    return true;
+  }
+
+  function actualizarKpisSucursalesCapillas() {
+    if (!asegurarKpisSucursalesCapillas()) return;
+
+    const churubusco = contarServiciosSucursal("CHURUBUSCO");
+    const aguaFria = contarServiciosSucursal("AGUA FRIA");
+
+    const churubuscoEl = document.getElementById("pageServiciosCapillasChurubusco");
+    const aguaFriaEl = document.getElementById("pageServiciosCapillasAguaFria");
+
+    if (churubuscoEl) churubuscoEl.textContent = churubusco.toLocaleString("es-MX");
+    if (aguaFriaEl) aguaFriaEl.textContent = aguaFria.toLocaleString("es-MX");
+  }
+
+  function envolverRenderDashboard() {
+    const original = window.renderDashboard;
+    if (typeof original !== "function" || original.__kpisSucursalesCapillas) return;
+
+    const wrapper = function (...args) {
+      const resultado = original.apply(this, args);
+      window.requestAnimationFrame(actualizarKpisSucursalesCapillas);
+      return resultado;
+    };
+
+    wrapper.__kpisSucursalesCapillas = true;
+    window.renderDashboard = wrapper;
+  }
+
   function conectar() {
     instalarEstilos();
+    envolverRenderDashboard();
+    actualizarKpisSucursalesCapillas();
 
     const grid = document.getElementById("serviciosCalendarioGrid");
     if (!grid) return false;
@@ -168,17 +331,25 @@
     actualizar();
 
     if (!intervalo) {
-      intervalo = window.setInterval(actualizar, 30000);
+      intervalo = window.setInterval(() => {
+        actualizar();
+        actualizarKpisSucursalesCapillas();
+      }, 30000);
     }
 
     return true;
   }
 
   function iniciar() {
+    instalarEstilos();
+    envolverRenderDashboard();
+    actualizarKpisSucursalesCapillas();
+
     if (conectar()) return;
 
     observerEspera = new MutationObserver(() => {
       conectar();
+      actualizarKpisSucursalesCapillas();
     });
 
     observerEspera.observe(document.body, {
