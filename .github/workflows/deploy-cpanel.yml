@@ -102,7 +102,7 @@ jobs:
 
           index_path = Path('deploy/index.php')
           source = index_path.read_text(encoding='utf-8')
-          source = source.replace('src="graph.js?v=20260823-2"', 'src="graph.js?v=20260914-1"', 1)
+          source = source.replace('src="graph.js?v=20260823-2"', 'src="graph.js?v=20261029-1"', 1)
           source = source.replace('src="app.js?v=20260823-4"', 'src="app.js?v=20260914-1"', 1)
 
           head_marker = '</head>'
