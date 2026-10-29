@@ -182,7 +182,7 @@ jobs:
           grep -q 'dashboard-current-time.js?v=20260908-1' deploy/index.php
           grep -q 'dashboard-annual-history.js?v=20260914-1' deploy/index.php
           grep -q 'dashboard-daily-calendar.css?v=20260908-2' deploy/index.php
-          grep -q 'graph.js?v=20260914-1' deploy/index.php
+          grep -q 'graph.js?v=20261029-1' deploy/index.php
           grep -q 'app.js?v=20260914-1' deploy/index.php
           grep -q 'PORTAL_USER_EMAIL' deploy/index.php
           grep -q 'DASHBOARD_CACHE_VERSION = 4' deploy/app.js
