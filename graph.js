@@ -222,7 +222,7 @@ async function obtenerIngresosSharePoint(mesesFiltro = []) {
       filtro: filtroMeses
     });
 
-    const ingresos = items.map((item) => {
+    const ingresosMapeados = items.map((item) => {
       const f = item.fields || {};
 
       return {
@@ -234,9 +234,14 @@ async function obtenerIngresosSharePoint(mesesFiltro = []) {
         referenciaContrato: limpiarTexto(f.Referencia_Contrato),
         importe: convertirNumero(f.Importe),
         fuente: limpiarTexto(f.Fuente),
-        hojaOrigen: limpiarTexto(f.Hoja_Origen)
+        hojaOrigen: limpiarTexto(f.Hoja_Origen),
+        claveRegistro: limpiarTexto(f.Clave_Registro),
+        fechaCarga: limpiarTexto(f.Fecha_Carga),
+        fechaActualizacion: limpiarTexto(f.Fecha_Actualizacion || f.Modified)
       };
     });
+
+    const ingresos = deduplicarIngresosPorClaveRegistro(ingresosMapeados);
 
     console.log("BI_Ingresos leídos:", ingresos);
     console.table(ingresos.slice(0, 20));
@@ -260,6 +265,58 @@ async function obtenerIngresosSharePoint(mesesFiltro = []) {
     setAuthStatus("Error al leer BI_Ingresos.");
     return [];
   }
+}
+
+function deduplicarIngresosPorClaveRegistro(ingresos) {
+  const porClave = new Map();
+  const sinClave = [];
+  let duplicadosIgnorados = 0;
+  let importeDuplicadoIgnorado = 0;
+
+  (ingresos || []).forEach((item) => {
+    const clave = limpiarTexto(item?.claveRegistro);
+
+    if (!clave) {
+      sinClave.push(item);
+      return;
+    }
+
+    const existente = porClave.get(clave);
+
+    if (!existente) {
+      porClave.set(clave, item);
+      return;
+    }
+
+    duplicadosIgnorados += 1;
+
+    const fechaExistente =
+      Date.parse(existente?.fechaActualizacion || existente?.fechaCarga || "") || 0;
+    const fechaNueva =
+      Date.parse(item?.fechaActualizacion || item?.fechaCarga || "") || 0;
+
+    const idExistente = Number(existente?.id || 0);
+    const idNuevo = Number(item?.id || 0);
+
+    const conservarNuevo =
+      fechaNueva > fechaExistente ||
+      (fechaNueva === fechaExistente && idNuevo > idExistente);
+
+    if (conservarNuevo) {
+      importeDuplicadoIgnorado += Number(existente?.importe || 0);
+      porClave.set(clave, item);
+    } else {
+      importeDuplicadoIgnorado += Number(item?.importe || 0);
+    }
+  });
+
+  if (duplicadosIgnorados > 0) {
+    console.warn(
+      `BI_Ingresos: se ignoraron ${duplicadosIgnorados} registros duplicados por Clave_Registro. Importe duplicado ignorado: ${importeDuplicadoIgnorado.toFixed(2)}.`
+    );
+  }
+
+  return [...porClave.values(), ...sinClave];
 }
 
 function limpiarTexto(valor) {
