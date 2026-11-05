@@ -50,3 +50,90 @@ function renderEstadoIngresosExcel() {
 // El sondeo de cachés no recarga las listas de los demás módulos.
 let ingresosExcelActualizando=false;
 setInterval(async()=>{if(ingresosExcelActualizando)return;ingresosExcelActualizando=true;try{const rows=await cargarIngresosExcelHistorico();state.datos.ingresos=rows;renderDashboard();}catch(e){console.warn('Ingresos Excel',e.message);}finally{ingresosExcelActualizando=false;}},60000);
+
+
+/* Metas y reales por área: la carátula validada de cada Excel es la autoridad.
+ * No se consultan listas BI_Metas_Cobranza, ni se reutilizan valores de SharePoint.
+ * Se consulta en bloques de tres meses para limitar las descargas iniciales. */
+const metasCobranzaExcelPendientes = new Map();
+const metasCobranzaExcelReintentarEn = new Map();
+const metasCobranzaExcelVerificadas = new Map();
+const METAS_EXCEL_AREAS = ["Panteon", "Servicios CH", "Servicios AF", "Total Service"];
+
+async function obtenerMetasCobranzaExcel(mesesFiltro = []) {
+  const mesesConOrigen = Object.entries(window.ingresosExcelEstado?.meses || {})
+    .filter(([, st]) => st?.cacheDisponible === true)
+    .map(([m]) => m);
+  const objetivo = (Array.isArray(mesesFiltro) && mesesFiltro.length
+    ? mesesFiltro : obtenerMesesRangoSeleccionado())
+    .filter(m => /^\d{4}-(0[1-9]|1[0-2])$/.test(m))
+    .filter((m, i, arr) => arr.indexOf(m) === i);
+  const meses = objetivo.filter(m => mesesConOrigen.includes(m));
+  const todos = [];
+  for (let idx = 0; idx < meses.length; idx += 3) {
+    const lote = meses.slice(idx, idx + 3);
+    const query = new URLSearchParams({ modo: "metas", meses: lote.join(",") });
+    const resp = await fetch("ingresos-historico.php?" + query.toString(), {
+      credentials: "same-origin", cache: "no-store"
+    });
+    if (!resp.ok) throw new Error("Metas de Excel no disponibles: HTTP " + resp.status);
+    const body = await resp.json();
+    if (body.ok !== true || body.fuente !== "EXCEL_ORIGINAL_CARATULA" ||
+        body.biMetasCobranza !== false || !body.meses) throw new Error("Respuesta de metas inválida");
+    for (const m of lote) {
+      const bloque = body.meses[m];
+      if (!bloque?.validado || bloque.fuente !== "EXCEL_ORIGINAL_CARATULA" ||
+          !Array.isArray(bloque.metas) || bloque.metas.length !== 4) continue;
+      const nombres = bloque.metas.map(row => row.area);
+      if (METAS_EXCEL_AREAS.some((area, i) => nombres[i] !== area)) continue;
+      if (bloque.metas.some(row => row.mes !== m || row.fuenteOrigen !== "excel_original_caratula" ||
+          !Number.isFinite(row.metaMensual) || row.metaMensual < 0 ||
+          !Number.isFinite(row.realCaratula) || row.realCaratula < 0)) continue;
+      const totalMeta = bloque.metas.reduce((n, row) => n + Math.round(row.metaMensual * 100), 0);
+      const totalReal = bloque.metas.reduce((n, row) => n + Math.round(row.realCaratula * 100), 0);
+      if (totalMeta !== Math.round(bloque.metaTotal * 100) ||
+          totalReal !== Math.round(bloque.realTotal * 100)) continue;
+      metasCobranzaExcelVerificadas.set(m, {
+        sha: bloque.excelSha256, filas: bloque.metas, verificadoUTC: bloque.verificadoUTC
+      });
+      todos.push(...bloque.metas);
+    }
+  }
+  return todos;
+}
+function asegurarMetasCobranzaExcel(mesesSolicitados) {
+  if (!window.ingresosExcelEstado || window.ingresosExcelEstado.cargando) return;
+  const disponibles = window.ingresosExcelEstado.meses || {};
+  const meses = (Array.isArray(mesesSolicitados) ? mesesSolicitados : [mesesSolicitados])
+    .filter(m => disponibles[m]?.cacheDisponible === true);
+  for (const mes of meses) {
+    const fingerprint = disponibles[mes]?.excel?.sha256;
+    const cached = metasCobranzaExcelVerificadas.get(mes);
+    if (cached && cached.sha === fingerprint) {
+      if (!(state.datos.metasCobranza || []).some(row =>
+          row.mes === mes && row.fuenteOrigen === "excel_original_caratula")) {
+        state.datos.metasCobranza = (state.datos.metasCobranza || [])
+          .filter(row => row.mes !== mes).concat(cached.filas);
+      }
+      continue;
+    }
+    if (metasCobranzaExcelPendientes.has(mes) ||
+        (metasCobranzaExcelReintentarEn.get(mes) || 0) > Date.now()) continue;
+    const tarea = obtenerMetasCobranzaExcel([mes])
+      .then(rows => {
+        if (rows.length !== 4) {
+          metasCobranzaExcelReintentarEn.set(mes, Date.now() + 60000);
+          return;
+        }
+        state.datos.metasCobranza = (state.datos.metasCobranza || [])
+          .filter(row => row.mes !== mes).concat(rows);
+        renderDashboard();
+      })
+      .catch(err => {
+        console.warn("Metas Excel " + mes + ":", err.message);
+        metasCobranzaExcelReintentarEn.set(mes, Date.now() + 60000);
+      })
+      .finally(() => metasCobranzaExcelPendientes.delete(mes));
+    metasCobranzaExcelPendientes.set(mes, tarea);
+  }
+}
