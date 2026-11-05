@@ -1,23 +1,7 @@
-name: Publicar Dashboard de Direccion independiente en cPanel
+name: LEGADO BLOQUEADO - deploy-cpanel.yml
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - 'app.js'
-      - 'auth.js'
-      - 'config.js'
-      - 'graph.js'
-      - 'index.html'
-      - 'styles.css'
-      - 'portal-integration.css'
-      - 'account-menu.css'
-      - 'dashboard-*.js'
-      - 'dashboard-*.css'
-      - 'tools/build_portal_dashboard.py'
-      - '.github/workflows/deploy-cpanel.yml'
 
 permissions:
   contents: read
@@ -28,6 +12,8 @@ concurrency:
 
 jobs:
   deploy:
+    # Legado: deshabilitado. Nunca debe sobrescribir lectores Excel directos.
+    if: ${{ false }}
     name: Validar y publicar Dashboard de Direccion
     runs-on: ubuntu-latest
     timeout-minutes: 15
