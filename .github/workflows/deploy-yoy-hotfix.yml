@@ -1,14 +1,12 @@
-name: Publicar comparativo interanual del Dashboard
+name: RESTAURAR comparativo legado - solo emergencia
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/deploy-yoy-hotfix.yml'
-      - 'auth.js'
-      - 'dashboard-yoy-comparison.js'
   workflow_dispatch:
+    inputs:
+      confirmacion:
+        description: 'Escribe RESTAURAR_COMPARATIVO para ejecutar el hotfix legado'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -19,6 +17,7 @@ concurrency:
 
 jobs:
   deploy-yoy:
+    if: ${{ github.event.inputs.confirmacion == 'RESTAURAR_COMPARATIVO' }}
     name: Publicar comparativo Ingresos, Ventas y Servicios Capillas
     runs-on: ubuntu-latest
     timeout-minutes: 15
