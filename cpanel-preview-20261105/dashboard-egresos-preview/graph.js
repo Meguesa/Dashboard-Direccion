@@ -321,7 +321,7 @@ async function cargarDatosSharePoint(opciones = {}) {
     const marketingMedios = await obtenerMarketingMediosSharePoint();
     const marketingRedes = await obtenerMarketingRedesSharePoint();
     const servicios = await obtenerServiciosSharePoint(usarFiltroMeses ? mesesRecargados : []);
-    const metasCobranza = await obtenerMetasCobranzaSharePoint(usarFiltroMeses ? mesesRecargados : []);
+    const metasCobranza = await obtenerMetasCobranzaExcel(usarFiltroMeses ? mesesRecargados : []);
     const metasVentas = await obtenerMetasVentasSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const alertas = await obtenerAlertasSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const parquePropiedades = modoCarga === "completa"
@@ -664,54 +664,6 @@ async function obtenerServiciosSharePoint(mesesFiltro = []) {
   } catch (error) {
     console.error("Error leyendo BI_Servicios:", error);
     setAuthStatus("Error al leer BI_Servicios.");
-    return [];
-  }
-}
-
-async function obtenerMetasCobranzaSharePoint(mesesFiltro = []) {
-  try {
-    setAuthStatus("Leyendo BI_Metas_Cobranza desde SharePoint...");
-
-    const listId = CONFIG.sharepoint.lists.metasCobranza.listId;
-
-    if (!listId) {
-      throw new Error("No está configurado el listId de BI_Metas_Cobranza.");
-    }
-
-    const filtroMeses = crearFiltroMesesSharePoint(mesesFiltro);
-    const items = await obtenerItemsLista(listId, 5000, {
-      filtro: filtroMeses
-    });
-
-    const metasCobranza = items.map((item) => {
-      const f = item.fields || {};
-
-      return {
-        id: item.id,
-        mes: limpiarTexto(f.Mes),
-        area: limpiarTexto(f.Area || f.Title),
-        metaMensual: convertirNumero(
-          f.Meta_Mensual ||
-          f.Meta_x005f_Mensual ||
-          f.MetaMensual ||
-          f.Meta_x0020_Mensual
-        ),
-        activo: convertirBooleano(f.Activo)
-      };
-    });
-
-    console.log("BI_Metas_Cobranza leídas:", metasCobranza);
-    console.table(metasCobranza);
-
-    return metasCobranza;
-  } catch (error) {
-    console.error("Error leyendo BI_Metas_Cobranza:", error);
-
-    setText(
-      "sharePointStatus",
-      "Error al leer BI_Metas_Cobranza. Revisa la consola del navegador."
-    );
-
     return [];
   }
 }
