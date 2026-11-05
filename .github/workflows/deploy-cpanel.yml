@@ -1,24 +1,12 @@
-name: Publicar Dashboard de Direccion independiente en cPanel
+name: RESTAURAR Dashboard legado SharePoint - solo emergencia
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - 'app.js'
-      - 'auth.js'
-      - 'config.js'
-      - 'graph.js'
-      - 'index.html'
-      - 'styles.css'
-      - 'portal-integration.css'
-      - 'account-menu.css'
-      - 'dashboard-*.js'
-      - 'dashboard-*.css'
-      - 'tools/build_portal_dashboard.py'
-      - '.github/workflows/deploy-cpanel.yml'
-
+    inputs:
+      confirmacion:
+        description: 'Escribe RESTAURAR_LEGADO para recuperar el lector BI anterior'
+        required: true
+        type: string
 permissions:
   contents: read
 
@@ -28,6 +16,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.event.inputs.confirmacion == 'RESTAURAR_LEGADO' }}
     name: Validar y publicar Dashboard de Direccion
     runs-on: ubuntu-latest
     timeout-minutes: 15
