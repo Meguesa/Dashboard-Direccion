@@ -22,6 +22,7 @@ FILES = [
     "dashboard-current-time.js", "dashboard-daily-calendar.css",
     "dashboard-daily-calendar.js", "dashboard-header-map.css",
     "dashboard-history-refresh.js",
+    "dashboard-yoy-comparison.js",
 ]
 
 def replace_once(text, old, new, purpose):
@@ -166,7 +167,7 @@ def validate():
     assert "ingresos-historico.js" in index and "egresos-excel.js" in index
     assert "if(m.puedeActualizar)" in (TARGET / "egresos-excel.js").read_text(encoding="utf-8")
     assert "return JSON" not in index
-    for name in FILES + ["dashboard-yoy-comparison.js"]:
+    for name in FILES:
         if not (TARGET / name).is_file() or not (TARGET / name).stat().st_size:
             raise RuntimeError(f"Output missing: {name}")
 
@@ -181,13 +182,12 @@ def main():
         if not source.is_file():
             raise RuntimeError(f"Snapshot file missing: {name}")
         shutil.copy2(source, TARGET / name)
-    shutil.copy2(ROOT / "dashboard-yoy-comparison.js", TARGET / "dashboard-yoy-comparison.js")
     build_frontend()
     build_expense_javascript()
     build_income_endpoint()
     build_expense_endpoint()
     validate()
-    print(f"Excel direct production candidate prepared, {len(FILES)+1} files. No deployment performed.")
+    print(f"Excel direct production candidate prepared, {len(FILES)} files. No deployment performed.")
 
 if __name__ == "__main__":
     main()
