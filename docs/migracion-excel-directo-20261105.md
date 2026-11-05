@@ -37,6 +37,22 @@
 11. Ensayar en una ruta adicional de staging con un usuario normal. Luego programar ventana controlada de cambio, pruebas de humo y reversión a último respaldo.
 12. Solo después de la confirmación operativa, apagar flujos `BI_Ingresos` y `BI_Egresos` que alimentaban producción; conservar sus respaldos hasta retención aprobada.
 
+
+## Estado de las pruebas automatizadas (05-11-2026)
+
+- CI aprobado sobre el candidato: [GitHub Actions #42117726329](https://github.com/Meguesa/Dashboard-Direccion/actions/runs/42117726329).
+- El generador, sintaxis PHP/JavaScript, referencias locales, controles de autorización estáticos y prueba de fechas de Monterrey pasaron en el runner.
+- Tres flujos heredados se deshabilitaron **solo en esta rama**; mientras no se fusione, `main` todavía puede disparar los publicadores antiguos. No hacer merge sin verificar esa diferencia.
+- PR de revisión sin fusión: [#2](https://github.com/Meguesa/Dashboard-Direccion/pull/2). No se ha publicado a cPanel.
+
+## Limitaciones funcionales que impiden anunciar una migración completa
+
+- **Egresos históricos:** el lector implementado (`egresos_engine.php`) únicamente contempla `RELACION DE PAGOS 2026.xlsx` y las hojas de enero-noviembre 2026. La autorización de lectura a la carpeta entera no significa que se hayan importado los libros 2024/2025. Debe resolverse si la Dirección necesita esos periodos o mostrarse explícitamente el límite antes de producción.
+- **Ingresos históricos:** los seis meses bloqueados no se han conciliado en las fuentes originales; el programa no debe inventar importes ni usar `BI_Ingresos` como sustituto.
+- **Control financiero:** las advertencias de Egresos no equivalen a validación contable completa. Distinguir total IMPORTE, total PAGADO y POR PAGAR, incluyendo pagos negativos y devoluciones.
+- **Seguridad:** los permisos de lectura y administración se verificaron por código, pero aún no se hizo una prueba end-to-end con otro usuario real de Dirección o Finanzas.
+- **Automatización:** el servidor debe continuar haciendo lecturas privadas cada 15 minutos y la última caché validada debe persistir ante lecturas parciales o errores.
+
 ## Restricciones
 
 - Los archivos Excel continúan en SharePoint. Se elimina la dependencia de las **listas BI duplicadas y de Power Automate** en esos dos módulos, no de Microsoft Graph ni de SharePoint como almacenamiento.
