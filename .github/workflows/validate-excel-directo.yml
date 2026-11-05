@@ -44,5 +44,28 @@ jobs:
             echo 'Posible secreto: revisar antes de autorizar.'
             exit 1
           fi
+
+      - name: Crear paquete ZIP listo para cPanel (sin desplegar)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd deploy-excel-directo
+          zip -q -r ../dashboard-excel-directo-cpanel.zip .
+          cd ..
+          test "$(unzip -Z1 dashboard-excel-directo-cpanel.zip | wc -l)" -eq 22
+          unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'index.php'
+          unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'graph.js'
+          unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'ingresos-historico.php'
+          unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'egresos-excel.php'
+          sha256sum dashboard-excel-directo-cpanel.zip > dashboard-excel-directo-cpanel.sha256
+      - name: Dejar ZIP disponible para descarga manual
+        uses: actions/upload-artifact@v4
+        with:
+          name: paquete-dashboard-excel-cpanel
+          path: |
+            dashboard-excel-directo-cpanel.zip
+            dashboard-excel-directo-cpanel.sha256
+          if-no-files-found: error
+          retention-days: 14
       - name: Confirmación
         run: echo 'Paquete probado en runner sin publicación automática.'
