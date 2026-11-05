@@ -1,13 +1,6 @@
-name: Publicar comparativo interanual del Dashboard
+name: LEGADO BLOQUEADO - deploy-yoy-hotfix.yml
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/deploy-yoy-hotfix.yml'
-      - 'auth.js'
-      - 'dashboard-yoy-comparison.js'
   workflow_dispatch:
 
 permissions:
@@ -19,6 +12,8 @@ concurrency:
 
 jobs:
   deploy-yoy:
+    # Legado: deshabilitado. Nunca debe sobrescribir lectores Excel directos.
+    if: ${{ false }}
     name: Publicar comparativo Ingresos, Ventas y Servicios Capillas
     runs-on: ubuntu-latest
     timeout-minutes: 15
