@@ -1,0 +1,26 @@
+name: Publicar Dashboard Excel directo
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmacion:
+        description: 'Escribe PUBLICAR_EXCEL para habilitar instalacion'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dashboard-direccion
+  cancel-in-progress: false
+
+jobs:
+  revisar:
+    if: ${{ github.event.inputs.confirmacion == 'PUBLICAR_EXCEL' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: d82f18c24c625c1cc761ad6fca87d1bac95f5e06
+      - run: python3 -m unittest discover -s tests -p 'test_excel_directo_build.py' -v
