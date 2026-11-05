@@ -37,6 +37,11 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
   <link rel="stylesheet" href="account-menu.css?v=20260823-2" />
   <link rel="stylesheet" href="dashboard-role-access.css?v=20260823-2" />
   <link rel="stylesheet" href="dashboard-daily-calendar.css?v=20260908-2">
+
+<style>
+.dashboard-portal-page #dashboardPage .grid-kpis > .card .kpi-value.excel-no-disponible { display:block!important;white-space:normal!important;overflow-wrap:anywhere!important;font-size:clamp(15px,.95vw,18px)!important;line-height:1.2!important;letter-spacing:0!important;}
+#excelVersionGuardadaInfo{margin:0 32px 16px;color:#425650;font:13px/1.4 system-ui}
+</style>
 </head>
 
 <body class="dashboard-portal-page">
@@ -71,6 +76,17 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
   </nav>
 <div id="egresosExcelEstado" style="margin:16px;padding:14px;border:1px solid #8ba3a0;border-radius:10px;background:#f4f9f7">Egresos Excel: verificando información.</div><div id="ingresosExcelEstado" style="margin:16px 32px;padding:12px 16px;border:1px solid #cbded7;border-radius:10px;background:#f4f9f7;color:#183c37;font:14px system-ui;display:block">Ingresos desde Excel: comprobando disponibilidad...</div>
   <script>window.PORTAL_USER_EMAIL = <?= json_encode($email, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;</script>
+<p id="excelVersionGuardadaInfo">Las cifras corresponden a los cambios guardados en SharePoint. Los cambios pendientes de guardar o sincronizar en Excel todavía no están disponibles.</p>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+ const values=Array.from(document.querySelectorAll('.kpi-value'));
+ const update=()=>{for(const el of values)el.classList.toggle('excel-no-disponible',el.textContent.trim()==='Información no disponible');
+ const info=document.getElementById('excelVersionGuardadaInfo');const months=typeof obtenerMesesRangoSeleccionado==='function'?obtenerMesesRangoSeleccionado():[];
+ const dates=months.map(m=>{const x=window.ingresosExcelEstado?.meses?.[m]?.excel;const d=x?.fechaDatosUTC||x?.fechaModificacion;return d?m+': '+new Date(d).toLocaleString('es-MX',{timeZone:'America/Monterrey'}):null}).filter(Boolean);
+ if(info)info.textContent='Las cifras corresponden a cambios guardados en SharePoint. Los cambios pendientes de guardar o sincronizar en Excel todavía no están disponibles.'+(dates.length?' Versión guardada de Ingresos: '+dates.join(' · '):'');
+ };const observer=new MutationObserver(update);for(const el of values)observer.observe(el,{childList:true,subtree:true,characterData:true});update();
+});
+</script>
   <!-- Pantalla inicial de login -->
   <main id="loginPage" class="login-page">
     <section class="login-card">
@@ -244,7 +260,7 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
 
         <article class="card kpi-card" data-page="egresos" role="button" tabindex="0">
           <div class="kpi-label">Monto total egresos</div>
-          <div id="kpiEgresos" class="kpi-value">$0.00</div>
+          <div id="kpiEgresos" class="kpi-value">Información no disponible</div>
         </article>
 
         <article class="card">
@@ -656,22 +672,22 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
         <div class="detail-kpi-grid detail-kpi-grid-4">
           <div class="detail-kpi-card">
             <span class="detail-kpi-label">Egresos del periodo seleccionado.</span>
-            <strong id="pageEgresosTotal">$0.00</strong>
+            <strong id="pageEgresosTotal">Información no disponible</strong>
           </div>
         
           <div class="detail-kpi-card">
             <span class="detail-kpi-label">Registros de egresos</span>
-            <strong id="pageEgresosRegistros">0</strong>
+            <strong id="pageEgresosRegistros">Información no disponible</strong>
           </div>
 
           <div class="detail-kpi-card">
             <span class="detail-kpi-label">Por pagar</span>
-            <strong id="pageEgresosPorPagar">$0.00</strong>
+            <strong id="pageEgresosPorPagar">Información no disponible</strong>
           </div>
           
           <div class="detail-kpi-card">
             <span class="detail-kpi-label">Promedio por registro</span>
-            <strong id="pageEgresosPromedio">$0.00</strong>
+            <strong id="pageEgresosPromedio">Información no disponible</strong>
           </div>
         </div>
 
