@@ -1,10 +1,11 @@
+
 name: Publicar Dashboard Excel directo
 
 on:
   workflow_dispatch:
     inputs:
       confirmacion:
-        description: 'Escribe PUBLICAR_EXCEL para habilitar instalacion'
+        description: 'Escribe PUBLICAR_EXCEL para autorizar el despliegue'
         required: true
         type: string
 
@@ -16,11 +17,82 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  revisar:
+  publicar:
     if: ${{ github.event.inputs.confirmacion == 'PUBLICAR_EXCEL' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Obtener integracion Excel validada
+        uses: actions/checkout@v4
         with:
           ref: d82f18c24c625c1cc761ad6fca87d1bac95f5e06
-      - run: python3 -m unittest discover -s tests -p 'test_excel_directo_build.py' -v
+
+      - name: Preparar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Construir y validar paquete
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p 'test_excel_directo_build.py' -v
+          test "$(find deploy-excel-directo -maxdepth 1 -type f | wc -l)" -eq 22
+          php -l deploy-excel-directo/index.php
+          php -l deploy-excel-directo/ingresos-historico.php
+          php -l deploy-excel-directo/egresos-excel.php
+          for archivo in deploy-excel-directo/*.js; do
+            node --check "$archivo"
+          done
+          ! grep -q 'obtenerIngresosSharePoint' deploy-excel-directo/graph.js
+          ! grep -q 'obtenerEgresosSharePoint' deploy-excel-directo/graph.js
+
+      - name: Preparar conexion FTPS
+        shell: bash
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+
+      - name: Publicar en Dashboard de produccion
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$FTP_SERVER"
+          test -n "$FTP_USERNAME"
+          test -n "$FTP_PASSWORD"
+
+          for intento in 1 2 3; do
+            if timeout --kill-after=10s 180s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://${FTP_SERVER}:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ftp:sync-mode false;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 30;
+              set net:max-retries 1;
+              mirror --reverse --overwrite --no-perms --exclude-glob index.php deploy-excel-directo .;
+              put deploy-excel-directo/index.php -o index.php;
+              bye;
+            "; then
+              echo "Publicacion FTPS completada."
+              exit 0
+            fi
+
+            if [ "$intento" -lt 3 ]; then sleep 12; fi
+          done
+
+          echo "Error durante la publicacion."
+          exit 1
+
+      - name: Resumen de publicacion
+        run: |
+          echo "### Dashboard Excel publicado por FTPS" >> "$GITHUB_STEP_SUMMARY"
+          echo "URL: https://portal.juanpablo.com.mx/dashboard/" >> "$GITHUB_STEP_SUMMARY"
+          echo "Verificar cifras, permisos y fuentes en el navegador." >> "$GITHUB_STEP_SUMMARY"
