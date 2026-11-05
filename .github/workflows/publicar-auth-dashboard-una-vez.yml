@@ -1,11 +1,6 @@
-name: Publicar correccion auth Dashboard una vez
+name: LEGADO BLOQUEADO - publicar-auth-dashboard-una-vez.yml
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/publicar-auth-dashboard-una-vez.yml'
   workflow_dispatch:
 
 permissions:
@@ -14,6 +9,8 @@ permissions:
 
 jobs:
   dispatch:
+    # Legado: deshabilitado. Nunca debe sobrescribir lectores Excel directos.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - name: Lanzar despliegue independiente del Dashboard
