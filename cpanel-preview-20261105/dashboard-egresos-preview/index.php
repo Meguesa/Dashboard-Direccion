@@ -41,6 +41,10 @@ $email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
 <style>
 .dashboard-portal-page #dashboardPage .grid-kpis > .card .kpi-value.excel-no-disponible { display:block!important;white-space:normal!important;overflow-wrap:anywhere!important;font-size:clamp(15px,.95vw,18px)!important;line-height:1.2!important;letter-spacing:0!important;}
 #excelVersionGuardadaInfo{margin:0 32px 16px;color:#425650;font:13px/1.4 system-ui}
+/* Ocultar solamente mensajes de auditoria, conservando los datos y los lectores Excel. */
+#egresosExcelEstado,
+#ingresosExcelEstado,
+#excelVersionGuardadaInfo { display: none !important; }
 </style>
 </head>
 
