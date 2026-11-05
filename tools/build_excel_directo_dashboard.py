@@ -57,6 +57,8 @@ def build_frontend():
     )
     # Do not let a prior preview's branding imply that it is a new app.
     source = source.replace("Egresos Excel: verificando información.", "Egresos desde Excel: verificando información.")
+    # Correct literal backslash+n leftover from the archived preview HTML.
+    source = source.replace(r"</script>\n<script", "</script>" + "\n" + "<script")
     write_file("index.php", source)
 
     app = (TARGET / "app.js").read_text(encoding="utf-8")
@@ -81,6 +83,24 @@ def build_frontend():
 """
     app = app[:pos] + block + app[pos:]
     write_file("app.js", app)
+
+def build_expense_javascript():
+    path = TARGET / "egresos-excel.js"
+    source = path.read_text(encoding="utf-8")
+    source = replace_once(
+        source,
+        "el.append(when);const a=document.createElement('a');a.href='egresos-excel.php?modo=admin';",
+        "el.append(when);if(m.puedeActualizar){const a=document.createElement('a');a.href='egresos-excel.php?modo=admin';",
+        "show expense admin link only to approved auditors",
+    )
+    source = replace_once(
+        source,
+        "a.rel='noopener';el.append(a);",
+        "a.rel='noopener';el.append(a);}",
+        "close admin-only expense link",
+    )
+    write_file("egresos-excel.js", source)
+
 
 def build_income_endpoint():
     path = TARGET / "ingresos-historico.php"
@@ -144,6 +164,7 @@ def validate():
     assert "dashboardExcelDirectoDatos" in app
     assert "const fechaSinZona = texto.match" in app
     assert "ingresos-historico.js" in index and "egresos-excel.js" in index
+    assert "if(m.puedeActualizar)" in (TARGET / "egresos-excel.js").read_text(encoding="utf-8")
     assert "return JSON" not in index
     for name in FILES + ["dashboard-yoy-comparison.js"]:
         if not (TARGET / name).is_file() or not (TARGET / name).stat().st_size:
@@ -162,6 +183,7 @@ def main():
         shutil.copy2(source, TARGET / name)
     shutil.copy2(ROOT / "dashboard-yoy-comparison.js", TARGET / "dashboard-yoy-comparison.js")
     build_frontend()
+    build_expense_javascript()
     build_income_endpoint()
     build_expense_endpoint()
     validate()
