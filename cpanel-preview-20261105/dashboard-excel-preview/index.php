@@ -1,0 +1,1764 @@
+<?php
+
+declare(strict_types=1);
+// HS_PREVIEW_RESPONSE: evita reutilizar scripts antiguos inyectados por el Portal.
+ob_start(static function (string $html): string {
+    return preg_replace('~dashboard-yoy-comparison\.js(?:\?[^"\x27<> ]*)?~', 'dashboard-yoy-comparison.js?v=20261105-historico-3', $html);
+});
+
+
+// Unica dependencia compartida con el Portal: autenticacion/sesion.
+require_once dirname(__DIR__) . '/includes/bootstrap.php';
+portal_require_authentication();
+
+if (strtolower(trim((string) (portal_user()['email'] ?? ''))) !== 'gabriel.guerra@juanpablo.com.mx') {
+    http_response_code(403);
+    exit('Vista de pruebas restringida.');
+}
+
+$user = portal_user();
+$name = htmlspecialchars((string) ($user['name'] ?? 'Usuario'), ENT_QUOTES, 'UTF-8');
+$email = htmlspecialchars((string) ($user['email'] ?? ''), ENT_QUOTES, 'UTF-8');
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  
+  <title>Dashboard de Dirección | Portal Interno JdJP</title>
+
+  <link rel="stylesheet" href="styles.css?v=20260823-3" />
+  <link rel="stylesheet" href="portal-integration.css?v=20260823-3" />
+  <link rel="stylesheet" href="account-menu.css?v=20260823-2" />
+  <link rel="stylesheet" href="dashboard-role-access.css?v=20260823-2" />
+  <link rel="stylesheet" href="dashboard-daily-calendar.css?v=20260908-2">
+</head>
+
+<body class="dashboard-portal-page">
+  <nav class="dashboard-portal-toolbar" aria-label="Navegación del Portal Interno">
+    <div class="dashboard-portal-toolbar-inner">
+      <div class="dashboard-portal-title">
+        <div class="dashboard-portal-title-text">
+          <strong>Dashboard de Dirección</strong>
+          <span>Portal Interno JdJP · Jardines de Juan Pablo</span>
+        </div>
+      </div>
+
+      <div class="dashboard-portal-actions">
+        <a class="dashboard-portal-back" href="/">Regresar al portal</a>
+        <details class="account-menu">
+          <summary class="account-trigger" aria-label="Abrir menú de usuario" title="<?= $name ?>">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="8" r="4" fill="currentColor" />
+              <path d="M4 20c0-4.1 3.6-6 8-6s8 1.9 8 6v1H4z" fill="currentColor" />
+            </svg>
+          </summary>
+          <div class="account-menu-panel">
+            <div class="account-menu-info">
+              <strong><?= $name ?></strong>
+              <span><?= $email ?></span>
+            </div>
+            <a class="account-menu-logout" href="/logout.php">Cerrar sesión</a>
+          </div>
+        </details>
+      </div>
+    </div>
+  </nav><div id="ingresosExcelEstado" style="margin:16px 32px;padding:12px 16px;border:1px solid #cbded7;border-radius:10px;background:#f4f9f7;color:#183c37;font:14px system-ui;display:block">Ingresos desde Excel: comprobando disponibilidad...</div>
+  <script>window.PORTAL_USER_EMAIL = <?= json_encode($email, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;</script>
+  <!-- Pantalla inicial de login -->
+  <main id="loginPage" class="login-page">
+    <section class="login-card">
+      <h1>Centro de Control Dirección</h1>
+      <p>Dashboard ejecutivo de indicadores financieros, comerciales y operativos.</p>
+
+      <div class="login-divider"></div>
+
+      <p class="login-note">
+        Para visualizar la información, inicia sesión con tu cuenta autorizada de Microsoft 365.
+      </p>
+
+      <button id="loginButton" class="button login-main-button">
+        Iniciar sesión
+      </button>
+
+      <div id="loginStatus" class="login-status">
+        Sin sesión iniciada.
+      </div>
+    </section>
+  </main>
+
+  <!-- Dashboard principal -->
+  <main id="dashboardPage" class="app hidden">
+    <header class="header">
+      <div class="header-title">
+        <h1>Centro de Control Dirección</h1>
+        <p>Dashboard ejecutivo de indicadores financieros, comerciales y operativos</p>
+      </div>
+
+      <div class="header-actions">
+        <div class="period-filter">
+          <label class="period-label" for="yearSelector">Año</label>
+          <select id="yearSelector" class="select select-period"></select>
+        </div>
+
+        <div class="period-filter">
+          <label class="period-label" for="monthStartSelector">Desde</label>
+          <select id="monthStartSelector" class="select select-period"></select>
+        </div>
+
+        <div class="period-filter">
+          <label class="period-label" for="monthEndSelector">Hasta</label>
+          <select id="monthEndSelector" class="select select-period"></select>
+        </div>
+
+        <div class="dashboard-toolbar-block">
+          <div class="dashboard-toolbar">
+          <!-- Actualizar -->
+          <button
+            id="refreshButton"
+            class="toolbar-icon-button toolbar-refresh-button"
+            type="button"
+            title="Actualizar"
+            aria-label="Actualizar dashboard"
+          >
+            <svg
+              class="toolbar-icon-svg"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                d="M20 5v5h-5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M20 10a8 8 0 0 0-14.85-2"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M4 19v-5h5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M4 14a8 8 0 0 0 14.85 2"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+
+          <!-- Cuenta administrada desde el encabezado del Portal Interno -->
+
+          <!-- Notificaciones -->
+          <div id="notificationsWrapper" class="notifications-wrapper">
+            <button
+              id="notificationsButton"
+              class="toolbar-icon-button toolbar-notifications-button notifications-button"
+              type="button"
+              title="Notificaciones"
+              aria-label="Notificaciones"
+            >
+              <svg class="toolbar-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm6-6v-5a6 6 0 1 0-12 0v5l-2 2v1h16v-1l-2-2z"></path>
+              </svg>
+
+              <span id="notificationsBadge" class="notifications-badge hidden">0</span>
+            </button>
+
+            <section id="notificationsPanel" class="notifications-panel hidden">
+              <div class="notifications-panel-header">
+                <div>
+                  <h3>Notificaciones</h3>
+                  <p>Alertas nuevas y pendientes del dashboard.</p>
+                </div>
+              </div>
+
+                <div id="notificationsList" class="notifications-list">
+                  <div class="notifications-empty">
+                    Sin notificaciones nuevas.
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="dashboard-build-info"
+          aria-label="Información de versión y actualización"
+        >
+          <span class="dashboard-build-item">
+            Versión
+            <strong id="dashboardVersionValue">—</strong>
+          </span>
+
+          <span
+            class="dashboard-build-separator"
+            aria-hidden="true"
+          >
+            •
+          </span>
+
+          <span class="dashboard-build-item">
+            Última actualización
+            <strong id="dashboardLastUpdateValue">—</strong>
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <div id="notificationToastContainer" class="notification-toast-container"></div>
+
+    <section id="statusPanel" class="auth-panel hidden">
+      <div id="authStatus">Revisando sesión...</div>
+      <div id="sharePointStatus" style="margin-top: 6px;">SharePoint: sin probar</div>
+    </section>
+
+    <!-- Página principal / Resumen -->
+    <section id="pageResumen" class="dashboard-page">
+      <section class="grid-kpis">
+        <article class="card kpi-card" data-page="ingresos" role="button" tabindex="0">
+          <div class="kpi-label">Monto total ingresos</div>
+          <div id="kpiIngresos" class="kpi-value">Información no disponible</div>
+        </article>
+
+        <article class="card kpi-card" data-page="egresos" role="button" tabindex="0">
+          <div class="kpi-label">Monto total egresos</div>
+          <div id="kpiEgresos" class="kpi-value">$0.00</div>
+        </article>
+
+        <article class="card">
+          <div class="kpi-label">Flujo neto</div>
+          <div id="kpiFlujo" class="kpi-value">Información no disponible</div>
+        </article>
+
+        <article class="card kpi-card" data-page="ventas" role="button" tabindex="0">
+          <div class="kpi-label">Monto total ventas</div>
+          <div id="kpiVentas" class="kpi-value">$0.00</div>
+        </article>
+
+        <article class="card kpi-card" data-page="marketing" role="button" tabindex="0">
+          <div class="kpi-label">Ventas generadas MKT</div>
+          <div id="kpiMarketingVentas" class="kpi-value">$0.00</div>
+        </article>
+
+        <article class="card kpi-card" data-page="serviciosCapillas" role="button" tabindex="0">
+          <div class="kpi-label">Servicios Capillas</div>
+          <div id="kpiServiciosCapillas" class="kpi-value">0</div>
+        </article>
+
+        <article class="card kpi-card" data-page="serviciosParque" role="button" tabindex="0">
+          <div class="kpi-label">Servicios Parque</div>
+          <div id="kpiServiciosParque" class="kpi-value">0</div>
+        </article>
+      </section>
+
+      <section class="grid-main">
+        <article class="card flujo-card">
+          <div class="flujo-card-header">
+            <div>
+              <h2>Flujo de efectivo neto</h2>
+              <p>Resumen mensual conforme a estructura de presupuesto: contribución marginal, flujo operativo, pasivos, reinversión e impuestos.</p>
+            </div>
+          </div>
+        
+          <div class="flujo-table-scroll">
+            <table class="table flujo-table">
+              <thead>
+                <tr>
+                  <th>Concepto</th>
+                  <th>Total</th>
+                  <th>% ingreso</th>
+                </tr>
+              </thead>
+              <tbody id="tablaFlujoEfectivoBody">
+                <tr>
+                  <td>Cargando...</td>
+                  <td>—</td>
+                  <td>—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      
+        <div class="home-right-stack">
+          <article class="card metas-cobranza-card">
+            <div class="metas-card-header">
+              <div>
+                <h2 class="section-title">Avance contra meta de cobranza</h2>
+                <p>Comparativo mensual del cobro real contra la meta definida por área.</p>
+              </div>
+            </div>
+          
+            <div class="status-box metas-status-box">
+              Cumplimiento total:
+              <span id="metasCobranzaCumplimiento">0.0%</span>
+            </div>
+          
+            <div class="metas-table-scroll">
+              <table class="table metas-cobranza-table">
+                <thead>
+                  <tr>
+                    <th>Área</th>
+                    <th>Real cobrado</th>
+                    <th>Meta mensual</th>
+                    <th>% cumplido</th>
+                    <th>Por cumplir</th>
+                  </tr>
+                </thead>
+                <tbody id="tablaMetasCobranzaBody">
+                  <tr>
+                    <td>Cargando...</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+      
+          <article class="card servicios-resumen-card">
+            <div class="servicios-resumen-header">
+              <div>
+                <h2>Servicios del día</h2>
+                <p>Resumen de servicios activos y programados considerando la fecha y hora local actual.</p>
+              </div>
+          
+              <div class="servicios-resumen-hora">
+                <span id="serviciosDiaActualizado">Hora local: —</span>
+              </div>
+            </div>
+          
+            <div class="servicios-resumen-groups">
+              <section class="servicios-resumen-group">
+                <div class="servicios-resumen-group-title">
+                  Capillas
+                </div>
+          
+                <div class="servicios-dia-resumen servicios-dia-resumen-top">
+                  <div class="servicios-dia-resumen-item activo">
+                    <span>Activos ahora</span>
+                    <strong id="serviciosDiaCapillasActivosTotal">0</strong>
+                  </div>
+          
+                  <div class="servicios-dia-resumen-item programado">
+                    <span>Programados hoy</span>
+                    <strong id="serviciosDiaCapillasProgramadosTotal">0</strong>
+                  </div>
+                </div>
+              </section>
+          
+              <section class="servicios-resumen-group">
+                <div class="servicios-resumen-group-title">
+                  Parque
+                </div>
+          
+                <div class="servicios-dia-resumen servicios-dia-resumen-top">
+                  <div class="servicios-dia-resumen-item activo">
+                    <span>Activos ahora</span>
+                    <strong id="serviciosDiaParqueActivosTotal">0</strong>
+                  </div>
+          
+                  <div class="servicios-dia-resumen-item programado">
+                    <span>Programados hoy</span>
+                    <strong id="serviciosDiaParqueProgramadosTotal">0</strong>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </article>
+        </div>
+      </section>
+      
+      <section class="servicios-dia-section servicios-dia-detail-section">
+        <article class="card servicios-dia-card">
+          <div class="servicios-dia-header servicios-dia-header-simple">
+            <div>
+              <h2>Detalle de servicios del día</h2>
+              <p>Servicios activos y programados considerando la fecha y hora local actual.</p>
+            </div>
+          </div>
+      
+          <section class="servicios-detalle-bloque">
+            <div class="servicios-detalle-titulo">
+              <h3>Capillas</h3>
+            </div>
+      
+            <div class="servicios-agenda-grid">
+              <section class="servicios-agenda-column">
+                <div class="servicios-agenda-column-header">
+                  <div>
+                    <h3>Activos ahora</h3>
+                    <p>Servicios de Capillas que ya iniciaron y aún no terminan.</p>
+                  </div>
+                </div>
+      
+                <div id="serviciosDiaCapillasActivosBody" class="servicios-agenda-list">
+                  <div class="servicios-agenda-empty">Sin servicios activos de Capillas actualmente.</div>
+                </div>
+              </section>
+      
+              <section class="servicios-agenda-column">
+                <div class="servicios-agenda-column-header">
+                  <div>
+                    <h3>Programados hoy</h3>
+                    <p>Servicios de Capillas que inician más tarde durante el día.</p>
+                  </div>
+                </div>
+      
+                <div id="serviciosDiaCapillasProgramadosBody" class="servicios-agenda-list">
+                  <div class="servicios-agenda-empty">Sin servicios programados de Capillas para hoy.</div>
+                </div>
+              </section>
+            </div>
+          </section>
+      
+          <section class="servicios-detalle-bloque">
+            <div class="servicios-detalle-titulo">
+              <h3>Parque</h3>
+            </div>
+      
+            <div class="servicios-agenda-grid">
+              <section class="servicios-agenda-column">
+                <div class="servicios-agenda-column-header">
+                  <div>
+                    <h3>Activos ahora</h3>
+                    <p>Servicios de Parque que ya iniciaron y aún no terminan.</p>
+                  </div>
+                </div>
+      
+                <div id="serviciosDiaParqueActivosBody" class="servicios-agenda-list">
+                  <div class="servicios-agenda-empty">Sin servicios activos de Parque actualmente.</div>
+                </div>
+              </section>
+      
+              <section class="servicios-agenda-column">
+                <div class="servicios-agenda-column-header">
+                  <div>
+                    <h3>Programados hoy</h3>
+                    <p>Servicios de Parque que inician más tarde durante el día.</p>
+                  </div>
+                </div>
+      
+                <div id="serviciosDiaParqueProgramadosBody" class="servicios-agenda-list">
+                  <div class="servicios-agenda-empty">Sin servicios programados de Parque para hoy.</div>
+                </div>
+              </section>
+            </div>
+          </section>
+        </article>
+      </section>
+    </section>  
+
+      
+    <!-- Página de Ingresos -->
+    <section id="pageIngresos" class="dashboard-page hidden">
+      <article class="card">
+        <div class="page-header">
+          <div>
+            <h2 class="section-title">Ingresos</h2>
+            <p class="footer-note">Detalle de ingresos del periodo seleccionado.</p>
+          </div>
+
+          <button class="button button-secondary page-back-button" data-page="resumen">
+            Regresar
+          </button>
+        </div>
+
+        <div class="detail-kpi-grid detail-kpi-grid-6">
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Ingresos del periodo</span>
+            <strong id="pageIngresosTotal">Información no disponible</strong>
+          </div>
+        
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Ingreso real</span>
+            <strong id="pageIngresosReal">Información no disponible</strong>
+          </div>
+        
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Meta del periodo</span>
+            <strong id="pageIngresosMeta">$0.00</strong>
+          </div>
+        
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">% Cumplimiento</span>
+            <strong id="pageIngresosCumplimiento">Información no disponible</strong>
+          </div>
+        
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Registros de ingresos</span>
+            <strong id="pageIngresosRegistros">Información no disponible</strong>
+          </div>
+        
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Promedio por registro</span>
+            <strong id="pageIngresosPromedio">Información no disponible</strong>
+          </div>
+        </div>
+        
+        <article class="detail-section-card chart-card chart-card-full">
+          <div class="detail-section-header">
+            <div>
+              <h3>Ingreso real vs meta mensual</h3>
+              <p>Comparativo del ingreso total mensual contra la meta mensual total.</p>
+            </div>
+          </div>
+        
+          <div class="chart-container chart-container-line">
+            <canvas id="chartIngresosMensuales"></canvas>
+          </div>
+        </article>
+        
+        <div class="detail-columns">
+          <div class="detail-column">
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Ingresos por banco</h3>
+                  <p>Distribución del ingreso mensual por cuenta/banco.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll">
+                <table class="table detail-table">
+                  <thead>
+                    <tr>
+                      <th>Banco</th>
+                      <th>Registros</th>
+                      <th>Total</th>
+                      <th>% del ingreso</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaIngresosBancoBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div class="chart-container chart-container-pie">
+                <canvas id="chartIngresosBanco"></canvas>
+              </div>
+            </article>
+        
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Ingresos por subcategoría</h3>
+                  <p>Detalle del ingreso mensual por subcategoría de cobranza.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll table-scroll-ingresos-subcategoria">
+                <table class="table detail-table detail-table-ingresos-subcategoria">
+                  <thead>
+                    <tr>
+                      <th>Subcategoría</th>
+                      <th>Registros</th>
+                      <th>Total</th>
+                      <th>% del ingreso</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaIngresosSubcategoriaBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        
+          <div class="detail-column">
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Ingresos por categoría</h3>
+                  <p>Clasificación del ingreso mensual por categoría de cobranza.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll">
+                <table class="table detail-table">
+                  <thead>
+                    <tr>
+                      <th>Categoría</th>
+                      <th>Registros</th>
+                      <th>Total</th>
+                      <th>% del ingreso</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaIngresosCategoriaBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="chart-container chart-container-pie chart-container-pie-categoria">
+                <canvas id="chartIngresosCategoria"></canvas>
+              </div>
+            </article>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Página de Egresos -->
+    <section id="pageEgresos" class="dashboard-page hidden">
+      <article class="card">
+        <div class="page-header">
+          <div>
+            <h2 class="section-title">Egresos</h2>
+            <p class="footer-note">Detalle de egresos del periodo seleccionado.</p>
+          </div>
+
+          <button class="button button-secondary page-back-button" data-page="resumen">
+            Regresar
+          </button>
+        </div>
+
+        <div class="detail-kpi-grid detail-kpi-grid-4">
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Egresos del periodo seleccionado.</span>
+            <strong id="pageEgresosTotal">$0.00</strong>
+          </div>
+        
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Registros de egresos</span>
+            <strong id="pageEgresosRegistros">0</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Por pagar</span>
+            <strong id="pageEgresosPorPagar">$0.00</strong>
+          </div>
+          
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Promedio por registro</span>
+            <strong id="pageEgresosPromedio">$0.00</strong>
+          </div>
+        </div>
+
+        <article class="detail-section-card chart-card chart-card-full">
+          <div class="detail-section-header">
+            <div>
+              <h3>Egresos mensuales del año</h3>
+              <p>Comparativo del total de egresos pagados por mes.</p>
+            </div>
+          </div>
+        
+          <div class="chart-container chart-container-line">
+            <canvas id="chartEgresosMensuales"></canvas>
+          </div>
+        </article>
+        
+        <div class="detail-columns">
+          <div class="detail-column">
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Egresos por rubro</h3>
+                  <p>Distribución de egresos pagados por rubro contable y tipo de gasto.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll table-scroll-20">
+                <table class="table detail-table detail-table-egresos-rubro">
+                  <thead>
+                    <tr>
+                      <th>Rubro</th>
+                      <th>Tipo de gasto</th>
+                      <th>Registros</th>
+                      <th>Pagado</th>
+                      <th>% del egreso</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaEgresosRubroBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="chart-container chart-container-pie chart-container-pie-egresos-rubro">
+                <canvas id="chartEgresosRubro"></canvas>
+              </div>
+            </article>
+        
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Egresos por tipo de gasto</h3>
+                  <p>Clasificación mensual entre gasto fijo, variable, reinversión, impuestos u otros tipos.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll">
+                <table class="table detail-table">
+                  <thead>
+                    <tr>
+                      <th>Tipo de gasto</th>
+                      <th>Registros</th>
+                      <th>Pagado</th>
+                      <th>% del egreso</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaEgresosTipoGastoBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        
+          <div class="detail-column">
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Egresos por beneficiario</h3>
+                  <p>Principales proveedores, beneficiarios o conceptos de pago del mes.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll table-scroll-15">
+                <table class="table detail-table">
+                  <thead>
+                    <tr>
+                      <th>Beneficiario</th>
+                      <th>Registros</th>
+                      <th>Pagado</th>
+                      <th>% del egreso</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaEgresosBeneficiarioBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+        
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Pagos pendientes / por pagar</h3>
+                  <p>Relación de egresos registrados que todavía tienen importe pendiente por pagar.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll table-scroll-15">
+                <table class="table detail-table detail-table-egresos-pendientes">
+                  <thead>
+                    <tr>
+                      <th>Beneficiario</th>
+                      <th>Rubro</th>
+                      <th>Tipo de gasto</th>
+                      <th>Por pagar</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaEgresosPendientesBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Página de Ventas -->
+    <section id="pageVentas" class="dashboard-page hidden">
+      <article class="card">
+        <div class="page-header">
+          <div>
+            <h2 class="section-title">Ventas</h2>
+            <p class="footer-note">Detalle de ventas del periodo seleccionado.</p>
+          </div>
+
+          <button class="button button-secondary page-back-button" data-page="resumen">
+            Regresar
+          </button>
+        </div>
+
+        <div class="detail-kpi-grid detail-kpi-grid-9">
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Ventas Previsión del periodo</span>
+            <strong id="pageVentasTotal">$0.00</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Meta Previsión Mensual</span>
+            <strong id="pageVentasMetaPrevision">$0.00</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">% Cumplimiento Previsión</span>
+            <strong id="pageVentasCumplimientoPrevision">0.0%</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Ventas UI del periodo</span>
+            <strong id="pageVentasUiTotal">$0.00</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Meta UI Mensual</span>
+            <strong id="pageVentasMetaUi">$0.00</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">% Cumplimiento UI</span>
+            <strong id="pageVentasCumplimientoUi">0.0%</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Contratos</span>
+            <strong id="pageVentasContratos">0</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Ticket prom. propiedades</span>
+            <strong id="pageVentasTicketPropiedades">$0.00</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Ticket prom. servicios</span>
+            <strong id="pageVentasTicketServicios">$0.00</strong>
+          </div>
+        </div>
+        
+        <article class="detail-section-card chart-card chart-card-full">
+          <div class="detail-section-header">
+            <div>
+              <h3>Ventas Previsión/UI vs metas mensuales</h3>
+              <p>Comparativo mensual de ventas de Previsión y Uso Inmediato contra sus metas correspondientes.</p>
+            </div>
+          </div>
+        
+          <div class="chart-container chart-container-line">
+            <canvas id="chartVentasMensuales"></canvas>
+          </div>
+        </article>
+        
+        <article class="detail-section-card chart-card chart-card-full">
+          <div class="detail-section-header">
+            <div>
+              <h3>Ventas por asesor</h3>
+              <p>Comparativo del monto vendido por asesor en el mes seleccionado.</p>
+            </div>
+          </div>
+        
+          <div class="chart-ventas-asesor-wrapper">
+            <div class="chart-ventas-asesor-axis">
+              <canvas id="chartVentasAsesorAxis"></canvas>
+            </div>
+          
+            <div class="chart-container chart-container-bar chart-container-bar-ventas-asesor">
+              <div id="chartVentasAsesorInner" class="chart-scroll-inner-ventas-asesor">
+                <canvas id="chartVentasAsesor"></canvas>
+              </div>
+            </div>
+          </div>
+        </article>
+        
+        <div class="detail-columns">
+          <div class="detail-column">
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Ventas por asesor</h3>
+                  <p>Distribución de venta mensual por asesor comercial.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll table-scroll-15">
+                <table class="table detail-table detail-table-ventas detail-table-ventas-asesor">
+                  <thead>
+                    <tr>
+                      <th>Asesor</th>
+                      <th>Registros</th>
+                      <th>Unidades</th>
+                      <th>Total venta</th>
+                      <th>Meta mensual</th>
+                      <th>% cumplimiento</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaVentasAsesorBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+        
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Ventas por tipo de servicio</h3>
+                  <p>Resumen de unidades vendidas por tipo de servicio o producto.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll">
+                <table class="table detail-table detail-table-ventas detail-table-ventas-servicio">
+                  <thead>
+                    <tr>
+                      <th>Tipo de servicio</th>
+                      <th>Registros</th>
+                      <th>Unidades</th>
+                      <th>Total venta</th>
+                      <th>% unidades</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaVentasTipoServicioBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        
+          <div class="detail-column">
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Contratos del periodo</h3>
+                  <p>Todos los contratos registrados dentro del periodo seleccionado.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll table-scroll-ventas-contratos">
+                <table class="table detail-table detail-table-ventas detail-table-ventas-contratos">
+                  <thead>
+                    <tr>
+                      <th>Contrato</th>
+                      <th>Cliente</th>
+                      <th>Tipo</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaVentasContratosBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Ventas Uso Inmediato por responsable</h3>
+                  <p>Resumen de ventas de Uso Inmediato separadas entre Capillas y Parque.</p>
+                </div>
+              </div>
+
+              <div class="table-scroll table-scroll-15">
+                <table class="table detail-table detail-table-ventas-ui-responsable">
+                  <thead>
+                    <tr>
+                      <th>Responsable</th>
+                      <th>Ventas UI Capillas</th>
+                      <th>Monto UI Capillas</th>
+                      <th>Ventas UI Parque</th>
+                      <th>Monto UI Parque</th>
+                      <th>% Servicios</th>
+                    </tr>
+                  </thead>
+
+                  <tbody id="tablaVentasUiResponsableBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    
+    <!-- Página de Marketing -->
+    <section id="pageMarketing" class="dashboard-page hidden">
+      <article class="card">
+        <div class="page-header">
+          <div>
+            <h2 class="section-title">Marketing</h2>
+            <p class="footer-note">Indicadores de marketing digital del periodo seleccionado.</p>
+          </div>
+
+          <button class="button button-secondary page-back-button" data-page="resumen">
+            Regresar
+          </button>
+        </div>
+
+        <div class="detail-kpi-grid detail-kpi-grid-6">
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Leads generadas</span>
+            <strong id="pageMarketingLeadsGenerados">0</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Leads efectivos</span>
+            <strong id="pageMarketingLeadsEfectivos">0</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Costo por lead</span>
+            <strong id="pageMarketingCostoLead">$0.00</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Costo por venta</span>
+            <strong id="pageMarketingCostoVenta">$0.00</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">ROI</span>
+            <strong id="pageMarketingRoi">0.00x</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Número de ventas</span>
+            <strong id="pageMarketingNumeroVentas">0</strong>
+          </div>
+        </div>
+
+        <!-- Venta digital, leads y tabla de metas -->
+        <div class="detail-columns marketing-main-columns">
+
+          <!-- Columna izquierda: dos gráficas del mismo tamaño -->
+          <div class="detail-column marketing-chart-stack">
+
+            <article class="detail-section-card chart-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Venta digital vs meta</h3>
+                  <p>
+                    Comparativo mensual de la venta generada por Marketing
+                    contra las metas mínima y máxima.
+                  </p>
+                </div>
+              </div>
+
+              <div class="chart-container chart-container-line">
+                <canvas id="chartMarketingVentaMeta"></canvas>
+              </div>
+            </article>
+
+            <article class="detail-section-card chart-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Leads generados vs leads efectivos</h3>
+                  <p>
+                    Evolución mensual del volumen de leads y los prospectos
+                    considerados efectivos.
+                  </p>
+                </div>
+              </div>
+
+              <div class="chart-container chart-container-line">
+                <canvas id="chartMarketingLeads"></canvas>
+              </div>
+            </article>
+
+          </div>
+
+          <!-- Columna derecha: tabla mensual -->
+          <div class="detail-column">
+            <article class="detail-section-card marketing-venta-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Venta digital mensual</h3>
+                  <p>
+                    Resultado mensual contra la meta mínima y la meta máxima.
+                  </p>
+                </div>
+              </div>
+
+              <div class="table-scroll table-scroll-15">
+                <table class="table detail-table marketing-venta-table">
+                  <thead>
+                    <tr>
+                      <th>Mes</th>
+                      <th>Venta digital</th>
+                      <th>Meta mínima</th>
+                      <th>Meta máxima</th>
+                      <th>% meta mínima</th>
+                      <th>Estatus</th>
+                    </tr>
+                  </thead>
+
+                  <tbody id="tablaMarketingVentaMetaBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+
+        </div>
+
+        <!-- Tabla mensual de resultados -->
+        <article class="detail-section-card marketing-monthly-card">
+          <div class="detail-section-header">
+            <div>
+              <h3>Resultados mensuales de Marketing</h3>
+              <p>
+                Resumen de leads, conversión, ventas, costos e indicador de retorno.
+              </p>
+            </div>
+          </div>
+
+          <div class="table-scroll">
+            <table class="table detail-table marketing-monthly-table">
+              <thead>
+                <tr>
+                  <th>Mes</th>
+                  <th>Leads generados</th>
+                  <th>Leads efectivos</th>
+                  <th>% conversión</th>
+                  <th>No. ventas</th>
+                  <th>Inversión</th>
+                  <th>CPL</th>
+                  <th>CPV</th>
+                  <th>Venta digital</th>
+                  <th>ROI</th>
+                </tr>
+              </thead>
+
+              <tbody id="tablaMarketingMensualBody">
+                <tr>
+                  <td>Cargando...</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <!-- Comparativo por medio -->
+        <article class="detail-section-card chart-card chart-card-full">
+          <div class="detail-section-header">
+            <div>
+              <h3>Comparativo por medio digital</h3>
+              <p>
+                Comparativo de inversión, venta generada y retorno estimado
+                por plataforma.
+              </p>
+            </div>
+          </div>
+
+          <div class="chart-container chart-container-bar marketing-medios-chart">
+            <canvas id="chartMarketingMedios"></canvas>
+          </div>
+        </article>
+
+        <article class="detail-section-card">
+          <div class="detail-section-header">
+            <div>
+              <h3>Desempeño por medio</h3>
+              <p>
+                Resultados acumulados de Google, Facebook/Instagram,
+                TikTok y YouTube/Video para el periodo seleccionado.
+              </p>
+            </div>
+          </div>
+
+          <div class="table-scroll">
+            <table class="table detail-table marketing-medios-table">
+              <thead>
+                <tr>
+                  <th>Medio</th>
+                  <th>Leads</th>
+                  <th>Leads efectivos</th>
+                  <th>% conversión</th>
+                  <th>No. ventas</th>
+                  <th>Inversión</th>
+                  <th>Venta digital</th>
+                  <th>CPL</th>
+                  <th>CPV</th>
+                  <th>ROI</th>
+                </tr>
+              </thead>
+
+              <tbody id="tablaMarketingMediosBody">
+                <tr>
+                  <td>Cargando...</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                  <td>—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <!-- Redes sociales -->
+        <article class="detail-section-card marketing-redes-card">
+          <div class="detail-section-header">
+            <div>
+              <h3>Resultados de redes sociales</h3>
+              <p>
+                Alcance, interacciones, seguidores, visualizaciones
+                y engagement del periodo seleccionado.
+              </p>
+            </div>
+          </div>
+
+          <div class="detail-kpi-grid detail-kpi-grid-5 marketing-redes-kpis">
+            <div class="detail-kpi-card">
+              <span class="detail-kpi-label">Alcance total</span>
+              <strong id="pageMarketingAlcanceTotal">0</strong>
+            </div>
+
+            <div class="detail-kpi-card">
+              <span class="detail-kpi-label">Interacciones</span>
+              <strong id="pageMarketingInteracciones">0</strong>
+            </div>
+
+            <div class="detail-kpi-card">
+              <span class="detail-kpi-label">Seguidores ganados</span>
+              <strong id="pageMarketingSeguidores">0</strong>
+            </div>
+
+            <div class="detail-kpi-card">
+              <span class="detail-kpi-label">Visualizaciones</span>
+              <strong id="pageMarketingVisualizaciones">0</strong>
+            </div>
+
+            <div class="detail-kpi-card">
+              <span class="detail-kpi-label">Engagement</span>
+              <strong id="pageMarketingEngagement">0.0%</strong>
+            </div>
+          </div>
+
+          <div class="marketing-redes-content">
+            <div class="chart-container chart-container-bar marketing-redes-chart">
+              <canvas id="chartMarketingRedes"></canvas>
+            </div>
+
+            <div class="table-scroll">
+              <table class="table detail-table marketing-redes-table">
+                <thead>
+                  <tr>
+                    <th>Red</th>
+                    <th>Alcance</th>
+                    <th>Interacciones</th>
+                    <th>Seguidores ganados</th>
+                    <th>Visualizaciones</th>
+                    <th>Engagement</th>
+                  </tr>
+                </thead>
+
+                <tbody id="tablaMarketingRedesBody">
+                  <tr>
+                    <td>Cargando...</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+      </article>
+    </section>
+
+    <!-- Página de Servicios -->
+    <section id="pageServiciosCapillas" class="dashboard-page hidden">
+      <article class="card">
+        <div class="page-header">
+          <div>
+            <h2 class="section-title">Servicios Capillas</h2>
+            <p class="footer-note">Detalle de servicios de Capillas del periodo seleccionado.</p>
+          </div>
+
+          <button class="button button-secondary page-back-button" data-page="resumen">
+            Regresar
+          </button>
+        </div>
+
+        <div class="detail-kpi-grid detail-kpi-grid-5">
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Servicios Capillas</span>
+            <strong id="pageServiciosCapillasTotal">0</strong>
+          </div>
+        
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Capillas Uso Inmediato</span>
+            <strong id="pageServiciosCapillasUsoInmediato">0</strong>
+          </div>
+        
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Capillas Previsión</span>
+            <strong id="pageServiciosCapillasPrevision">0</strong>
+          </div> 
+        </div>
+
+        <article class="detail-section-card chart-card chart-card-full">
+          <div class="detail-section-header">
+            <div>
+              <h3>Servicios Capillas mensuales</h3>
+              <p>Comparativo mensual de servicios Uso Inmediato contra Previsión.</p>
+            </div>
+          </div>
+        
+          <div class="chart-container chart-container-line">
+            <canvas id="chartServiciosMensuales"></canvas>
+          </div>
+        </article>
+        
+        <div class="detail-columns">
+          <div class="detail-column">
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Servicios por ubicación / sucursal</h3>
+                  <p>Distribución mensual de servicios por sucursal, parque o ubicación registrada.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll">
+                <table class="table detail-table detail-table-servicios">
+                  <thead>
+                    <tr>
+                      <th>Ubicación</th>
+                      <th>Total</th>
+                      <th>Uso Inmediato</th>
+                      <th>Previsión</th>
+                      <th>% Servicios</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaServiciosUbicacionBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+        
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Servicios por tipo de servicio</h3>
+                  <p>Resumen mensual por velación, inhumación, cremación, depósito u otro tipo de servicio.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll">
+                <table class="table detail-table detail-table-servicios-tipo">
+                  <thead>
+                    <tr>
+                      <th>Origen</th>
+                      <th>Tipo de servicio</th>
+                      <th>Registros</th>
+                      <th>% servicios</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaServiciosTipoBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        
+          <div class="detail-column">
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Servicios recientes</h3>
+                  <p>Últimos servicios registrados para el mes seleccionado.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll table-scroll-15">
+                <table class="table detail-table tabla-servicios-recientes-capillas">
+                  <colgroup>
+                    <col class="col-servicio-numero">
+                    <col class="col-servicio-fecha">
+                    <col class="col-servicio-finado">
+                    <col class="col-servicio-ubicacion">
+                    <col class="col-servicio-tipo">
+                  </colgroup>
+
+                  <thead>
+                    <tr>
+                      <th>No. Servicio</th>
+                      <th>Fecha</th>
+                      <th>Finado</th>
+                      <th>Ubicación</th>
+                      <th>Tipo</th>
+                    </tr>
+                  </thead>
+
+                  <tbody id="tablaServiciosRecientesBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+        
+            <article class="detail-section-card">
+              <div class="detail-section-header">
+                <div>
+                  <h3>Servicios por asesor / responsable</h3>
+                  <p>Servicios relacionados con asesor, responsable o embalsamador registrado.</p>
+                </div>
+              </div>
+        
+              <div class="table-scroll table-scroll-15">
+                <table class="table detail-table detail-table-servicios">
+                  <thead>
+                    <tr>
+                      <th>Responsable</th>
+                      <th>Total</th>
+                      <th>Uso Inmediato</th>
+                      <th>Previsión</th>
+                      <th>% Servicios</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tablaServiciosResponsableBody">
+                    <tr>
+                      <td>Cargando...</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section id="pageServiciosParque" class="dashboard-page hidden">
+      <article class="card page-card">
+        <div class="page-header">
+          <div>
+            <h2 class="section-title">Servicios Parque</h2>
+            <p class="footer-note">Detalle operativo y resumen de propiedades del Parque.</p>
+          </div>
+
+          <button class="button button-secondary page-back-button" data-page="resumen">
+            Regresar
+          </button>
+        </div>
+
+        <div class="detail-kpi-grid parque-kpi-grid">
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Total servicios del periodo</span>
+            <strong id="pageParqueServiciosTotal">0</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Propiedades construidas a la fecha</span>
+            <strong id="pageParquePropiedadesConstruidas">0</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">% construidas vs proyectado</span>
+            <strong id="pageParqueConstruidasProyectadoPct">0.0%</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Propiedades vendidas a la fecha</span>
+            <strong id="pageParquePropiedadesVendidas">0</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">% vendidas vs proyectado</span>
+            <strong id="pageParqueVendidasConstruidoPct">0.0%</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">Propiedades utilizadas a la fecha</span>
+            <strong id="pageParquePropiedadesUtilizadas">0</strong>
+          </div>
+
+          <div class="detail-kpi-card">
+            <span class="detail-kpi-label">% utilizadas vs proyectado</span>
+            <strong id="pageParqueUtilizadasProyectadoPct">0.0%</strong>
+          </div>
+        </div>
+
+        <section class="detail-section-card">
+          <div class="section-card-header">
+            <div>
+              <h3>Servicios Parque mensuales</h3>
+              <p>Comparativo mensual de servicios registrados en Parque.</p>
+            </div>
+          </div>
+
+          <div class="chart-container chart-container-line">
+            <canvas id="chartServiciosParqueMensuales"></canvas>
+          </div>
+        </section>
+
+        <section class="detail-section-card">
+          <div class="section-card-header">
+            <div>
+              <h3>Resumen de propiedades de Parque</h3>
+              <p>Resumen por tipo de propiedad, estatus construido, vendido y usado.</p>
+            </div>
+          </div>
+
+          <div id="tablaParquePropiedadesBase">
+            <div class="empty-state">
+              Cargando información de propiedades de Parque...
+            </div>
+          </div>
+        </section>
+      </article>
+    </section>
+
+    <!-- Modal: histórico de ventas por asesor -->
+    <div id="ventasAsesorModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+      <section class="modal-card ventas-asesor-modal-card">
+        <div class="modal-header">
+          <div>
+            <h2 id="ventasAsesorModalTitle">Histórico de ventas</h2>
+            <p id="ventasAsesorModalSubtitle">
+              Ventas mensuales del asesor durante el año seleccionado.
+            </p>
+          </div>
+
+          <button id="ventasAsesorModalClose" class="modal-close-button" type="button">
+            ×
+          </button>
+        </div>
+
+
+        <div class="ventas-asesor-modal-kpis">
+          <div class="ventas-asesor-modal-kpi">
+            <span>Total vendido</span>
+            <strong id="ventasAsesorHistoricoTotal">$0.00</strong>
+          </div>
+
+          <div class="ventas-asesor-modal-kpi">
+            <span>Meta acumulada</span>
+            <strong id="ventasAsesorHistoricoMeta">$0.00</strong>
+          </div>
+
+          <div class="ventas-asesor-modal-kpi">
+            <span>% cumplimiento</span>
+            <strong id="ventasAsesorHistoricoCumplimiento">0.0%</strong>
+          </div>
+
+          <div class="ventas-asesor-modal-kpi">
+            <span>Mejor mes</span>
+            <strong id="ventasAsesorHistoricoMejorMes">—</strong>
+          </div>
+
+          <div class="ventas-asesor-modal-kpi">
+            <span>Unidades</span>
+            <strong id="ventasAsesorHistoricoUnidades">0</strong>
+          </div>
+        </div>
+
+        <div class="chart-container chart-container-line ventas-asesor-modal-chart">
+          <canvas id="chartVentasAsesorHistorico"></canvas>
+        </div>
+      </section>
+    </div>
+
+
+    <!-- Modal: detalle de egresos por tipo de gasto -->
+    <div id="egresosTipoGastoModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+      <section class="modal-card egresos-tipo-gasto-modal-card">
+        <div class="modal-header">
+          <div>
+            <h2 id="egresosTipoGastoModalTitle">Detalle de egresos</h2>
+            <p id="egresosTipoGastoModalSubtitle">
+              Movimientos del tipo de gasto seleccionado dentro del periodo.
+            </p>
+          </div>
+
+          <button id="egresosTipoGastoModalClose" class="modal-close-button" type="button">
+            ×
+          </button>
+        </div>
+
+        <div class="table-scroll egresos-tipo-gasto-modal-scroll">
+          <table class="table detail-table egresos-tipo-gasto-modal-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Beneficiario</th>
+                <th>Rubro</th>
+                <th>Contexto</th>
+                <th>Pagado</th>
+                <th>Por pagar</th>
+              </tr>
+            </thead>
+
+            <tbody id="egresosTipoGastoModalBody">
+              <tr>
+                <td colspan="6">Selecciona un tipo de gasto para ver el detalle.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div id="notificationDetailModal" class="notification-detail-modal hidden">
+      <div class="notification-detail-card">
+        <div class="notification-detail-header">
+          <div>
+            <span id="notificationDetailPriority" class="notification-detail-priority">Alta</span>
+            <h2 id="notificationDetailTitle">Detalle de notificación</h2>
+            <p id="notificationDetailSubtitle">Información detallada de la alerta seleccionada.</p>
+          </div>
+
+          <button id="notificationDetailClose" class="notification-detail-close" type="button">
+            ×
+          </button>
+        </div>
+
+        <div id="notificationDetailBody" class="notification-detail-body"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="config.js?v=20261105-historico-4"></script>
+  <script src="auth.js?v=20260804-3"></script>
+  <script src="ingresos-historico.js?v=20261105-5"></script>\n<script src="graph.js?v=20261105-historico-4"></script>
+
+  <script
+    id="dashboardAppScript"
+    src="app.js?v=20261105-alertas-1"
+  ></script>
+  <script src="dashboard-role-access.js?v=20261105-historico-4"></script>
+  <script src="dashboard-table-tools.js?v=20260824-1"></script>
+  <script src="dashboard-history-refresh.js?v=20260824-1"></script>
+  <script src="dashboard-daily-calendar.js?v=20260908-2"></script>
+  <script src="dashboard-current-time.js?v=20260908-1"></script>
+  <script src="dashboard-annual-history.js?v=20261105-historico-4"></script>
+  
+</body>
+</html>

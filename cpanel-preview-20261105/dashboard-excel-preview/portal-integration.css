@@ -1,0 +1,119 @@
+/* Integracion del Dashboard de Direccion al Portal Interno JdJP */
+:root {
+  --portal-blue: #225b8a;
+  --portal-brown: #3a1109;
+  --portal-gold: #fdbb2d;
+  --portal-line: #e8e1d8;
+}
+
+body.dashboard-portal-page {
+  padding-top: 0;
+}
+
+.dashboard-portal-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  color: var(--portal-brown);
+  background: #fff;
+  border-bottom: 2px solid var(--portal-gold);
+  box-shadow: 0 6px 20px rgba(58, 17, 9, .06);
+}
+
+.dashboard-portal-toolbar::before {
+  content: none;
+}
+
+.dashboard-portal-toolbar-inner {
+  width: min(1180px, calc(100% - 36px));
+  min-height: 86px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.dashboard-portal-title {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.dashboard-portal-logo {
+  display: none;
+}
+
+.dashboard-portal-title-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dashboard-portal-title-text strong {
+  color: var(--portal-brown);
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+.dashboard-portal-title-text span {
+  order: -1;
+  color: #7a675d;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.dashboard-portal-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-portal-back {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 17px;
+  color: #0b4e7d;
+  background: #fff;
+  border: 1px solid #c9d9e7;
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.dashboard-portal-back:hover,
+.dashboard-portal-back:focus-visible {
+  color: var(--portal-brown);
+  background: var(--portal-gold);
+  border-color: var(--portal-gold);
+  outline: none;
+}
+
+.dashboard-portal-page #loginPage {
+  min-height: calc(100vh - 88px);
+}
+
+.dashboard-portal-page #dashboardPage {
+  max-width: none;
+}
+
+@media (max-width: 720px) {
+  .dashboard-portal-toolbar-inner {
+    min-height: 0;
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 14px 0;
+  }
+
+  .dashboard-portal-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .dashboard-portal-title-text strong {
+    font-size: 21px;
+  }
+}
