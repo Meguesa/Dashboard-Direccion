@@ -167,11 +167,17 @@ async function obtenerMetasCobranzaExcel(mesesFiltro = []) {
           !Number.isFinite(row.realCaratula) || row.realCaratula < 0)) continue;
       const totalMeta = bloque.metas.reduce((n, row) => n + Math.round(row.metaMensual * 100), 0);
       const totalReal = bloque.metas.reduce((n, row) => n + Math.round(row.realCaratula * 100), 0);
-      if (totalMeta !== Math.round(bloque.metaTotal * 100) ||
+      const metaCaratula = Math.round(bloque.metaTotal * 100);
+      const alertaDiferencia = (bloque.advertencias || []).some(alerta =>
+        alerta.codigo === 'META_TOTAL_DIFIERE_AREAS' &&
+        Number.isSafeInteger(alerta.diferenciaCentavos) &&
+        alerta.diferenciaCentavos === metaCaratula - totalMeta);
+      if ((totalMeta !== metaCaratula && !alertaDiferencia) ||
           totalReal !== Math.round(bloque.realTotal * 100)) continue;
       metasCobranzaExcelIncidencias.delete(m);
       metasCobranzaExcelVerificadas.set(m, {
-        sha: bloque.excelSha256, filas: bloque.metas, verificadoUTC: bloque.verificadoUTC
+        sha: bloque.excelSha256, filas: bloque.metas, verificadoUTC: bloque.verificadoUTC,
+        advertencias: bloque.advertencias || []
       });
       todos.push(...bloque.metas);
     }
