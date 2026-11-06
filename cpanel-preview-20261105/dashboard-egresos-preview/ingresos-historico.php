@@ -79,36 +79,36 @@ function hsMetaDesdeExcel(string $archivo,string $mes):array {
     }finally{$zip->close();}
 }
 function hsMetaMesValidado(string $mes,?string &$token):array {
-    $noDisponible=['mes'=>$mes,'validado'=>false,'metas'=>[],'estado'=>'no_disponible'];
+    $noDisponible=['mes'=>$mes,'validado'=>false,'metas'=>[],'estado'=>'no_disponible','motivo'=>'SIN_CACHE_INGRESOS_VALIDADA'];
     $ingresos=hsRead(hsCacheName($mes));
     if(!($ingresos['auditoria']['validado']??false)||
        ($ingresos['reglasVersion']??null)!==HS_RULES)return $noDisponible;
     $sha=(string)($ingresos['excel']['sha256']??'');
     $etag=(string)($ingresos['excel']['etag']??'');
-    if(!preg_match('/^[a-f0-9]{64}$/D',$sha)||$etag==='')return $noDisponible;
+    if(!preg_match('/^[a-f0-9]{64}$/D',$sha)||$etag==='')return array_merge($noDisponible,['motivo'=>'HUELLA_EXCEL_INCOMPLETA']);
     $nombre='cache_metas_cobranza_excel_'.$mes.'.json';
     $cache=hsRead($nombre);
-    if(($cache['validado']??false)&&($cache['excelSha256']??'')===$sha&&
-       ($cache['excelEtag']??'')===$etag)return $cache;
+    // El SHA256 identifica el contenido exacto. Un eTag distinto no invalida
+    // una caratula ya validada contra los mismos bytes del Excel.
+    if(($cache['validado']??false)&&($cache['excelSha256']??'')===$sha)return $cache;
     $lock=fopen(HS_DIR.'/metas_cobranza_'.$mes.'.lock','c');
     if(!$lock||!flock($lock,LOCK_EX|LOCK_NB)){
         if($lock)fclose($lock);
-        return $noDisponible;
+        return array_merge($noDisponible,['motivo'=>'LECTURA_EN_CURSO']);
     }
     try{
         $cache=hsRead($nombre);
-        if(($cache['validado']??false)&&($cache['excelSha256']??'')===$sha&&
-           ($cache['excelEtag']??'')===$etag)return $cache;
+        if(($cache['validado']??false)&&($cache['excelSha256']??'')===$sha)return $cache;
         if($token===null)$token=hsToken();
         $catalogo=hsRead('historico_catalogo.json')['meses']??[];
         if(!isset($catalogo[$mes]))$catalogo=hsSources($token);
-        if(!isset($catalogo[$mes]['id']))return $noDisponible;
+        if(!isset($catalogo[$mes]['id']))return array_merge($noDisponible,['motivo'=>'MES_FUERA_DE_CATALOGO']);
         $metaArchivo=hsGraph('/items/'.rawurlencode((string)$catalogo[$mes]['id']),$token);
-        if(($metaArchivo['eTag']??'')!==$etag)return $noDisponible;
+        if(($metaArchivo['eTag']??'')!==$etag)return array_merge($noDisponible,['motivo'=>'EXCEL_MODIFICADO_PENDIENTE_SINCRONIZAR']);
         $descarga=hsSnapshotDownload(JJP_COBRANZA_DRIVE_ID,$metaArchivo,$token);
         try{
             // Previene mezclar metas de una version distinta a Ingresos.
-            if(!hash_equals($sha,(string)$descarga['sha256']))return $noDisponible;
+            if(!hash_equals($sha,(string)$descarga['sha256']))return array_merge($noDisponible,['motivo'=>'EXCEL_MODIFICADO_DURANTE_LECTURA']);
             $resultado=hsMetaDesdeExcel($descarga['temporal'],$mes);
             $resultado['validado']=true;
             $resultado['estado']='validado';
@@ -122,7 +122,7 @@ function hsMetaMesValidado(string $mes,?string &$token):array {
         }finally{@unlink($descarga['temporal']);}
     }catch(Throwable $error){
         error_log('Lectura de metas de Excel '.$mes.': '.get_class($error));
-        return $noDisponible;
+        return array_merge($noDisponible,['motivo'=>'ERROR_DE_LECTURA_CARATULA']);
     }finally{flock($lock,LOCK_UN);fclose($lock);}
 }
 
