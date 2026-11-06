@@ -22,6 +22,47 @@ class ExcelDirectBuildChecks(unittest.TestCase):
     def read(self, name):
         return (OUTPUT / name).read_text(encoding="utf-8")
 
+    def test_history_expense_engines_and_future_income_discovery(self):
+        expense = (ROOT / "cpanel-preview-20261105/private-code/egresos_engine.php").read_text(encoding="utf-8")
+        income = (ROOT / "cpanel-preview-20261105/private-code/ingresos_engine.php").read_text(encoding="utf-8")
+        self.assertIn("EG_MIN_YEAR=2024", expense)
+        self.assertIn("function egSources(", expense)
+        self.assertIn("RELACION DE PAGOS (20", expense)
+        self.assertIn("function egAudit(string $file,string $year)", expense)
+        self.assertIn("strtoupper(trim($sheet))", expense)
+        self.assertIn("if($key==='banco')", expense)
+        self.assertNotIn("const EG_YEAR=", expense)
+        self.assertIn("egCacheName(string $month)", expense)
+        self.assertIn("<900", income)
+        for name in ["egresos_engine.php", "ingresos_engine.php"]:
+            filename = ROOT / "cpanel-preview-20261105/private-code" / name
+            subprocess.run(["php", "-l", str(filename)], check=True, capture_output=True, text=True)
+
+    def test_expense_file_discovery_with_mock_graph(self):
+        source = (ROOT / "cpanel-preview-20261105/private-code/egresos_engine.php").as_posix()
+        php = """<?php
+require_once '__ENGINE__';
+function hsRemoteJson($drive, $path, $token) {
+    if(str_contains($path, 'parentReference')) return ['name'=>'RELACION DE PAGOS 2026.xlsx',
+        'parentReference'=>['id'=>'folder','driveId'=>EG_DRIVE]];
+    return ['value'=>[
+        ['name'=>'RELACION DE PAGOS 2024.xlsx','id'=>'a','file'=>[]],
+        ['name'=>'RELACION DE PAGOS 2025.xlsx','id'=>'b','file'=>[]],
+        ['name'=>'RELACION DE PAGOS 2026.xlsx','id'=>'c','file'=>[]],
+        ['name'=>'RELACION DE PAGOS 2027.xlsx','id'=>'d','file'=>[]],
+        ['name'=>'FLUJO 2027.xlsx','id'=>'e','file'=>[]],
+        ['name'=>'RELACION DE PAGOS 2023.xlsx','id'=>'f','file'=>[]]
+    ]];
+}
+echo json_encode(egSources('dummy'));
+""".replace('__ENGINE__', source)
+        with tempfile.TemporaryDirectory(prefix="yearly-expenses-") as tmp:
+            file = Path(tmp) / "mock.php"
+            file.write_text(php, encoding="utf-8")
+            result = subprocess.run(["php", str(file)], check=True, capture_output=True, text=True)
+            years = json.loads(result.stdout)
+            self.assertEqual(list(years.keys()), ["2027", "2026", "2025", "2024"])
+
     def test_sources_are_original_excel_caches(self):
         source = self.read("graph.js")
         self.assertIn("cargarIngresosExcelHistorico", source)
