@@ -4632,6 +4632,7 @@ function renderFilaMetaCobranza(fila, esTotal) {
 
 function obtenerMetasCobranzaMes(mes) {
   return (state.datos.metasCobranza || [])
+    .filter((meta) => meta.fuenteOrigen === "excel_original_caratula")
     .filter((meta) => {
       const esMes = coincideMesValor(meta.mes, mes);
       const estaActivo = meta.activo !== false;
