@@ -30,7 +30,7 @@ jobs:
       - name: Instalar cliente FTPS
         run: sudo apt-get update -qq && sudo apt-get install -y lftp
 
-      - name: Enviar tres archivos de prueba sin datos sensibles
+      - name: Enviar archivos de prueba publicos y protegidos (sin datos sensibles)
         if: ${{ inputs.accion == 'probar' }}
         shell: bash
         env:
@@ -41,6 +41,7 @@ jobs:
           set -euo pipefail
           test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
           printf 'JJP-SONDA-%s\n' "$GITHUB_RUN_ID" > ensayo-diagnostico-publico.txt
+          printf 'JJP-SONDA-%s\n' "$GITHUB_RUN_ID" > original_guardado_ensayo.txt
           printf '{"ensayo":"JJP-SONDA-%s"}\n' "$GITHUB_RUN_ID" > ensayo-proteccion.json
           printf '<?php echo "JJP-SONDA-%s";\n' "$GITHUB_RUN_ID" > ensayo-proteccion.php
           lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
@@ -52,6 +53,7 @@ jobs:
             set ssl:verify-certificate yes;
             set ssl:check-hostname yes;
             put ensayo-diagnostico-publico.txt -o ensayo-diagnostico-publico.txt;
+            put original_guardado_ensayo.txt -o original_guardado_ensayo.txt;
             put ensayo-proteccion.json -o ensayo-proteccion.json;
             put ensayo-proteccion.php -o ensayo-proteccion.php;
             get .htaccess -o reglas-remotas.htaccess;
@@ -69,7 +71,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p resultado-sonda
-          for archivo in ensayo-diagnostico-publico.txt ensayo-proteccion.json ensayo-proteccion.php; do
+          for archivo in ensayo-diagnostico-publico.txt original_guardado_ensayo.txt ensayo-proteccion.json ensayo-proteccion.php; do
             url="https://portal.juanpablo.com.mx/dashboard/$archivo"
             curl --silent --show-error --max-time 20 \
               --dump-header "resultado-sonda/$archivo.headers" \
@@ -85,7 +87,7 @@ jobs:
           import os
           root = Path('resultado-sonda')
           marker = 'JJP-SONDA-'
-          for name in ['ensayo-diagnostico-publico.txt','ensayo-proteccion.json','ensayo-proteccion.php']:
+          for name in ['ensayo-diagnostico-publico.txt','original_guardado_ensayo.txt','ensayo-proteccion.json','ensayo-proteccion.php']:
               first = (root / (name+'.status')).read_text().strip()
               final = (root / (name+'.finalstatus')).read_text().strip()
               head = (root / (name+'.headers')).read_text()
@@ -100,6 +102,7 @@ jobs:
               print(msg)
               with open(Path(os.environ['GITHUB_STEP_SUMMARY']),'a') as report:
                   report.write('\n- '+msg+'\n')
+          print('Compare los dos TXT: uno publico, otro expresamente denegado por .htaccess.')
           print('HTTP 200 despues de redireccion no cuenta como prueba de bloqueo 403.')
           PY
 
@@ -121,6 +124,7 @@ jobs:
             set ssl:verify-certificate yes;
             set ssl:check-hostname yes;
             rm -f ensayo-diagnostico-publico.txt;
+            rm -f original_guardado_ensayo.txt;
             rm -f ensayo-proteccion.json;
             rm -f ensayo-proteccion.php;
             bye;
