@@ -85,12 +85,17 @@ function hsMetaMesValidado(string $mes,?string &$token):array {
        ($ingresos['reglasVersion']??null)!==HS_RULES)return $noDisponible;
     $sha=(string)($ingresos['excel']['sha256']??'');
     $etag=(string)($ingresos['excel']['etag']??'');
-    if(!preg_match('/^[a-f0-9]{64}$/D',$sha)||$etag==='')return array_merge($noDisponible,['motivo'=>'HUELLA_EXCEL_INCOMPLETA']);
+    $shaValido=(bool)preg_match('/^[a-f0-9]{64}$/D',$sha);
+    if($etag==='')return array_merge($noDisponible,['motivo'=>'ETAG_EXCEL_AUSENTE']);
     $nombre='cache_metas_cobranza_excel_'.$mes.'.json';
     $cache=hsRead($nombre);
-    // El SHA256 identifica el contenido exacto. Un eTag distinto no invalida
-    // una caratula ya validada contra los mismos bytes del Excel.
-    if(($cache['validado']??false)&&($cache['excelSha256']??'')===$sha)return $cache;
+    // Si el motor anterior omitio SHA en el manifiesto, la version de Excel
+    // sigue identificada de forma inequívoca por su eTag. No servir otra
+    // version del libro: exigir mismo eTag en la caratula previamente validada.
+    if(($cache['validado']??false)&&
+       ($shaValido ? ($cache['excelSha256']??'')===$sha :
+        ($cache['excelEtag']??'')===$etag))return $cache;
+    if(!$shaValido)return array_merge($noDisponible,['motivo'=>'HUELLA_EXCEL_INCOMPLETA']);
     $lock=fopen(HS_DIR.'/metas_cobranza_'.$mes.'.lock','c');
     if(!$lock||!flock($lock,LOCK_EX|LOCK_NB)){
         if($lock)fclose($lock);
