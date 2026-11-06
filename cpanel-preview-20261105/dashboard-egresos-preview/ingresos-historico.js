@@ -30,7 +30,10 @@ async function cargarIngresosExcelHistorico() {
       }catch(e){s.error=e.message;const old=ingresosExcelMemoria.get(m);if(old){s.antigua=true;s.estado='ultima_validada_con_error';result.push(...old.movimientos);}else{s.cacheDisponible=false;s.estado='no_disponible';}}
     }
   }));
-  window.ingresosExcelEstado={...manifest,cargando:false};return result;
+  window.ingresosExcelEstado={...manifest,cargando:false};
+  if (typeof refrescarMetasHistoricasEnSegundoPlano === 'function')
+    queueMicrotask(refrescarMetasHistoricasEnSegundoPlano);
+  return result;
 }
 function ingresosExcelDisponibles(periodo) {
   const meses=Array.isArray(periodo)?periodo:[periodo];
@@ -52,14 +55,83 @@ let ingresosExcelActualizando=false;
 setInterval(async()=>{if(ingresosExcelActualizando)return;ingresosExcelActualizando=true;try{const rows=await cargarIngresosExcelHistorico();state.datos.ingresos=rows;renderDashboard();}catch(e){console.warn('Ingresos Excel',e.message);}finally{ingresosExcelActualizando=false;}},60000);
 
 
-/* Metas y reales por área: la carátula validada de cada Excel es la autoridad.
- * No se consultan listas BI_Metas_Cobranza, ni se reutilizan valores de SharePoint.
- * Se consulta en bloques de tres meses para limitar las descargas iniciales. */
+/* Metas históricas: extraer de cada carátula validada, sin BI_Metas_Cobranza.
+ * Los meses antiguos se incorporan por lotes en segundo plano; las consultas
+ * de un periodo elegido siempre tienen prioridad frente a la precarga. */
 const metasCobranzaExcelPendientes = new Map();
 const metasCobranzaExcelReintentarEn = new Map();
 const metasCobranzaExcelVerificadas = new Map();
 const metasCobranzaExcelIncidencias = new Map();
 const METAS_EXCEL_AREAS = ["Panteon", "Servicios CH", "Servicios AF", "Total Service"];
+let metasHistoricasCargando = false;
+let metasHistoricasProximaRevision = 0;
+
+function mesesHistoricosDeIngresosValidados() {
+  return Object.entries(window.ingresosExcelEstado?.meses || {})
+    .filter(([mes, estado]) => /^20\d{2}-(0[1-9]|1[0-2])$/.test(mes) &&
+      estado?.cacheDisponible === true)
+    .map(([mes]) => mes)
+    .sort();
+}
+
+// Mantener cuatro metas por cada mes validado; no borrar las del histórico
+// cuando Graph realiza una recarga incremental de los dos últimos meses.
+function mezclarMetasExcelVerificadas(actuales = [], nuevas = [], mesesRevisados = []) {
+  const anteriores = (actuales || []).filter(m => m?.fuenteOrigen === "excel_original_caratula");
+  const aprobadas = (nuevas || []).filter(m => m?.fuenteOrigen === "excel_original_caratula");
+  const mesesValidos = new Set(mesesRevisados.filter(m =>
+    aprobadas.filter(row => row.mes === m).length === 4));
+  const combinadas = anteriores.filter(row => !mesesValidos.has(row.mes))
+    .concat(aprobadas.filter(row => mesesValidos.has(row.mes)));
+  const indices = new Set();
+  return combinadas.filter(row => {
+    const clave = row.mes + "/" + row.area;
+    if (indices.has(clave)) return false;
+    indices.add(clave);
+    return true;
+  });
+}
+
+function refrescarMetasHistoricasEnSegundoPlano() {
+  if (metasHistoricasCargando || window.ingresosExcelEstado?.cargando ||
+      Date.now() < metasHistoricasProximaRevision) return;
+  const disponibles = window.ingresosExcelEstado?.meses || {};
+  const pendientes = mesesHistoricosDeIngresosValidados().filter(m => {
+    const huella = disponibles[m]?.excel?.sha256;
+    const previo = metasCobranzaExcelVerificadas.get(m);
+    const actual = (state.datos.metasCobranza || []).filter(row =>
+      row.mes === m && row.fuenteOrigen === "excel_original_caratula");
+    const validado = actual.length === 4 &&
+      (!huella || (previo && previo.sha === huella));
+    return !validado && !metasCobranzaExcelPendientes.has(m) &&
+      (metasCobranzaExcelReintentarEn.get(m) || 0) <= Date.now();
+  });
+  if (!pendientes.length) {
+    metasHistoricasProximaRevision = Date.now() + 60000;
+    return;
+  }
+  // Una sola descarga de carátula por turno: evita saturar Graph y el cron.
+  const mes = pendientes[0];
+  metasHistoricasCargando = true;
+  obtenerMetasCobranzaExcel([mes]).then(rows => {
+    if (rows.length === 4) {
+      state.datos.metasCobranza = mezclarMetasExcelVerificadas(
+        state.datos.metasCobranza, rows, [mes]);
+      renderGraficasIngresos?.(obtenerMesesRangoSeleccionado());
+      if (typeof guardarDatosEnCache === "function") guardarDatosEnCache();
+    } else {
+      metasCobranzaExcelReintentarEn.set(mes, Date.now() + 15 * 60000);
+    }
+  }).catch(error => {
+    console.warn("Precarga de meta histórica",mes,error.message);
+    metasCobranzaExcelIncidencias.set(mes,"SERVICIO_NO_DISPONIBLE");
+    metasCobranzaExcelReintentarEn.set(mes, Date.now() + 15 * 60000);
+  }).finally(() => {
+    metasHistoricasCargando = false;
+    metasHistoricasProximaRevision = Date.now() + 1000;
+  });
+}
+setInterval(refrescarMetasHistoricasEnSegundoPlano, 5000);
 
 async function obtenerMetasCobranzaExcel(mesesFiltro = []) {
   const mesesConOrigen = Object.entries(window.ingresosExcelEstado?.meses || {})
