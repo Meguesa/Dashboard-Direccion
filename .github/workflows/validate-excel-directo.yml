@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'tools/build_excel_directo_dashboard.py'
+      - 'tools/dashboard-htaccess.txt'
+      - '.github/workflows/publicar-dashboard-excel-produccion.yml'
       - 'tests/test_excel_directo_build.py'
       - 'cpanel-preview-20261105/**'
       - '.github/workflows/validate-excel-directo.yml'
