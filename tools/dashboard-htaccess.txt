@@ -1,0 +1,11 @@
+Options -Indexes
+
+# Los motores se invocan solo desde PHP/cron, nunca por HTTP.
+<FilesMatch "^(ingresos_engine|egresos_engine|ingresos_lector_prueba|dashboard_excel_cron)\.php$">
+    Require all denied
+</FilesMatch>
+
+# Ningun dato financiero, respaldo, registro o fichero oculto debe poder descargarse.
+<FilesMatch "(?i)(^\.|\.(json|jsonl|lock|log|bak|tmp|xlsx|xls|zip|sql|sqlite|db|old)$)">
+    Require all denied
+</FilesMatch>
