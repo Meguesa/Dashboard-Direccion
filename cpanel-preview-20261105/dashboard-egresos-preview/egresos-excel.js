@@ -1,4 +1,4 @@
-/* Egresos de pruebas: exclusivamente tablas del Excel original de Finanzas. */
+/* Egresos históricos: libros anuales de Finanzas, sin listas BI. */
 window.egresosExcelEstado={meses:{},cargando:true};
 const egresosExcelMemoria=new Map();
 async function cargarEgresosExcel(){
@@ -20,7 +20,7 @@ async function cargarEgresosExcel(){
 function egresosExcelDisponibles(periodo){const meses=Array.isArray(periodo)?periodo:[periodo];return meses.length>0&&meses.every(m=>window.egresosExcelEstado?.meses?.[m]?.cacheDisponible===true);}
 function renderEstadoEgresosExcel(){
  const el=document.getElementById('egresosExcelEstado');if(!el)return;const m=window.egresosExcelEstado;const selected=obtenerMesesRangoSeleccionado();const missing=selected.filter(k=>!m.meses?.[k]?.cacheDisponible);const stale=selected.filter(k=>m.meses?.[k]?.antigua);const warnings=selected.reduce((n,k)=>n+(m.meses?.[k]?.auditoria?.advertencias?.length||0),0);
- el.replaceChildren();const text=document.createElement('span');text.textContent=missing.length?'Egresos: Información no disponible para '+missing.join(', ')+'. Cobertura de este Excel: 2026.':'Egresos desde Excel original de Finanzas · '+(stale.length?'Última versión validada; actualización pendiente. ':'')+warnings+' advertencias del archivo original.';el.append(text);
+ el.replaceChildren();const text=document.createElement('span');text.textContent=missing.length?'Egresos: Información no disponible para '+missing.join(', ')+'. Se requieren archivos anuales validados en RELACION DE PAGOS.':'Egresos desde Excel original de Finanzas · '+(stale.length?'Última versión validada; actualización pendiente. ':'')+warnings+' advertencias del archivo original.';el.append(text);
  const when=document.createElement('small');when.textContent=' Verificación: '+(m.verificadoUTC?new Date(m.verificadoUTC).toLocaleString('es-MX',{timeZone:'America/Monterrey'}):'pendiente');el.append(when);const a=document.createElement('a');a.href='egresos-excel.php?modo=admin';a.textContent=' Revisar / actualizar Egresos';a.target='_blank';a.rel='noopener';el.append(a);
  if(missing.length)for(const id of ['kpiEgresos','kpiFlujo','pageEgresosTotal','pageEgresosPorPagar','pageEgresosRegistros']){const n=document.getElementById(id);if(n)n.textContent='Información no disponible';}
 }
