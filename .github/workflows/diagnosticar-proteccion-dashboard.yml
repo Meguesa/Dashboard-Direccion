@@ -52,6 +52,8 @@ jobs:
             set ftp:ssl-auth TLS;
             set ssl:verify-certificate yes;
             set ssl:check-hostname yes;
+            get .htaccess -o reglas-previas.htaccess;
+            put tools/dashboard-htaccess.txt -o .htaccess;
             put ensayo-diagnostico-publico.txt -o ensayo-diagnostico-publico.txt;
             put original_guardado_ensayo.txt -o original_guardado_ensayo.txt;
             put ensayo-proteccion.json -o ensayo-proteccion.json;
@@ -106,6 +108,40 @@ jobs:
           print('HTTP 200 despues de redireccion no cuenta como prueba de bloqueo 403.')
           PY
 
+      - name: Validar bloqueo 403 o restaurar reglas anteriores
+        if: ${{ inputs.accion == 'probar' }}
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          fallos=0
+          for archivo in ensayo-proteccion.php ensayo-proteccion.json original_guardado_ensayo.txt; do
+            estado="$(cat "resultado-sonda/$archivo.status")"
+            if [ "$estado" != "403" ]; then
+              echo "::warning::$archivo sin denegacion HTTP directa (HTTP $estado)"
+              fallos=1
+            fi
+          done
+          if [ "$fallos" -ne 0 ]; then
+            echo "::warning::Restaurando el .htaccess anterior para no afectar el Portal."
+            lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              put reglas-previas.htaccess -o .htaccess;
+              bye;
+            "
+            exit 1
+          fi
+          echo "Bloqueo HTTP 403 comprobado para tres archivos inocuos."
+          
       - name: Retirar los archivos de diagnostico
         if: ${{ always() && inputs.accion == 'limpiar' }}
         continue-on-error: true
