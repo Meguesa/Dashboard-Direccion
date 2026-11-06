@@ -141,6 +141,19 @@ jobs:
             exit 1
           fi
           echo "Bloqueo HTTP 403 comprobado para tres archivos inocuos."
+          # Esta corrida solo diagnostica: devuelve la configuracion previa.
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            put reglas-previas.htaccess -o .htaccess;
+            bye;
+          "
+          echo "Archivo .htaccess anterior restaurado tras la prueba."
           
       - name: Retirar los archivos de diagnostico
         if: ${{ always() && inputs.accion == 'limpiar' }}
