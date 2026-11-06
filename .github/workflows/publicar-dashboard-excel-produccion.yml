@@ -53,48 +53,28 @@ jobs:
         shell: bash
         run: sudo apt-get update -qq && sudo apt-get install -y lftp
 
-      - name: Validar destinos privados antes de publicar
+      # La cuenta de produccion del Dashboard tiene una raiz FTP limitada al sitio.
+      # Nunca tratar rutas de /home/juanpab1 como accesibles desde esa cuenta.
+      - name: Validar cuenta FTPS exclusiva de la carpeta privada
         shell: bash
         env:
-          FTP_PRIVATE_DIR: ${{ secrets.FTP_PRIVATE_DIR }}
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PRIVATE_USERNAME: ${{ secrets.FTP_PRIVATE_USERNAME }}
+          FTP_PRIVATE_PASSWORD: ${{ secrets.FTP_PRIVATE_PASSWORD }}
         run: |
           set -euo pipefail
-          test -n "$FTP_PRIVATE_DIR" || { echo 'Falta FTP_PRIVATE_DIR: ruta privada de los motores PHP'; exit 1; }
-          test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
-          case "$FTP_PRIVATE_DIR" in
-            "/home/juanpab1/bi-ingresos-privado"|"bi-ingresos-privado"|"/bi-ingresos-privado")
-              ;;
-            *) echo 'FTP_PRIVATE_DIR debe apuntar exclusivamente a la carpeta privada bi-ingresos-privado'; exit 1 ;;
-          esac
+          if [ -z "$FTP_PRIVATE_USERNAME" ] || [ -z "$FTP_PRIVATE_PASSWORD" ]; then
+            echo "::error::Configura FTP_PRIVATE_USERNAME y FTP_PRIVATE_PASSWORD. La cuenta FTP privada debe tener como directorio raiz bi-ingresos-privado."
+            exit 1
+          fi
+          test -n "$FTP_SERVER"
           php -l cpanel-preview-20261105/private-code/egresos_engine.php
           php -l cpanel-preview-20261105/private-code/ingresos_engine.php
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
-            set cmd:fail-exit yes;
-            set ftp:passive-mode true;
-            set ftp:ssl-force true;
-            set ftp:ssl-protect-data true;
-            set ftp:ssl-auth TLS;
-            set ssl:verify-certificate yes;
-            set ssl:check-hostname yes;
-            cd $FTP_PRIVATE_DIR;
-            cls egresos_engine.php;
-            cls ingresos_engine.php;
-            bye;
-          "
-
-      - name: Publicar motores privados con respaldo
-        shell: bash
-        env:
-          FTP_PRIVATE_DIR: ${{ secrets.FTP_PRIVATE_DIR }}
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-        run: |
-          set -euo pipefail
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+          probe_dir="$(mktemp -d)"
+          trap 'rm -rf "$probe_dir"' EXIT
+          # El usuario FTP nuevo DEBE iniciar dentro de bi-ingresos-privado.
+          # Se verifican archivos exclusivos del motor privado ANTES de subir nada.
+          lftp -u "$FTP_PRIVATE_USERNAME","$FTP_PRIVATE_PASSWORD" "ftp://${FTP_SERVER}:21" -e "
             set cmd:fail-exit yes;
             set ftp:passive-mode true;
             set ftp:ssl-force true;
@@ -104,7 +84,39 @@ jobs:
             set ssl:check-hostname yes;
             set net:timeout 30;
             set net:max-retries 1;
-            cd $FTP_PRIVATE_DIR;
+            get ingresos_engine.php -o $probe_dir/ingresos_engine.php;
+            get egresos_engine.php -o $probe_dir/egresos_engine.php;
+            get ingresos_lector_prueba.php -o $probe_dir/ingresos_lector_prueba.php;
+            bye;
+          "
+          if ! grep -Fq "const HS_DIR='/home/juanpab1/bi-ingresos-privado';" "$probe_dir/ingresos_engine.php" ||
+             ! grep -Fq 'const EG_DRIVE=' "$probe_dir/egresos_engine.php" ||
+             ! grep -Fq '<?php' "$probe_dir/ingresos_lector_prueba.php"; then
+            echo "::error::La cuenta FTP privada no apunta al directorio de los motores existentes. No se publican archivos."
+            exit 1
+          fi
+          echo "Destino privado verificado sin modificar archivos."
+
+      - name: Publicar motores en su FTP privado con respaldo
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_PRIVATE_USERNAME: ${{ secrets.FTP_PRIVATE_USERNAME }}
+          FTP_PRIVATE_PASSWORD: ${{ secrets.FTP_PRIVATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # La carpeta de inicio de esta cuenta FTPS es bi-ingresos-privado,
+          # fuera de public_html. No usar nunca la cuenta de despliegue publico.
+          lftp -u "$FTP_PRIVATE_USERNAME","$FTP_PRIVATE_PASSWORD" "ftp://${FTP_SERVER}:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            set net:timeout 30;
+            set net:max-retries 1;
             put cpanel-preview-20261105/private-code/egresos_engine.php -o egresos_engine.php.new_${GITHUB_RUN_ID};
             put cpanel-preview-20261105/private-code/ingresos_engine.php -o ingresos_engine.php.new_${GITHUB_RUN_ID};
             mv egresos_engine.php egresos_engine.php.bak_${GITHUB_RUN_ID};
