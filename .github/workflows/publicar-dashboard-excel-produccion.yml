@@ -62,6 +62,7 @@ jobs:
         run: |
           set -euo pipefail
           printf '{"prueba":"sin datos"}\n' > ensayo-proteccion.json
+          printf '<?php echo "prueba sin datos";\n' > ingresos_engine.php
           lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
             set cmd:fail-exit yes;
             set ftp:passive-mode true;
@@ -72,6 +73,7 @@ jobs:
             set ssl:check-hostname yes;
             put deploy-excel-directo/.htaccess -o .htaccess;
             put ensayo-proteccion.json -o ensayo-proteccion.json;
+            put ingresos_engine.php -o ingresos_engine.php;
             bye;
           "
 
@@ -80,6 +82,11 @@ jobs:
         run: |
           set -euo pipefail
           codigo="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://portal.juanpablo.com.mx/dashboard/ensayo-proteccion.json)"
+          codigo_php="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://portal.juanpablo.com.mx/dashboard/ingresos_engine.php)"
+          if [ "$codigo_php" != "403" ]; then
+            echo "::error::No se valido bloqueo PHP: HTTP $codigo_php"
+            exit 1
+          fi
           if [ "$codigo" != "403" ]; then
             echo "::error::No se valido la proteccion de archivos JSON: HTTP $codigo"
             exit 1
