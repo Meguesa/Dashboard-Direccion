@@ -110,7 +110,10 @@ function hsMetaMesValidado(string $mes,?string &$token):array {
     if(($cache['validado']??false)&&
        ($shaValido ? ($cache['excelSha256']??'')===$sha :
         ($cache['excelEtag']??'')===$etag))return $cache;
-    if(!$shaValido)return array_merge($noDisponible,['motivo'=>'HUELLA_EXCEL_INCOMPLETA']);
+    // Los historicos antiguos pueden tener auditoria validada y eTag, pero
+    // carecer de SHA-256. No se rechazan por ello: la version exacta del Excel
+    // debe coincidir antes Y despues de obtener la caratula.
+    $huellaLegada=!$shaValido;
     $lock=fopen(HS_DIR.'/metas_cobranza_'.$mes.'.lock','c');
     if(!$lock||!flock($lock,LOCK_EX|LOCK_NB)){
         if($lock)fclose($lock);
@@ -128,13 +131,25 @@ function hsMetaMesValidado(string $mes,?string &$token):array {
         $descarga=hsSnapshotDownload(JJP_COBRANZA_DRIVE_ID,$metaArchivo,$token);
         try{
             // Previene mezclar metas de una version distinta a Ingresos.
-            if(!hash_equals($sha,(string)$descarga['sha256']))return array_merge($noDisponible,['motivo'=>'EXCEL_MODIFICADO_DURANTE_LECTURA']);
+            // Una version de respaldo o una descarga parcial no permite
+            // recuperar metas de una auditoria historica sin huella fiable.
+            if(($descarga['metodo']??'')==='version_guardada_tras_reintentos'||
+               !empty($descarga['nuevaVersionPendiente']))
+                return array_merge($noDisponible,['motivo'=>'EXCEL_ACTUAL_NO_DISPONIBLE']);
+            $shaDescargado=(string)($descarga['sha256']??'');
+            if($shaValido&&!hash_equals($sha,$shaDescargado))
+                return array_merge($noDisponible,['motivo'=>'EXCEL_MODIFICADO_DURANTE_LECTURA']);
+            if($huellaLegada&&!preg_match('/^[a-f0-9]{64}$/D',$shaDescargado))
+                return array_merge($noDisponible,['motivo'=>'HUELLA_EXCEL_INCOMPLETA']);
+            $metaFinal=hsGraph('/items/'.rawurlencode((string)$catalogo[$mes]['id']).'?$select=id,eTag',$token);
+            if(($metaFinal['eTag']??'')!==$etag)
+                return array_merge($noDisponible,['motivo'=>'EXCEL_MODIFICADO_DURANTE_LECTURA']);
             $resultado=hsMetaDesdeExcel($descarga['temporal'],$mes);
             $resultado['validado']=true;
             $resultado['estado']='validado';
             $resultado['fuente']='EXCEL_ORIGINAL_CARATULA';
             $resultado['biMetasCobranza']=false;
-            $resultado['excelSha256']=$sha;
+            $resultado['excelSha256']=$shaValido?$sha:$shaDescargado;
             $resultado['excelEtag']=$etag;
             $resultado['verificadoUTC']=gmdate('c');
             hsWrite($nombre,$resultado);
