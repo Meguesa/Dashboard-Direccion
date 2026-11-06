@@ -124,6 +124,27 @@ jobs:
           echo "Error durante la publicacion."
           exit 1
 
+      - name: Retirar archivo de prueba
+        if: always()
+        continue-on-error: true
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          if [ -z "$FTP_SERVER" ] || [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ]; then exit 0; fi
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            rm -f ensayo-proteccion.json;
+            bye;
+          "
+
       - name: Resumen de publicacion
         run: |
           echo "### Dashboard Excel publicado por FTPS" >> "$GITHUB_STEP_SUMMARY"
