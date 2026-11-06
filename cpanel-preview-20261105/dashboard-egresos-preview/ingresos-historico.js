@@ -107,9 +107,12 @@ function asegurarMetasCobranzaExcel(mesesSolicitados) {
   const meses = (Array.isArray(mesesSolicitados) ? mesesSolicitados : [mesesSolicitados])
     .filter(m => disponibles[m]?.cacheDisponible === true);
   for (const mes of meses) {
-    const fingerprint = disponibles[mes]?.excel?.sha256;
+    const fingerprint = disponibles[mes]?.excel?.sha256 || null;
     const cached = metasCobranzaExcelVerificadas.get(mes);
-    if (cached && cached.sha === fingerprint) {
+    // El manifiesto puede no contener SHA tras un ciclo sin cambios. En
+    // ese caso, conservar el dato validado y dejar que el PHP verifique
+    // nuevamente la huella exacta del Excel antes de servir un cambio.
+    if (cached && (!fingerprint || cached.sha === fingerprint)) {
       if (!(state.datos.metasCobranza || []).some(row =>
           row.mes === mes && row.fuenteOrigen === "excel_original_caratula")) {
         state.datos.metasCobranza = (state.datos.metasCobranza || [])
