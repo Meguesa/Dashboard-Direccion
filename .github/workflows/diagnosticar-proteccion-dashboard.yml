@@ -1,0 +1,116 @@
+name: Diagnosticar proteccion HTTP Dashboard (sin desplegar)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dashboard-direccion
+  cancel-in-progress: false
+
+jobs:
+  diagnosticar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Obtener repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar cliente FTPS
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+
+      - name: Enviar tres archivos de prueba sin datos sensibles
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
+          printf 'JJP-SONDA-%s\n' "$GITHUB_RUN_ID" > ensayo-diagnostico-publico.txt
+          printf '{"ensayo":"JJP-SONDA-%s"}\n' "$GITHUB_RUN_ID" > ensayo-proteccion.json
+          printf '<?php echo "JJP-SONDA-%s";\n' "$GITHUB_RUN_ID" > ensayo-proteccion.php
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            put ensayo-diagnostico-publico.txt -o ensayo-diagnostico-publico.txt;
+            put ensayo-proteccion.json -o ensayo-proteccion.json;
+            put ensayo-proteccion.php -o ensayo-proteccion.php;
+            get .htaccess -o reglas-remotas.htaccess;
+            bye;
+          "
+          if cmp -s reglas-remotas.htaccess tools/dashboard-htaccess.txt; then
+            echo "Reglas .htaccess: el contenido remoto coincide con el repositorio."
+          else
+            echo "::warning::El .htaccess remoto NO coincide con el repositorio."
+          fi
+
+      - name: Identificar respuesta inicial, redireccion y contenido real
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p resultado-sonda
+          for archivo in ensayo-diagnostico-publico.txt ensayo-proteccion.json ensayo-proteccion.php; do
+            url="https://portal.juanpablo.com.mx/dashboard/$archivo"
+            curl --silent --show-error --max-time 20 \
+              --dump-header "resultado-sonda/$archivo.headers" \
+              --output "resultado-sonda/$archivo.body" \
+              --write-out '%{http_code}' "$url" > "resultado-sonda/$archivo.status"
+            curl --silent --show-error --location --max-redirs 3 --max-time 20 \
+              --output "resultado-sonda/$archivo.finalbody" \
+              --write-out '%{http_code}' "$url" > "resultado-sonda/$archivo.finalstatus"
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+          from urllib.parse import urlsplit
+          import os
+          root = Path('resultado-sonda')
+          marker = 'JJP-SONDA-'
+          for name in ['ensayo-diagnostico-publico.txt','ensayo-proteccion.json','ensayo-proteccion.php']:
+              first = (root / (name+'.status')).read_text().strip()
+              final = (root / (name+'.finalstatus')).read_text().strip()
+              head = (root / (name+'.headers')).read_text()
+              location = ''
+              for line in head.splitlines():
+                  if line.lower().startswith('location:'):
+                      u=urlsplit(line.partition(':')[2].strip())
+                      location = (u.netloc + u.path) if u.netloc else u.path
+              body=(root/(name+'.finalbody')).read_text(errors='replace')
+              echo=marker in body
+              msg=f'{name}: inicial={first}; final={final}; ruta_redireccion={location or "(ninguna)"}; marcador_en_respuesta={echo}'
+              print(msg)
+              with open(Path(os.environ['GITHUB_STEP_SUMMARY']),'a') as report:
+                  report.write('\n- '+msg+'\n')
+          print('HTTP 200 despues de redireccion no cuenta como prueba de bloqueo 403.')
+          PY
+
+      - name: Retirar los archivos de diagnostico
+        if: always()
+        continue-on-error: true
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          if [ -z "$FTP_SERVER" ] || [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ]; then exit 0; fi
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            rm -f ensayo-diagnostico-publico.txt;
+            rm -f ensayo-proteccion.json;
+            rm -f ensayo-proteccion.php;
+            bye;
+          "
