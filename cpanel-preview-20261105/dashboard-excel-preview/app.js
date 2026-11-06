@@ -96,7 +96,7 @@ async function escribirDashboardCacheIndexedDb(key, payload) {
     db.close();
   }
 }
-const DASHBOARD_REFRESH_MS = 60 * 60 * 1000;
+const DASHBOARD_REFRESH_MS = 15 * 60 * 1000;
 
 const DASHBOARD_ALERTAS_VISTAS_KEY = "dashboardAlertasVistas";
 const DASHBOARD_ALERTAS_CONOCIDAS_KEY = "dashboardAlertasConocidas";
