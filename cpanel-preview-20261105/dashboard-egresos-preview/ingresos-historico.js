@@ -102,7 +102,14 @@ function refrescarMetasHistoricasEnSegundoPlano() {
     const actual = (state.datos.metasCobranza || []).filter(row =>
       row.mes === m && row.fuenteOrigen === "excel_original_caratula");
     const validado = actual.length === 4 &&
-      (!huella || (previo && previo.sha === huella));
+      actual.every(row => row.excelSha256 &&
+        (!huella || row.excelSha256 === huella));
+    if (validado && !previo) {
+      metasCobranzaExcelVerificadas.set(m, {
+        sha: actual[0].excelSha256, filas: actual,
+        verificadoUTC: actual[0].verificadoUTC || null
+      });
+    }
     return !validado && !metasCobranzaExcelPendientes.has(m) &&
       (metasCobranzaExcelReintentarEn.get(m) || 0) <= Date.now();
   });
@@ -117,7 +124,10 @@ function refrescarMetasHistoricasEnSegundoPlano() {
     if (rows.length === 4) {
       state.datos.metasCobranza = mezclarMetasExcelVerificadas(
         state.datos.metasCobranza, rows, [mes]);
-      renderGraficasIngresos?.(obtenerMesesRangoSeleccionado());
+      if (typeof renderGraficaIngresosMensuales === "function")
+        renderGraficaIngresosMensuales();
+      if (typeof renderAvanceMetasCobranza === "function")
+        renderAvanceMetasCobranza(obtenerMesesRangoSeleccionado());
       if (typeof guardarDatosEnCache === "function") guardarDatosEnCache();
     } else {
       metasCobranzaExcelReintentarEn.set(mes, Date.now() + 15 * 60000);
@@ -175,11 +185,16 @@ async function obtenerMetasCobranzaExcel(mesesFiltro = []) {
       if ((totalMeta !== metaCaratula && !alertaDiferencia) ||
           totalReal !== Math.round(bloque.realTotal * 100)) continue;
       metasCobranzaExcelIncidencias.delete(m);
+      const filasConOrigen = bloque.metas.map(row => ({
+        ...row, excelSha256: bloque.excelSha256,
+        excelEtag: bloque.excelEtag, verificadoUTC: bloque.verificadoUTC
+      }));
       metasCobranzaExcelVerificadas.set(m, {
-        sha: bloque.excelSha256, filas: bloque.metas, verificadoUTC: bloque.verificadoUTC,
+        sha: bloque.excelSha256, filas: filasConOrigen,
+        verificadoUTC: bloque.verificadoUTC,
         advertencias: bloque.advertencias || []
       });
-      todos.push(...bloque.metas);
+      todos.push(...filasConOrigen);
     }
   }
   return todos;
@@ -198,8 +213,8 @@ function asegurarMetasCobranzaExcel(mesesSolicitados) {
     if (cached && (!fingerprint || cached.sha === fingerprint)) {
       if (!(state.datos.metasCobranza || []).some(row =>
           row.mes === mes && row.fuenteOrigen === "excel_original_caratula")) {
-        state.datos.metasCobranza = (state.datos.metasCobranza || [])
-          .filter(row => row.mes !== mes).concat(cached.filas);
+        state.datos.metasCobranza = mezclarMetasExcelVerificadas(
+          state.datos.metasCobranza, cached.filas, [mes]);
       }
       continue;
     }
@@ -215,8 +230,8 @@ function asegurarMetasCobranzaExcel(mesesSolicitados) {
           return;
         }
         metasCobranzaExcelIncidencias.delete(mes);
-        state.datos.metasCobranza = (state.datos.metasCobranza || [])
-          .filter(row => row.mes !== mes).concat(rows);
+        state.datos.metasCobranza = mezclarMetasExcelVerificadas(
+          state.datos.metasCobranza, rows, [mes]);
         renderDashboard();
       })
       .catch(err => {
