@@ -1,7 +1,7 @@
 Options -Indexes
 
 # Los motores se invocan solo desde PHP/cron, nunca por HTTP.
-<FilesMatch "^(ingresos_engine|egresos_engine|ingresos_lector_prueba|dashboard_excel_cron)\.php$">
+<FilesMatch "^(ingresos_engine|egresos_engine|ingresos_lector_prueba|dashboard_excel_cron|ensayo-proteccion)\.php$">
     Require all denied
 </FilesMatch>
 
