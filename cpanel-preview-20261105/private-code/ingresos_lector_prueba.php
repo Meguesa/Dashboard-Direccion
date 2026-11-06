@@ -6,7 +6,7 @@ declare(strict_types=1);
  * No puede publicar cache ni modificar archivos originales.
  * Revisado contra la estructura de OCTUBRE 2026.xlsx.
  */
-const JJP_PRIVATE_DIR = '/home/juanpab1/bi-ingresos-privado';
+const JJP_PRIVATE_DIR = __DIR__;
 const JJP_COBRANZA_DRIVE_ID = 'b!EAWNGReAT02APufy0uQPFnDnY1ILcuZGv2EfFdV9rplPAV4rL4C_QoZl8LbKac5c';
 const JJP_PORTAL_CLIENT_ID = '9cfc9e30-6dd2-45b4-96fe-5d5b69de0015';
 const JJP_MAX_XLSX_BYTES = 60000000;
