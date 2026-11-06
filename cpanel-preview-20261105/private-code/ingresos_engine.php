@@ -138,7 +138,7 @@ function hsSnapshotDownload(string $drive,array $meta,string $token):array {
 }
 
 function hsSources(string $token):array {
-    $saved=hsRead('historico_catalogo.json');if(isset($saved['meses'])&&time()-strtotime($saved['verificadoUTC']??'1970-01-01')<86400)return $saved['meses'];
+    $saved=hsRead('historico_catalogo.json');if(isset($saved['meses'])&&time()-strtotime($saved['verificadoUTC']??'1970-01-01')<900)return $saved['meses'];
     $names=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];$months=[];
     $root=hsGraph('/root:/'.rawurlencode('2. Reportes').':/children?$top=200',$token);
     foreach($root['value']??[] as $folder){if(empty($folder['folder'])||!preg_match('/^20\d\d$/D',$folder['name']??''))continue;$year=$folder['name'];
