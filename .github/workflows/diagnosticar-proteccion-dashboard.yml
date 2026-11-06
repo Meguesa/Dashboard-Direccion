@@ -2,6 +2,15 @@ name: Diagnosticar proteccion HTTP Dashboard (sin desplegar)
 
 on:
   workflow_dispatch:
+    inputs:
+      accion:
+        description: 'probar conserva archivos inocuos para verificar con sesion; limpiar los retira'
+        required: true
+        type: choice
+        options:
+          - probar
+          - limpiar
+        default: probar
 
 permissions:
   contents: read
@@ -22,6 +31,7 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y lftp
 
       - name: Enviar tres archivos de prueba sin datos sensibles
+        if: ${{ inputs.accion == 'probar' }}
         shell: bash
         env:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
@@ -54,6 +64,7 @@ jobs:
           fi
 
       - name: Identificar respuesta inicial, redireccion y contenido real
+        if: ${{ inputs.accion == 'probar' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -93,7 +104,7 @@ jobs:
           PY
 
       - name: Retirar los archivos de diagnostico
-        if: always()
+        if: ${{ always() && inputs.accion == 'limpiar' }}
         continue-on-error: true
         shell: bash
         env:
@@ -114,3 +125,12 @@ jobs:
             rm -f ensayo-proteccion.php;
             bye;
           "
+
+      - name: Instrucciones para prueba autenticada
+        if: ${{ inputs.accion == 'probar' }}
+        run: |
+          echo '### Comprobacion con sesion iniciada' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Las pruebas se conservan hasta ejecutar de nuevo este workflow con accion=limpiar.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Abrir ensayo-proteccion.json y ensayo-proteccion.php en el mismo navegador con sesion del Portal.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Se requiere HTTP 403 para ambos; mostrar login o contenido de prueba no confirma bloqueo.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Al terminar, ejecutar accion=limpiar y confirmar su resultado.' >> "$GITHUB_STEP_SUMMARY"
