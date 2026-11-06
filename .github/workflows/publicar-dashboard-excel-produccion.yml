@@ -77,7 +77,7 @@ jobs:
               set ssl:check-hostname yes;
               set net:timeout 30;
               set net:max-retries 1;
-              mirror --reverse --overwrite --no-perms --exclude-glob index.php deploy-excel-directo .;
+              mirror --reverse --overwrite --no-perms --exclude-glob index.php --exclude-glob ingresos_engine.php --exclude-glob egresos_engine.php --exclude-glob ingresos_lector_prueba.php --exclude-glob dashboard_excel_cron.php deploy-excel-directo .;
               put deploy-excel-directo/index.php -o index.php;
               bye;
             "; then
