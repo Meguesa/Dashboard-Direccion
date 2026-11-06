@@ -26,7 +26,7 @@ jobs:
       - name: Obtener integracion Excel validada
         uses: actions/checkout@v4
         with:
-          ref: 0b45cecd6db62967e26893467a23524ea1701b85
+          ref: main
 
       - name: Preparar PHP
         uses: shivammathur/setup-php@v2
