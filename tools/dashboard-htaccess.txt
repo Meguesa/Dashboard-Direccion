@@ -1,5 +1,9 @@
 Options -Indexes
 
+# Evitar que un ErrorDocument 403 heredado redirija a /login.php.
+# La denegacion de archivos del Dashboard debe conservar el estado 403.
+ErrorDocument 403 "Acceso denegado por Dashboard JJP"
+
 # Negar en fase de reescritura antes de redirecciones a la pagina de inicio de sesion.
 # En hosts con reglas heredadas, FilesMatch por si solo puede no producir HTTP 403.
 <IfModule mod_rewrite.c>
