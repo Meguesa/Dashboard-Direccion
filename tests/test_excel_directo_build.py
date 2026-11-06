@@ -63,6 +63,18 @@ echo json_encode(egSources('dummy'));
             years = json.loads(result.stdout)
             self.assertEqual(list(years.keys()), ["2027", "2026", "2025", "2024"])
 
+    def test_protected_engine_package_and_safe_fallback(self):
+        for name in ["ingresos_engine.php", "egresos_engine.php",
+                     "ingresos_lector_prueba.php", "dashboard_excel_cron.php",
+                     ".htaccess"]:
+            self.assertTrue((OUTPUT / name).is_file(), name)
+        rules = self.read(".htaccess")
+        self.assertIn("Require all denied", rules)
+        self.assertIn("jsonl", rules)
+        self.assertIn("dashboard_excel_cron", rules)
+        for name in ["ingresos-historico.php", "egresos-excel.php"]:
+            self.assertIn(".dashboard-local-ready", self.read(name))
+
     def test_sources_are_original_excel_caches(self):
         source = self.read("graph.js")
         self.assertIn("cargarIngresosExcelHistorico", source)
@@ -141,6 +153,7 @@ if (obtenerFechaEgreso({fecha:'2026-02-30'}) !== null) throw new Error('Fecha im
         source = source.replace("declare(strict_types=1);", "", 1)
         imports = [
             "require_once '/home/juanpab1/bi-ingresos-privado/ingresos_engine.php';",
+            "require_once (is_file(__DIR__.'/.dashboard-local-ready') && is_file(__DIR__.'/historico_estado.json') && is_file(__DIR__.'/egresos_estado.json') ? __DIR__.'/ingresos_engine.php' : '/home/juanpab1/bi-ingresos-privado/ingresos_engine.php');",
             "require_once HS_DIR.'/egresos_engine.php';",
             "require_once dirname(__DIR__).'/includes/bootstrap.php';",
             "require_once dirname(__DIR__).'/includes/portal-access.php';",
