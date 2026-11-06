@@ -769,10 +769,12 @@ async function actualizarDatosDashboard(opciones = {}) {
       mesesRecargados
     );
 
-    state.datos.metasCobranza = reemplazarRegistrosPorMes(
+    // Conservar las carátulas históricas ya validadas. Una actualización
+    // incremental nunca debe borrar meses anteriores.
+    state.datos.metasCobranza = mezclarMetasExcelVerificadas(
       state.datos.metasCobranza,
       datosSharePoint.metasCobranza || [],
-      mesesRecargados
+      (datosSharePoint.metasCobranza || []).map(row => row.mes)
     );
 
     state.datos.metasVentas = reemplazarRegistrosPorMes(
@@ -2621,8 +2623,20 @@ function esIngresoConsideradoMetaCobranza(item) {
 }
 
 function sumarMetaCobranzaMensual(mes) {
-  return obtenerMetasCobranzaMes(mes)
-    .reduce((total, meta) => total + Number(meta.metaMensual || 0), 0);
+  const filas = obtenerMetasCobranzaMes(mes);
+  const porMes = new Map();
+  for (const fila of filas) {
+    if (!porMes.has(fila.mes)) porMes.set(fila.mes, []);
+    porMes.get(fila.mes).push(fila);
+  }
+  return [...porMes.values()].reduce((total, filasMes) => {
+    if (filasMes.length !== 4) return total;
+    const totalOriginal = Number(filasMes[0].metaTotalCaratula);
+    // El TOTAL de la carátula histórica puede diferir de las cuatro áreas.
+    return total + (Number.isFinite(totalOriginal) && totalOriginal > 0
+      ? totalOriginal : filasMes.reduce((suma, fila) =>
+          suma + Number(fila.metaMensual || 0), 0));
+  }, 0);
 }
 
 function sumarEgresos(mes) {
@@ -4913,7 +4927,11 @@ function renderGraficaIngresosMensuales() {
 
   const labels = meses.map((mes) => mes.nombre);
   const valoresIngresos = meses.map((mes) => sumarIngresoRealCobranza(mes.clave));
-  const valoresMetas = meses.map((mes) => sumarMetaCobranzaMensual(mes.clave));
+  // null expresa mes sin meta validada; 0 no debe dibujarse como una meta real.
+  const valoresMetas = meses.map((mes) => {
+    const filas = obtenerMetasCobranzaMes(mes.clave);
+    return filas.length === 4 ? sumarMetaCobranzaMensual(mes.clave) : null;
+  });
 
   const datasets = [
     {
