@@ -58,6 +58,7 @@ setInterval(async()=>{if(ingresosExcelActualizando)return;ingresosExcelActualiza
 const metasCobranzaExcelPendientes = new Map();
 const metasCobranzaExcelReintentarEn = new Map();
 const metasCobranzaExcelVerificadas = new Map();
+const metasCobranzaExcelIncidencias = new Map();
 const METAS_EXCEL_AREAS = ["Panteon", "Servicios CH", "Servicios AF", "Total Service"];
 
 async function obtenerMetasCobranzaExcel(mesesFiltro = []) {
@@ -83,7 +84,10 @@ async function obtenerMetasCobranzaExcel(mesesFiltro = []) {
     for (const m of lote) {
       const bloque = body.meses[m];
       if (!bloque?.validado || bloque.fuente !== "EXCEL_ORIGINAL_CARATULA" ||
-          !Array.isArray(bloque.metas) || bloque.metas.length !== 4) continue;
+          !Array.isArray(bloque.metas) || bloque.metas.length !== 4) {
+        metasCobranzaExcelIncidencias.set(m, bloque?.motivo || 'CARATULA_NO_VALIDADA');
+        continue;
+      }
       const nombres = bloque.metas.map(row => row.area);
       if (METAS_EXCEL_AREAS.some((area, i) => nombres[i] !== area)) continue;
       if (bloque.metas.some(row => row.mes !== m || row.fuenteOrigen !== "excel_original_caratula" ||
@@ -93,6 +97,7 @@ async function obtenerMetasCobranzaExcel(mesesFiltro = []) {
       const totalReal = bloque.metas.reduce((n, row) => n + Math.round(row.realCaratula * 100), 0);
       if (totalMeta !== Math.round(bloque.metaTotal * 100) ||
           totalReal !== Math.round(bloque.realTotal * 100)) continue;
+      metasCobranzaExcelIncidencias.delete(m);
       metasCobranzaExcelVerificadas.set(m, {
         sha: bloque.excelSha256, filas: bloque.metas, verificadoUTC: bloque.verificadoUTC
       });
@@ -107,9 +112,12 @@ function asegurarMetasCobranzaExcel(mesesSolicitados) {
   const meses = (Array.isArray(mesesSolicitados) ? mesesSolicitados : [mesesSolicitados])
     .filter(m => disponibles[m]?.cacheDisponible === true);
   for (const mes of meses) {
-    const fingerprint = disponibles[mes]?.excel?.sha256;
+    const fingerprint = disponibles[mes]?.excel?.sha256 || null;
     const cached = metasCobranzaExcelVerificadas.get(mes);
-    if (cached && cached.sha === fingerprint) {
+    // El manifiesto puede no contener SHA tras un ciclo sin cambios. En
+    // ese caso, conservar el dato validado y dejar que el PHP verifique
+    // nuevamente la huella exacta del Excel antes de servir un cambio.
+    if (cached && (!fingerprint || cached.sha === fingerprint)) {
       if (!(state.datos.metasCobranza || []).some(row =>
           row.mes === mes && row.fuenteOrigen === "excel_original_caratula")) {
         state.datos.metasCobranza = (state.datos.metasCobranza || [])
@@ -122,16 +130,22 @@ function asegurarMetasCobranzaExcel(mesesSolicitados) {
     const tarea = obtenerMetasCobranzaExcel([mes])
       .then(rows => {
         if (rows.length !== 4) {
+          metasCobranzaExcelIncidencias.set(mes,
+            metasCobranzaExcelIncidencias.get(mes) || 'CARATULA_NO_VALIDADA');
           metasCobranzaExcelReintentarEn.set(mes, Date.now() + 60000);
+          renderAvanceMetasCobranza(obtenerMesesRangoSeleccionado());
           return;
         }
+        metasCobranzaExcelIncidencias.delete(mes);
         state.datos.metasCobranza = (state.datos.metasCobranza || [])
           .filter(row => row.mes !== mes).concat(rows);
         renderDashboard();
       })
       .catch(err => {
         console.warn("Metas Excel " + mes + ":", err.message);
+        metasCobranzaExcelIncidencias.set(mes, 'SERVICIO_NO_DISPONIBLE');
         metasCobranzaExcelReintentarEn.set(mes, Date.now() + 60000);
+        renderAvanceMetasCobranza(obtenerMesesRangoSeleccionado());
       })
       .finally(() => metasCobranzaExcelPendientes.delete(mes));
     metasCobranzaExcelPendientes.set(mes, tarea);

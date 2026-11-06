@@ -4539,7 +4539,16 @@ function renderAvanceMetasCobranza(mes) {
   if (filas.length !== 4 ||
       filas.some(fila => fila.meta <= 0 || !Number.isFinite(fila.real))) {
     setText("metasCobranzaCumplimiento", "Información no disponible");
-    tbody.innerHTML = '<tr><td colspan="5">Consultando metas de la carátula de Excel; no se mostrarán importes estimados.</td></tr>';
+    const periodos = Array.isArray(mes) ? mes : [mes];
+    const incidencias = periodos
+      .map(m => ({mes:m, motivo:typeof metasCobranzaExcelIncidencias !== "undefined"
+        ? metasCobranzaExcelIncidencias.get(m) : null}))
+      .filter(x => x.motivo);
+    const detalle = incidencias.length
+      ? incidencias.map(x => x.mes + ": " + x.motivo).join("; ")
+      : "Lectura de metas de la carátula pendiente de validación";
+    tbody.innerHTML = '<tr><td colspan="5"></td></tr>';
+    tbody.firstElementChild.firstElementChild.textContent = detalle;
     return;
   }
   const total = calcularTotalAvanceMetasCobranza(filas);
