@@ -6,6 +6,6 @@ Options -Indexes
 </FilesMatch>
 
 # Ningun dato financiero, respaldo, registro o fichero oculto debe poder descargarse.
-<FilesMatch "(?i)(^\.|\.(json|jsonl|lock|log|bak|tmp|xlsx|xls|zip|sql|sqlite|db|old)$)">
+<FilesMatch "(?i)(^\.|\.(json|jsonl|lock|log|bak|tmp|xlsx|xls|zip|sql|sqlite|db|old)$|^(original_guardado_|xml_hs_|hs_|excel_test_|egresos_ciclos|historico_ciclos))">
     Require all denied
 </FilesMatch>
