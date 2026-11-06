@@ -1208,6 +1208,8 @@ function mostrarPagina(nombrePagina) {
 function renderDashboard() {
   const mesesPeriodo = obtenerMesesRangoSeleccionado();
   const mes = mesesPeriodo.length ? mesesPeriodo : [state.mesSeleccionado];
+  // Al cambiar el periodo, consultar metas originales sin requerir recargar el portal.
+  if (typeof asegurarMetasCobranzaExcel === "function") asegurarMetasCobranzaExcel(mes);
 
   const totalIngresos = sumarIngresos(mes);
   const totalEgresos = sumarEgresos(mes);
@@ -4534,6 +4536,12 @@ function renderAvanceMetasCobranza(mes) {
   }
 
   const filas = calcularAvanceMetasCobranza(mes);
+  if (filas.length !== (Array.isArray(mes) ? mes.length : 1) * 4 ||
+      filas.some(fila => fila.meta <= 0 || !Number.isFinite(fila.real))) {
+    setText("metasCobranzaCumplimiento", "Información no disponible");
+    tbody.innerHTML = '<tr><td colspan="5">Consultando metas de la carátula de Excel; no se mostrarán importes estimados.</td></tr>';
+    return;
+  }
   const total = calcularTotalAvanceMetasCobranza(filas);
 
   setText("metasCobranzaCumplimiento", formatoPorcentaje(total.porcentajeCumplido));
@@ -4562,7 +4570,9 @@ function calcularAvanceMetasCobranza(mes) {
 
   return areas
     .map((area) => {
-      const real = calcularRealCobranzaArea(mes, area);
+      const real = metasMes
+        .filter(item => normalizarAreaMetaCobranza(item.area) === normalizarAreaMetaCobranza(area))
+        .reduce((suma, item) => suma + Number(item.realCaratula || 0), 0);
       const meta = obtenerMetaCobranzaArea(metasMes, area);
       const porcentajeCumplido = meta > 0 ? real / meta : 0;
       const porCumplir = Math.max(meta - real, 0);
