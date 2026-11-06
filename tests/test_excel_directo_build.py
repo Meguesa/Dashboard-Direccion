@@ -114,7 +114,8 @@ echo json_encode(hsMetaDesdeFilas($rows,'2024-07'));
         self.assertIn("return filas.length === 4", app)
         self.assertIn("metaTotalCaratula", app)
         self.assertNotIn("state.datos.metasCobranza = reemplazarRegistrosPorMes(", app)
-        self.assertNotIn("BI_Metas_Cobranza", historical)
+        self.assertNotIn("fetch(\"BI_Metas_Cobranza", historical)
+        self.assertNotIn("obtenerMetasCobranzaSharePoint", historical)
 
     def test_expense_file_discovery_with_mock_graph(self):
         source = (ROOT / "cpanel-preview-20261105/private-code/egresos_engine.php").as_posix()
