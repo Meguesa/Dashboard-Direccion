@@ -53,6 +53,16 @@ jobs:
         shell: bash
         run: sudo apt-get update -qq && sudo apt-get install -y lftp
 
+      - name: Validar bloqueo externo antes de publicar
+        shell: bash
+        run: |
+          set -euo pipefail
+          codigo="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://portal.juanpablo.com.mx/dashboard/ensayo-proteccion.json)"
+          if [ "$codigo" != "403" ]; then
+            echo "::error::No se valido la proteccion de archivos JSON: HTTP $codigo"
+            exit 1
+          fi
+
       - name: Publicar en Dashboard de produccion
         shell: bash
         env:
