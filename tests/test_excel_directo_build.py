@@ -46,6 +46,25 @@ class ExcelDirectBuildChecks(unittest.TestCase):
         self.assertIn("HUELLA_EXCEL_INCOMPLETA", endpoint)
         self.assertIn("excelSha256", endpoint)
 
+    def test_legacy_income_fingerprint_requires_same_workbook_version(self):
+        # Previously validated snapshots may have an eTag but lack sha256.
+        # Recovery must never disable the financial audit nor accept another file.
+        source = self.read("ingresos-historico.php")
+        self.assertIn("($ingresos['auditoria']['validado']??false)", source)
+        self.assertIn("if($etag==='')", source)
+        self.assertIn("$huellaLegada=!$shaValido;", source)
+        self.assertIn("$shaDescargado=(string)($descarga['sha256']??'');", source)
+        self.assertIn("if($shaValido&&!hash_equals($sha,$shaDescargado))", source)
+        self.assertIn("if($huellaLegada&&!preg_match", source)
+        self.assertIn("$resultado['excelSha256']=$shaValido?$sha:$shaDescargado;", source)
+        self.assertIn("($metaFinal['eTag']??'')!==$etag", source)
+        self.assertIn("EXCEL_MODIFICADO_DURANTE_LECTURA", source)
+        self.assertIn("version_guardada_tras_reintentos", source)
+        self.assertIn("EXCEL_ACTUAL_NO_DISPONIBLE", source)
+        self.assertIn("huellaLegada", source)
+        self.assertIn("hsMetaDesdeExcel($descarga['temporal'],$mes)", source)
+        self.assertIn("hsWrite($nombre,$resultado)", source)
+
     def test_real_november_cover_layout_parser(self):
         # Matches the published November cover sheet: B=BANCOS, C:G=areas + total.
         source = self.read("ingresos-historico.php")
