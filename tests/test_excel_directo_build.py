@@ -75,6 +75,48 @@ echo json_encode(hsMetaDesdeFilas($rows,'2026-11'));
             self.assertAlmostEqual(meta["realTotal"], 327948.91)
             self.assertEqual(meta["metaTotal"], 4890000)
 
+    def test_historical_cover_keeps_original_total_with_warning(self):
+        source = self.read("ingresos-historico.php")
+        parser = source[source.index("function hsMetaDesdeFilas("):
+                        source.index("function hsMetaDesdeExcel(")]
+        code = """<?php
+function hsText($v) { return mb_strtoupper(trim((string)$v), 'UTF-8'); }
+function hsCents($v) { return (int) round((float)$v * 100); }
+""" + parser + """
+$rows = [
+ [19,[1=>'BANCOS',2=>'Panteon',3=>'Servicios CH',4=>'Servicios AF',5=>'TOTAL SERVICE',6=>'TOTAL'],[]],
+ [24,[1=>'Ingreso Total',2=>'67333.06',3=>'824540.41',4=>'870033.32',5=>'2201154.65',6=>'3963061.44'],[]],
+ [25,[1=>'META',2=>'90000',3=>'765303',4=>'797304',5=>'1469053',6=>'3300000'],[]],
+];
+echo json_encode(hsMetaDesdeFilas($rows,'2024-07'));
+"""
+        with tempfile.TemporaryDirectory(prefix="historic-cover-") as tmp:
+            file = Path(tmp) / "test.php"
+            file.write_text(code, encoding="utf-8")
+            r = subprocess.run(["php", str(file)], capture_output=True, text=True, check=True)
+            data = json.loads(r.stdout)
+            self.assertEqual(data["metaTotal"], 3300000)
+            self.assertEqual(data["mes"], "2024-07")
+            self.assertEqual(len(data["metas"]), 4)
+            self.assertEqual(data["advertencias"][0]["codigo"], "META_TOTAL_DIFIERE_AREAS")
+            self.assertEqual(data["advertencias"][0]["diferenciaCentavos"], 17834000)
+
+    def test_historical_goals_load_all_valid_months_without_erasing_cache(self):
+        historical = self.read("ingresos-historico.js")
+        app = self.read("app.js")
+        graph = self.read("graph.js")
+        self.assertIn("mesesHistoricosDeIngresosValidados()", historical)
+        self.assertIn("refrescarMetasHistoricasEnSegundoPlano()", historical)
+        self.assertIn("mesesMetaRecientes", graph)
+        self.assertIn("mezclarMetasExcelVerificadas(", app)
+        self.assertIn("excelSha256", historical)
+        self.assertIn("const valoresMetas = meses.map", app)
+        self.assertIn("return filas.length === 4", app)
+        self.assertIn("metaTotalCaratula", app)
+        self.assertNotIn("state.datos.metasCobranza = reemplazarRegistrosPorMes(", app)
+        self.assertNotIn("fetch(\"BI_Metas_Cobranza", historical)
+        self.assertNotIn("obtenerMetasCobranzaSharePoint", historical)
+
     def test_expense_file_discovery_with_mock_graph(self):
         source = (ROOT / "cpanel-preview-20261105/private-code/egresos_engine.php").as_posix()
         php = """<?php

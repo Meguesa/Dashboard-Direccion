@@ -19,7 +19,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 // mensual que el motor de Ingresos ya concilio. No lee BI_Metas_Cobranza.
 function hsMetaDesdeFilas(iterable $filas, string $mes):array {
     $areas=['Panteon','Servicios CH','Servicios AF','Total Service'];
-    $enTabla=false;$reales=null;$metas=null;$filaMeta=null;
+    $enTabla=false;$reales=null;$metas=null;$filaMeta=null;$advertencias=[];
     $normal=static function($valor):string {
         $valor=hsText($valor);
         return trim((string)preg_replace('/\s+/u',' ',strtr($valor,['Á'=>'A','É'=>'E','Í'=>'I','Ó'=>'O','Ú'=>'U'])));
@@ -46,8 +46,20 @@ function hsMetaDesdeFilas(iterable $filas, string $mes):array {
             if($centavos<0)throw new RuntimeException('La caratula tiene un importe negativo en sus metas.');
             $cantidades[]=$centavos;
         }
-        if(array_sum(array_slice($cantidades,0,4))!==$cantidades[4]){
-            throw new RuntimeException('El total de la caratula difiere de la suma por area.');
+        $sumatoriaAreas=array_sum(array_slice($cantidades,0,4));
+        if($sumatoriaAreas!==$cantidades[4]){
+            if($etiqueta==='INGRESO TOTAL'){
+                throw new RuntimeException('Los reales de la caratula difieren de la suma por area.');
+            }
+            // Algunas caratulas historicas publican una meta TOTAL diferente de
+            // la suma de las cuatro metas por area. Respetar el TOTAL original,
+            // sin modificar ninguno de los valores y registrando la discrepancia.
+            $advertencias[]=[
+                'codigo'=>'META_TOTAL_DIFIERE_AREAS',
+                'diferenciaCentavos'=>$cantidades[4]-$sumatoriaAreas,
+                'totalCaratula'=>$cantidades[4]/100,
+                'sumaAreas'=>$sumatoriaAreas/100
+            ];
         }
         if($etiqueta==='INGRESO TOTAL')$reales=$cantidades;
         else{$metas=$cantidades;$filaMeta=$fila;}
@@ -61,11 +73,14 @@ function hsMetaDesdeFilas(iterable $filas, string $mes):array {
         $registros[]=[
             'mes'=>$mes,'area'=>$area,'metaMensual'=>$metas[$i]/100,
             'realCaratula'=>$reales[$i]/100,'activo'=>true,
+            'metaTotalCaratula'=>$metas[4]/100,
+            'realTotalCaratula'=>$reales[4]/100,
             'fuenteOrigen'=>'excel_original_caratula'
         ];
     }
     return ['mes'=>$mes,'metas'=>$registros,'metaTotal'=>$metas[4]/100,
-        'realTotal'=>$reales[4]/100,'filaMeta'=>$filaMeta];
+        'realTotal'=>$reales[4]/100,'filaMeta'=>$filaMeta,
+        'advertencias'=>$advertencias];
 }
 function hsMetaDesdeExcel(string $archivo,string $mes):array {
     $zip=new ZipArchive();
