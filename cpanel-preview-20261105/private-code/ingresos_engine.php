@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 /* Ingresos originales: solo lectura en SharePoint; publicación atómica privada. */
-const HS_DIR='/home/juanpab1/bi-ingresos-privado';
+const HS_DIR=__DIR__;
 const HS_BUILD='20261105-historico-1';
 const HS_RULES=2;
 require_once HS_DIR.'/ingresos_lector_prueba.php';
