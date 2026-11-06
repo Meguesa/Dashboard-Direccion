@@ -4536,7 +4536,7 @@ function renderAvanceMetasCobranza(mes) {
   }
 
   const filas = calcularAvanceMetasCobranza(mes);
-  if (filas.length !== (Array.isArray(mes) ? mes.length : 1) * 4 ||
+  if (filas.length !== 4 ||
       filas.some(fila => fila.meta <= 0 || !Number.isFinite(fila.real))) {
     setText("metasCobranzaCumplimiento", "Información no disponible");
     tbody.innerHTML = '<tr><td colspan="5">Consultando metas de la carátula de Excel; no se mostrarán importes estimados.</td></tr>';
