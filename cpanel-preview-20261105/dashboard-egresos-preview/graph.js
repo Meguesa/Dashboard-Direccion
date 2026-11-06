@@ -321,7 +321,8 @@ async function cargarDatosSharePoint(opciones = {}) {
     const marketingMedios = await obtenerMarketingMediosSharePoint();
     const marketingRedes = await obtenerMarketingRedesSharePoint();
     const servicios = await obtenerServiciosSharePoint(usarFiltroMeses ? mesesRecargados : []);
-    const metasCobranza = await obtenerMetasCobranzaExcel(usarFiltroMeses ? mesesRecargados : []);
+    const mesesMetaRecientes = usarFiltroMeses ? mesesRecargados : obtenerMesesRecargaReciente();
+    const metasCobranza = await obtenerMetasCobranzaExcel(mesesMetaRecientes);
     const metasVentas = await obtenerMetasVentasSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const alertas = await obtenerAlertasSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const parquePropiedades = modoCarga === "completa"
