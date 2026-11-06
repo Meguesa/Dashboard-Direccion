@@ -39,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m unittest discover -s tests -p 'test_excel_directo_build.py' -v
-          test "$(find deploy-excel-directo -maxdepth 1 -type f | wc -l)" -eq 22
+          test "$(find deploy-excel-directo -maxdepth 1 -type f | wc -l)" -eq 27
           php -l deploy-excel-directo/index.php
           php -l deploy-excel-directo/ingresos-historico.php
           php -l deploy-excel-directo/egresos-excel.php
@@ -53,24 +53,16 @@ jobs:
         shell: bash
         run: sudo apt-get update -qq && sudo apt-get install -y lftp
 
-      - name: Validar destinos privados antes de publicar
+      - name: Publicar prueba inocua de proteccion
         shell: bash
         env:
-          FTP_PRIVATE_DIR: ${{ secrets.FTP_PRIVATE_DIR }}
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
           set -euo pipefail
-          test -n "$FTP_PRIVATE_DIR" || { echo 'Falta FTP_PRIVATE_DIR: ruta privada de los motores PHP'; exit 1; }
-          test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
-          case "$FTP_PRIVATE_DIR" in
-            "/home/juanpab1/bi-ingresos-privado"|"bi-ingresos-privado"|"/bi-ingresos-privado")
-              ;;
-            *) echo 'FTP_PRIVATE_DIR debe apuntar exclusivamente a la carpeta privada bi-ingresos-privado'; exit 1 ;;
-          esac
-          php -l cpanel-preview-20261105/private-code/egresos_engine.php
-          php -l cpanel-preview-20261105/private-code/ingresos_engine.php
+          printf '{"prueba":"sin datos"}\n' > ensayo-proteccion.json
+          printf '<?php echo "prueba sin datos";\n' > ensayo-proteccion.php
           lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
             set cmd:fail-exit yes;
             set ftp:passive-mode true;
@@ -79,41 +71,26 @@ jobs:
             set ftp:ssl-auth TLS;
             set ssl:verify-certificate yes;
             set ssl:check-hostname yes;
-            cd $FTP_PRIVATE_DIR;
-            cls egresos_engine.php;
-            cls ingresos_engine.php;
+            put deploy-excel-directo/.htaccess -o .htaccess;
+            put ensayo-proteccion.json -o ensayo-proteccion.json;
+            put ensayo-proteccion.php -o ensayo-proteccion.php;
             bye;
           "
 
-      - name: Publicar motores privados con respaldo
+      - name: Validar bloqueo externo antes de publicar
         shell: bash
-        env:
-          FTP_PRIVATE_DIR: ${{ secrets.FTP_PRIVATE_DIR }}
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
           set -euo pipefail
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
-            set cmd:fail-exit yes;
-            set ftp:passive-mode true;
-            set ftp:ssl-force true;
-            set ftp:ssl-protect-data true;
-            set ftp:ssl-auth TLS;
-            set ssl:verify-certificate yes;
-            set ssl:check-hostname yes;
-            set net:timeout 30;
-            set net:max-retries 1;
-            cd $FTP_PRIVATE_DIR;
-            put cpanel-preview-20261105/private-code/egresos_engine.php -o egresos_engine.php.new_${GITHUB_RUN_ID};
-            put cpanel-preview-20261105/private-code/ingresos_engine.php -o ingresos_engine.php.new_${GITHUB_RUN_ID};
-            mv egresos_engine.php egresos_engine.php.bak_${GITHUB_RUN_ID};
-            mv egresos_engine.php.new_${GITHUB_RUN_ID} egresos_engine.php;
-            mv ingresos_engine.php ingresos_engine.php.bak_${GITHUB_RUN_ID};
-            mv ingresos_engine.php.new_${GITHUB_RUN_ID} ingresos_engine.php;
-            bye;
-          "
-          echo 'Motores privados publicados; versiones anteriores conservadas como .bak_RUNID.'
+          codigo="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://portal.juanpablo.com.mx/dashboard/ensayo-proteccion.json)"
+          codigo_php="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://portal.juanpablo.com.mx/dashboard/ensayo-proteccion.php)"
+          if [ "$codigo_php" != "403" ]; then
+            echo "::error::No se valido bloqueo PHP: HTTP $codigo_php"
+            exit 1
+          fi
+          if [ "$codigo" != "403" ]; then
+            echo "::error::No se valido la proteccion de archivos JSON: HTTP $codigo"
+            exit 1
+          fi
 
       - name: Publicar en Dashboard de produccion
         shell: bash
@@ -139,6 +116,7 @@ jobs:
               set ssl:check-hostname yes;
               set net:timeout 30;
               set net:max-retries 1;
+              put deploy-excel-directo/.htaccess -o .htaccess;
               mirror --reverse --overwrite --no-perms --exclude-glob index.php deploy-excel-directo .;
               put deploy-excel-directo/index.php -o index.php;
               bye;
@@ -152,6 +130,28 @@ jobs:
 
           echo "Error durante la publicacion."
           exit 1
+
+      - name: Retirar archivo de prueba
+        if: always()
+        continue-on-error: true
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          if [ -z "$FTP_SERVER" ] || [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ]; then exit 0; fi
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            rm -f ensayo-proteccion.json;
+            rm -f ensayo-proteccion.php;
+            bye;
+          "
 
       - name: Resumen de publicacion
         run: |

@@ -24,6 +24,35 @@ FILES = [
     "dashboard-history-refresh.js",
     "dashboard-yoy-comparison.js",
 ]
+PRIVATE_SOURCE = ROOT / "cpanel-preview-20261105" / "private-code"
+SERVER_FILES = [
+    "ingresos_engine.php",
+    "egresos_engine.php",
+    "ingresos_lector_prueba.php",
+    "dashboard_excel_cron.php",
+]
+LOCAL_READY = ".dashboard-local-ready"
+PROTECT_SOURCE = ROOT / "tools" / "dashboard-htaccess.txt"
+
+
+def add_server_components():
+    for name in SERVER_FILES:
+        shutil.copy2(PRIVATE_SOURCE / name, TARGET / name)
+    shutil.copy2(PROTECT_SOURCE, TARGET / ".htaccess")
+
+
+def prepare_local_reader(source):
+    old = "require_once '/home/juanpab1/bi-ingresos-privado/ingresos_engine.php';"
+    new = (
+        "require_once ("
+        "is_file(__DIR__.'/.dashboard-local-ready') "
+        "&& is_file(__DIR__.'/historico_estado.json') "
+        "&& is_file(__DIR__.'/egresos_estado.json') "
+        "? __DIR__.'/ingresos_engine.php' "
+        ": '/home/juanpab1/bi-ingresos-privado/ingresos_engine.php');"
+    )
+    return replace_once(source, old, new, "conmutacion sin interrupciones de Excel")
+
 
 def replace_once(text, old, new, purpose):
     if text.count(old) != 1:
@@ -105,7 +134,7 @@ def build_expense_javascript():
 
 def build_income_endpoint():
     path = TARGET / "ingresos-historico.php"
-    source = path.read_text(encoding="utf-8")
+    source = prepare_local_reader(path.read_text(encoding="utf-8"))
     source = replace_once(
         source,
         "if(!$admin||!portal_user_can_tool('dashboard')){http_response_code(403);exit('Acceso restringido a la auditoría de pruebas.');}",
@@ -128,7 +157,7 @@ def build_income_endpoint():
 
 def build_expense_endpoint():
     path = TARGET / "egresos-excel.php"
-    source = path.read_text(encoding="utf-8")
+    source = prepare_local_reader(path.read_text(encoding="utf-8"))
     old = "if(strtolower(trim((string)($u['email']??'')))!=='gabriel.guerra@juanpablo.com.mx'||!portal_user_can_tool('dashboard')){http_response_code(403);exit('Acceso restringido a pruebas.');}"
     new = "$admin=strtolower(trim((string)($u['email']??'')))==='gabriel.guerra@juanpablo.com.mx';\nif(!portal_user_can_tool('dashboard')){http_response_code(403);exit('Acceso no autorizado.');}"
     source = replace_once(source, old, new, "Dashboard role read-only access to expense")
@@ -167,9 +196,14 @@ def validate():
     assert "ingresos-historico.js" in index and "egresos-excel.js" in index
     assert "if(m.puedeActualizar)" in (TARGET / "egresos-excel.js").read_text(encoding="utf-8")
     assert "return JSON" not in index
-    for name in FILES:
+    for name in FILES + SERVER_FILES + [".htaccess"]:
         if not (TARGET / name).is_file() or not (TARGET / name).stat().st_size:
             raise RuntimeError(f"Output missing: {name}")
+    for name in ["ingresos-historico.php", "egresos-excel.php"]:
+        if "is_file(__DIR__.'/.dashboard-local-ready')" not in (TARGET / name).read_text(encoding="utf-8"):
+            raise RuntimeError(f"Dashboard should stay on legacy reader until activated: {name}")
+    if "Require all denied" not in (TARGET / ".htaccess").read_text(encoding="utf-8"):
+        raise RuntimeError("The financial-data protection rules are missing.")
 
 def main():
     if not SOURCE.is_dir():
@@ -182,12 +216,13 @@ def main():
         if not source.is_file():
             raise RuntimeError(f"Snapshot file missing: {name}")
         shutil.copy2(source, TARGET / name)
+    add_server_components()
     build_frontend()
     build_expense_javascript()
     build_income_endpoint()
     build_expense_endpoint()
     validate()
-    print(f"Excel direct production candidate prepared, {len(FILES)} files. No deployment performed.")
+    print(f"Excel direct production candidate prepared, {len(FILES) + len(SERVER_FILES) + 1} files. No deployment performed.")
 
 if __name__ == "__main__":
     main()

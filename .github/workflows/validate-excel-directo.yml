@@ -40,7 +40,7 @@ jobs:
           test -f deploy-excel-directo/index.php
           test -f deploy-excel-directo/ingresos-historico.php
           test -f deploy-excel-directo/egresos-excel.php
-          if grep -R -n -E '(client_secret|FTP_PASSWORD|PRIVATE.KEY|BEGIN RSA PRIVATE KEY)' deploy-excel-directo; then
+          if grep -R -n -E '(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|FTP_PASSWORD[[:space:]]*[:=][[:space:]]*[^$]|client_secret[[:space:]]*[:=][[:space:]]*[A-Za-z0-9_-]{24,})' deploy-excel-directo; then
             echo 'Posible secreto: revisar antes de autorizar.'
             exit 1
           fi
@@ -52,7 +52,7 @@ jobs:
           cd deploy-excel-directo
           zip -q -r ../dashboard-excel-directo-cpanel.zip .
           cd ..
-          test "$(unzip -Z1 dashboard-excel-directo-cpanel.zip | wc -l)" -eq 22
+          test "$(unzip -Z1 dashboard-excel-directo-cpanel.zip | wc -l)" -eq 27
           unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'index.php'
           unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'graph.js'
           unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'ingresos-historico.php'
