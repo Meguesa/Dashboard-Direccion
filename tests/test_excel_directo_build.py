@@ -38,6 +38,43 @@ class ExcelDirectBuildChecks(unittest.TestCase):
             filename = ROOT / "cpanel-preview-20261105/private-code" / name
             subprocess.run(["php", "-l", str(filename)], check=True, capture_output=True, text=True)
 
+    def test_income_manifest_preserves_verified_sha(self):
+        engine = (ROOT / "cpanel-preview-20261105/private-code/ingresos_engine.php").read_text(encoding="utf-8")
+        self.assertIn("array_merge($cache['excel']??[],$old['excel']??[],$state['excel'])", engine)
+        self.assertIn("array_merge($cache['excel']??[],$state['excel'])", engine)
+        endpoint = self.read("ingresos-historico.php")
+        self.assertIn("HUELLA_EXCEL_INCOMPLETA", endpoint)
+        self.assertIn("excelSha256", endpoint)
+
+    def test_real_november_cover_layout_parser(self):
+        # Matches the published November cover sheet: B=BANCOS, C:G=areas + total.
+        source = self.read("ingresos-historico.php")
+        start = source.index("function hsMetaDesdeFilas(")
+        end = source.index("function hsMetaDesdeExcel(", start)
+        parser = source[start:end]
+        code = """<?php
+function hsText($v) { return mb_strtoupper(trim((string)$v), 'UTF-8'); }
+function hsCents($v) { return (int) round((float)$v * 100); }
+""" + parser + """
+$rows = [
+ [23,[1=>'BANCOS',2=>'Panteon',3=>'Servicios CH',4=>'Servicios AF',5=>'TOTAL SERVICE',6=>'TOTAL'],[]],
+ [28,[1=>'Ingreso Total',2=>'2375',3=>'41438.89',4=>'92645.54',5=>'191489.48',6=>'327948.91'],[]],
+ [29,[1=>'META',2=>'120000',3=>'950646',4=>'1393562.50',5=>'2425791.50',6=>'4890000'],[]],
+];
+echo json_encode(hsMetaDesdeFilas($rows,'2026-11'));
+"""
+        with tempfile.TemporaryDirectory(prefix="nov-cover-") as tmp:
+            file = Path(tmp) / "verify.php"
+            file.write_text(code, encoding="utf-8")
+            result = subprocess.run(["php", str(file)], check=True, capture_output=True, text=True)
+            meta = json.loads(result.stdout)
+            self.assertEqual([r["area"] for r in meta["metas"]],
+                             ["Panteon", "Servicios CH", "Servicios AF", "Total Service"])
+            self.assertEqual([r["metaMensual"] for r in meta["metas"]],
+                             [120000, 950646, 1393562.5, 2425791.5])
+            self.assertAlmostEqual(meta["realTotal"], 327948.91)
+            self.assertEqual(meta["metaTotal"], 4890000)
+
     def test_expense_file_discovery_with_mock_graph(self):
         source = (ROOT / "cpanel-preview-20261105/private-code/egresos_engine.php").as_posix()
         php = """<?php
