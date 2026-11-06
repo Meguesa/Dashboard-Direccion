@@ -132,27 +132,43 @@ jobs:
           echo "Error durante la publicacion."
           exit 1
 
-      - name: Retirar archivo de prueba
+      - name: Retirar archivos de prueba (maximo 2 minutos)
         if: always()
         continue-on-error: true
+        timeout-minutes: 2
         shell: bash
         env:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
-          if [ -z "$FTP_SERVER" ] || [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ]; then exit 0; fi
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
-            set ftp:passive-mode true;
-            set ftp:ssl-force true;
-            set ftp:ssl-protect-data true;
-            set ftp:ssl-auth TLS;
-            set ssl:verify-certificate yes;
-            set ssl:check-hostname yes;
-            rm -f ensayo-proteccion.json;
-            rm -f ensayo-proteccion.php;
-            bye;
-          "
+          set -euo pipefail
+          if [ -z "$FTP_SERVER" ] || [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ]; then
+            echo "::warning::No se encontraron credenciales FTPS para limpiar los ensayos."
+            exit 0
+          fi
+          for intento in 1 2; do
+            if timeout --kill-after=5s 40s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 10;
+              set net:max-retries 1;
+              rm -f ensayo-proteccion.json;
+              rm -f ensayo-proteccion.php;
+              bye;
+            "; then
+              echo "Archivos inocuos de prueba retirados."
+              exit 0
+            fi
+            if [ "$intento" -lt 2 ]; then sleep 3; fi
+          done
+          echo "::warning::Limpieza FTPS sin confirmar. El deploy principal ya terminó. Revisar en cPanel únicamente ensayo-proteccion.json y ensayo-proteccion.php."
+          exit 0
 
       - name: Resumen de publicacion
         run: |
