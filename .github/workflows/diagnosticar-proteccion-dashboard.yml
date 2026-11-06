@@ -108,8 +108,22 @@ jobs:
           print('HTTP 200 despues de redireccion no cuenta como prueba de bloqueo 403.')
           PY
 
-      - name: Validar bloqueo 403 o restaurar reglas anteriores
+      - name: Verificar que el servidor devuelve 403 directamente
         if: ${{ inputs.accion == 'probar' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for archivo in ensayo-proteccion.php ensayo-proteccion.json original_guardado_ensayo.txt; do
+            estado="$(cat "resultado-sonda/$archivo.status")"
+            if [ "$estado" != "403" ]; then
+              echo "::error::$archivo no devolvio HTTP 403 directo (HTTP $estado)"
+              exit 1
+            fi
+          done
+          echo "Bloqueo directo 403 confirmado en tres archivos de prueba."
+
+      - name: Restaurar reglas del Dashboard y retirar archivos de prueba
+        if: ${{ always() && inputs.accion == 'probar' }}
         shell: bash
         env:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
@@ -117,16 +131,8 @@ jobs:
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
           set -euo pipefail
-          fallos=0
-          for archivo in ensayo-proteccion.php ensayo-proteccion.json original_guardado_ensayo.txt; do
-            estado="$(cat "resultado-sonda/$archivo.status")"
-            if [ "$estado" != "403" ]; then
-              echo "::warning::$archivo sin denegacion HTTP directa (HTTP $estado)"
-              fallos=1
-            fi
-          done
-          if [ "$fallos" -ne 0 ]; then
-            echo "::warning::Restaurando el .htaccess anterior para no afectar el Portal."
+          test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
+          if [ -f reglas-previas.htaccess ]; then
             lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
               set cmd:fail-exit yes;
               set ftp:passive-mode true;
@@ -136,25 +142,18 @@ jobs:
               set ssl:verify-certificate yes;
               set ssl:check-hostname yes;
               put reglas-previas.htaccess -o .htaccess;
+              rm -f ensayo-diagnostico-publico.txt;
+              rm -f original_guardado_ensayo.txt;
+              rm -f ensayo-proteccion.json;
+              rm -f ensayo-proteccion.php;
               bye;
             "
+            echo "Se restauro el .htaccess anterior y se retiraron los archivos de prueba."
+          else
+            echo "::warning::No se encontro respaldo local de .htaccess. Se requiere revision manual."
             exit 1
           fi
-          echo "Bloqueo HTTP 403 comprobado para tres archivos inocuos."
-          # Esta corrida solo diagnostica: devuelve la configuracion previa.
-          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
-            set cmd:fail-exit yes;
-            set ftp:passive-mode true;
-            set ftp:ssl-force true;
-            set ftp:ssl-protect-data true;
-            set ftp:ssl-auth TLS;
-            set ssl:verify-certificate yes;
-            set ssl:check-hostname yes;
-            put reglas-previas.htaccess -o .htaccess;
-            bye;
-          "
-          echo "Archivo .htaccess anterior restaurado tras la prueba."
-          
+
       - name: Retirar los archivos de diagnostico
         if: ${{ always() && inputs.accion == 'limpiar' }}
         continue-on-error: true
@@ -179,11 +178,3 @@ jobs:
             bye;
           "
 
-      - name: Instrucciones para prueba autenticada
-        if: ${{ inputs.accion == 'probar' }}
-        run: |
-          echo '### Comprobacion con sesion iniciada' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Las pruebas se conservan hasta ejecutar de nuevo este workflow con accion=limpiar.' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Abrir ensayo-proteccion.json y ensayo-proteccion.php en el mismo navegador con sesion del Portal.' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Se requiere HTTP 403 para ambos; mostrar login o contenido de prueba no confirma bloqueo.' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Al terminar, ejecutar accion=limpiar y confirmar su resultado.' >> "$GITHUB_STEP_SUMMARY"
