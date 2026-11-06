@@ -1,0 +1,53 @@
+.dashboard-role-hidden {
+  display: none !important;
+}
+
+.dashboard-role-access-panel {
+  margin: 16px 32px 0;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.dashboard-role-access-panel strong {
+  font-size: 15px;
+}
+
+.dashboard-role-access-denied {
+  color: #6b1d16;
+  background: #fff1ef;
+  border-color: #e8b8b2;
+}
+
+.dashboard-role-access-error {
+  color: #6d4a00;
+  background: #fff8df;
+  border-color: #e8d183;
+}
+
+.dashboard-role-limited #notificationsWrapper {
+  display: none !important;
+}
+
+.dashboard-role-services-layout #pageResumen .grid-main {
+  grid-template-columns: 1fr;
+}
+
+.dashboard-role-services-layout #pageResumen .home-right-stack {
+  width: 100%;
+}
+
+.dashboard-role-limited .grid-kpis {
+  align-items: stretch;
+}
+
+@media (max-width: 720px) {
+  .dashboard-role-access-panel {
+    margin: 12px 16px 0;
+  }
+}

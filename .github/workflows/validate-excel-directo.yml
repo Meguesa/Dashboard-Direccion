@@ -1,0 +1,71 @@
+name: Validar migración Excel directa sin desplegar
+on:
+  pull_request:
+    paths:
+      - 'tools/build_excel_directo_dashboard.py'
+      - 'tests/test_excel_directo_build.py'
+      - 'cpanel-preview-20261105/**'
+      - '.github/workflows/validate-excel-directo.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    name: Construir, verificar fechas, PHP y JS sin tocar cPanel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          extensions: mbstring, zip, dom, xml, xmlreader
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verificar el candidato de migración
+        env:
+          TZ: America/Monterrey
+        run: python3 -m unittest discover -s tests -p 'test_excel_directo_build.py' -v
+      - name: Asegurar que el paquete no contiene secretos
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f deploy-excel-directo/index.php
+          test -f deploy-excel-directo/ingresos-historico.php
+          test -f deploy-excel-directo/egresos-excel.php
+          if grep -R -n -E '(client_secret|FTP_PASSWORD|PRIVATE.KEY|BEGIN RSA PRIVATE KEY)' deploy-excel-directo; then
+            echo 'Posible secreto: revisar antes de autorizar.'
+            exit 1
+          fi
+
+      - name: Crear paquete ZIP listo para cPanel (sin desplegar)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd deploy-excel-directo
+          zip -q -r ../dashboard-excel-directo-cpanel.zip .
+          cd ..
+          test "$(unzip -Z1 dashboard-excel-directo-cpanel.zip | wc -l)" -eq 22
+          unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'index.php'
+          unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'graph.js'
+          unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'ingresos-historico.php'
+          unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'egresos-excel.php'
+          sha256sum dashboard-excel-directo-cpanel.zip > dashboard-excel-directo-cpanel.sha256
+      - name: Dejar ZIP disponible para descarga manual
+        uses: actions/upload-artifact@v4
+        with:
+          name: paquete-dashboard-excel-cpanel
+          path: |
+            dashboard-excel-directo-cpanel.zip
+            dashboard-excel-directo-cpanel.sha256
+          if-no-files-found: error
+          retention-days: 14
+      - name: Confirmación
+        run: echo 'Paquete probado en runner sin publicación automática.'

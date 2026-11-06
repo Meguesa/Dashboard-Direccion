@@ -1,0 +1,5760 @@
+:root {
+  --bg: #f4f6f8;
+  --panel: #ffffff;
+  --text: #1f2933;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --primary: #1f4e79;
+  --primary-dark: #163a59;
+  --success: #1b5e20;
+  --danger: #b91c1c;
+  --warning: #92400e;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app {
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header-title h1 {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 800;
+}
+
+.header-title p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.select {
+  height: 42px;
+  min-width: 170px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0 12px;
+  background: white;
+  font-size: 15px;
+}
+
+.button {
+  height: 42px;
+  border: none;
+  border-radius: 10px;
+  padding: 0 18px;
+  background: var(--primary);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--primary-dark);
+}
+
+.grid-kpis {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 24px;
+}
+
+.card {
+  background: var(--panel);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 22px;
+  border: 1px solid var(--border);
+}
+
+.kpi-label {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.kpi-value {
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.kpi-value.negative {
+  color: var(--danger);
+}
+
+.kpi-value.positive {
+  color: var(--success);
+}
+
+.grid-main {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 18px;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0 0 14px;
+}
+
+.status-box {
+  background: #eef6ff;
+  border: 1px solid #cfe8ff;
+  color: #164e78;
+  border-radius: 12px;
+  padding: 14px;
+  font-weight: 700;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.table th {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.footer-note {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 1200px) {
+  .grid-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .grid-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .select,
+  .button {
+    width: 100%;
+  }
+}
+
+.user-box {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 260px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.user-label {
+  font-weight: 700;
+  color: var(--text);
+  margin-right: 4px;
+}
+
+.button-secondary {
+  background: #6b7280;
+}
+
+.button-secondary:hover {
+  background: #4b5563;
+}
+
+.auth-panel {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #92400e;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+
+.hidden {
+  display: none !important;
+}
+
+/* Pantalla inicial de login */
+.login-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f4f6f8 0%, #e8eef5 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 760px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  padding: 56px;
+  text-align: center;
+}
+
+.login-card h1 {
+  margin: 0;
+  font-size: 44px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.login-card p {
+  margin: 16px 0 0;
+  font-size: 18px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.login-divider {
+  width: 90px;
+  height: 5px;
+  background: var(--primary);
+  border-radius: 999px;
+  margin: 32px auto;
+}
+
+.login-note {
+  max-width: 560px;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.login-main-button {
+  margin-top: 30px;
+  height: 54px;
+  padding: 0 34px;
+  font-size: 17px;
+  border-radius: 14px;
+}
+
+.login-status {
+  margin-top: 22px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Ajustes para header del dashboard después del login */
+.header-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (min-width: 1400px) {
+  .app {
+    padding: 32px;
+  }
+
+  .header-title h1 {
+    font-size: 40px;
+  }
+
+  .kpi-value {
+    font-size: 34px;
+  }
+}
+
+/* ================================
+   Navegación interna del dashboard
+================================ */
+
+.dashboard-page {
+  width: 100%;
+}
+
+.kpi-card {
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-3px);
+  border-color: #bfdbfe;
+  box-shadow: 0 12px 30px rgba(31, 78, 121, 0.16);
+}
+
+.kpi-card:focus {
+  outline: 3px solid rgba(31, 78, 121, 0.25);
+  outline-offset: 3px;
+}
+
+.kpi-card::after {
+  content: "Ver detalle";
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+.kpi-card:hover::after {
+  opacity: 1;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.page-header .section-title {
+  margin-bottom: 4px;
+}
+
+.page-header .footer-note {
+  margin-top: 0;
+}
+
+.page-back-button {
+  flex-shrink: 0;
+}
+
+@media (max-width: 700px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-back-button {
+    width: 100%;
+  }
+}
+
+/* ================================
+   KPIs de páginas internas
+================================ */
+
+.detail-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 18px 0 20px;
+}
+
+.detail-kpi-card {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.detail-kpi-label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.detail-kpi-card strong {
+  display: block;
+  color: var(--text);
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.placeholder-box {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a5f;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .detail-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================================
+   Secciones de detalle
+================================ */
+
+.detail-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.detail-section-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.detail-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.detail-section-header h3 {
+  margin: 0 0 4px;
+  color: var(--text);
+  font-size: 17px;
+}
+
+.detail-section-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.detail-table th,
+.detail-table td {
+  white-space: nowrap;
+}
+
+.detail-table td:nth-child(2),
+.detail-table td:nth-child(3),
+.detail-table td:nth-child(4) {
+  text-align: right;
+}
+
+@media (max-width: 1000px) {
+  .detail-section-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================================
+   Columnas de detalle para Ingresos
+================================ */
+
+.detail-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 20px;
+  align-items: start;
+}
+
+.detail-column {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+@media (max-width: 1000px) {
+  .detail-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================================
+   Ajustes de tablas de Egresos
+================================ */
+
+.table-scroll-10 {
+  max-height: 430px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.table-scroll-10 thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
+}
+
+.detail-table-egresos-rubro td:nth-child(2) {
+  text-align: left;
+}
+
+.detail-table-egresos-rubro td:nth-child(3),
+.detail-table-egresos-rubro td:nth-child(4),
+.detail-table-egresos-rubro td:nth-child(5) {
+  text-align: right;
+}
+
+/* ================================
+   Corrección de márgenes y distribución de tablas
+================================ */
+
+.detail-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.detail-column,
+.detail-section-card,
+.table-scroll {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.detail-section-card {
+  overflow: hidden;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.detail-table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+}
+
+.detail-table th,
+.detail-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  vertical-align: top;
+}
+
+/* Tablas generales de 4 columnas */
+.detail-table:not(.detail-table-egresos-rubro) th:nth-child(1),
+.detail-table:not(.detail-table-egresos-rubro) td:nth-child(1) {
+  width: 46%;
+}
+
+.detail-table:not(.detail-table-egresos-rubro) th:nth-child(2),
+.detail-table:not(.detail-table-egresos-rubro) td:nth-child(2) {
+  width: 16%;
+}
+
+.detail-table:not(.detail-table-egresos-rubro) th:nth-child(3),
+.detail-table:not(.detail-table-egresos-rubro) td:nth-child(3) {
+  width: 22%;
+}
+
+.detail-table:not(.detail-table-egresos-rubro) th:nth-child(4),
+.detail-table:not(.detail-table-egresos-rubro) td:nth-child(4) {
+  width: 16%;
+}
+
+/* Tabla Egresos por rubro: 5 columnas */
+.detail-table-egresos-rubro th:nth-child(1),
+.detail-table-egresos-rubro td:nth-child(1) {
+  width: 36%;
+}
+
+.detail-table-egresos-rubro th:nth-child(2),
+.detail-table-egresos-rubro td:nth-child(2) {
+  width: 15%;
+}
+
+.detail-table-egresos-rubro th:nth-child(3),
+.detail-table-egresos-rubro td:nth-child(3) {
+  width: 13%;
+}
+
+.detail-table-egresos-rubro th:nth-child(4),
+.detail-table-egresos-rubro td:nth-child(4) {
+  width: 20%;
+}
+
+.detail-table-egresos-rubro th:nth-child(5),
+.detail-table-egresos-rubro td:nth-child(5) {
+  width: 16%;
+}
+
+/* Mantener importes y porcentajes alineados a la derecha */
+.detail-table td:nth-child(2),
+.detail-table td:nth-child(3),
+.detail-table td:nth-child(4),
+.detail-table-egresos-rubro td:nth-child(3),
+.detail-table-egresos-rubro td:nth-child(4),
+.detail-table-egresos-rubro td:nth-child(5) {
+  text-align: right;
+}
+
+.detail-table-egresos-rubro td:nth-child(2) {
+  text-align: left;
+}
+
+/* ================================
+   Pagos pendientes / por pagar
+================================ */
+
+.detail-full-card {
+  margin-top: 18px;
+}
+
+.detail-table-egresos-pendientes {
+  table-layout: fixed;
+}
+
+.detail-table-egresos-pendientes th:nth-child(1),
+.detail-table-egresos-pendientes td:nth-child(1) {
+  width: 24%;
+}
+
+.detail-table-egresos-pendientes th:nth-child(2),
+.detail-table-egresos-pendientes td:nth-child(2) {
+  width: 18%;
+}
+
+.detail-table-egresos-pendientes th:nth-child(3),
+.detail-table-egresos-pendientes td:nth-child(3) {
+  width: 13%;
+}
+
+.detail-table-egresos-pendientes th:nth-child(4),
+.detail-table-egresos-pendientes td:nth-child(4) {
+  width: 25%;
+}
+
+.detail-table-egresos-pendientes th:nth-child(5),
+.detail-table-egresos-pendientes td:nth-child(5) {
+  width: 12%;
+  text-align: right;
+}
+
+.detail-table-egresos-pendientes th:nth-child(6),
+.detail-table-egresos-pendientes td:nth-child(6) {
+  width: 8%;
+}
+
+/* ================================
+   Alturas con scroll para tablas
+================================ */
+
+.table-scroll-20 {
+  max-height: 880px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.table-scroll-10 {
+  max-height: 430px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.table-scroll-20 thead th,
+.table-scroll-10 thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
+}
+
+/* Pagos pendientes con 4 columnas */
+.detail-table-egresos-pendientes th:nth-child(1),
+.detail-table-egresos-pendientes td:nth-child(1) {
+  width: 34%;
+}
+
+.detail-table-egresos-pendientes th:nth-child(2),
+.detail-table-egresos-pendientes td:nth-child(2) {
+  width: 27%;
+}
+
+.detail-table-egresos-pendientes th:nth-child(3),
+.detail-table-egresos-pendientes td:nth-child(3) {
+  width: 17%;
+}
+
+.detail-table-egresos-pendientes th:nth-child(4),
+.detail-table-egresos-pendientes td:nth-child(4) {
+  width: 22%;
+  text-align: right;
+}
+
+
+/* ================================
+   Altura para tablas de 15 filas
+================================ */
+
+.table-scroll-15 {
+  max-height: 640px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.table-scroll-15 thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
+}
+
+/* ================================
+   KPIs de 4 columnas
+================================ */
+
+.detail-kpi-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .detail-kpi-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .detail-kpi-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================================
+   Filtros por columna en tablas
+================================ */
+
+.table-filter-row th {
+  padding: 6px 8px 10px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+}
+
+.table-filter-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 8px;
+  font-size: 12px;
+  color: var(--text);
+  background: #ffffff;
+}
+
+.table-filter-input:focus {
+  outline: 2px solid rgba(31, 78, 121, 0.22);
+  border-color: var(--primary);
+}
+
+.table-filter-input::placeholder {
+  color: #94a3b8;
+}
+
+/* ================================
+   Tablas de Ventas
+================================ */
+
+.detail-table-ventas th:nth-child(1),
+.detail-table-ventas td:nth-child(1) {
+  width: 32%;
+}
+
+.detail-table-ventas th:nth-child(2),
+.detail-table-ventas td:nth-child(2) {
+  width: 13%;
+  text-align: right;
+}
+
+.detail-table-ventas th:nth-child(3),
+.detail-table-ventas td:nth-child(3) {
+  width: 13%;
+  text-align: right;
+}
+
+.detail-table-ventas th:nth-child(4),
+.detail-table-ventas td:nth-child(4) {
+  width: 24%;
+  text-align: right;
+}
+
+.detail-table-ventas th:nth-child(5),
+.detail-table-ventas td:nth-child(5) {
+  width: 18%;
+  text-align: right;
+}
+
+/* ================================
+   Ajustes específicos de Ventas
+================================ */
+
+/* Ventas por asesor: 6 columnas */
+.detail-table-ventas-asesor th:nth-child(1),
+.detail-table-ventas-asesor td:nth-child(1) {
+  width: 26%;
+}
+
+.detail-table-ventas-asesor th:nth-child(2),
+.detail-table-ventas-asesor td:nth-child(2) {
+  width: 12%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-asesor th:nth-child(3),
+.detail-table-ventas-asesor td:nth-child(3) {
+  width: 11%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-asesor th:nth-child(4),
+.detail-table-ventas-asesor td:nth-child(4) {
+  width: 17%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-asesor th:nth-child(5),
+.detail-table-ventas-asesor td:nth-child(5) {
+  width: 17%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-asesor th:nth-child(6),
+.detail-table-ventas-asesor td:nth-child(6) {
+  width: 17%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Ventas por tipo de servicio: 4 columnas */
+.detail-table-ventas-servicio th:nth-child(1),
+.detail-table-ventas-servicio td:nth-child(1) {
+  width: 42%;
+}
+
+.detail-table-ventas-servicio th:nth-child(2),
+.detail-table-ventas-servicio td:nth-child(2) {
+  width: 18%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-servicio th:nth-child(3),
+.detail-table-ventas-servicio td:nth-child(3) {
+  width: 20%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-servicio th:nth-child(4),
+.detail-table-ventas-servicio td:nth-child(4) {
+  width: 20%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Contratos: dar más espacio a la columna Tipo */
+.detail-table-ventas-contratos th:nth-child(1),
+.detail-table-ventas-contratos td:nth-child(1) {
+  width: 18%;
+}
+
+.detail-table-ventas-contratos th:nth-child(2),
+.detail-table-ventas-contratos td:nth-child(2) {
+  width: 22%;
+}
+
+.detail-table-ventas-contratos th:nth-child(3),
+.detail-table-ventas-contratos td:nth-child(3) {
+  width: 13%;
+}
+
+.detail-table-ventas-contratos th:nth-child(4),
+.detail-table-ventas-contratos td:nth-child(4) {
+  width: 32%;
+}
+
+.detail-table-ventas-contratos th:nth-child(5),
+.detail-table-ventas-contratos td:nth-child(5) {
+  width: 15%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+
+/* ================================
+   Ventas: ajustes de asesor, detalle y contratos
+================================ */
+
+.ventas-asesor-row.is-clickable {
+  cursor: pointer;
+}
+
+.ventas-asesor-row.is-clickable:hover {
+  background: #f8fafc;
+}
+
+.ventas-asesor-row.is-expanded {
+  background: #eff6ff;
+}
+
+.expand-icon {
+  display: inline-block;
+  width: 16px;
+  font-weight: 900;
+  color: var(--primary);
+}
+
+.ventas-asesor-detail-row {
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ventas-detail-label {
+  padding-left: 28px !important;
+  font-weight: 700;
+}
+
+/* Ventas por asesor: reducir Asesor y ampliar % cumplimiento */
+.detail-table-ventas-asesor th:nth-child(1),
+.detail-table-ventas-asesor td:nth-child(1) {
+  width: 17%;
+}
+
+.detail-table-ventas-asesor th:nth-child(2),
+.detail-table-ventas-asesor td:nth-child(2) {
+  width: 11%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-asesor th:nth-child(3),
+.detail-table-ventas-asesor td:nth-child(3) {
+  width: 11%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-asesor th:nth-child(4),
+.detail-table-ventas-asesor td:nth-child(4) {
+  width: 18%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-asesor th:nth-child(5),
+.detail-table-ventas-asesor td:nth-child(5) {
+  width: 18%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ventas-asesor th:nth-child(6),
+.detail-table-ventas-asesor td:nth-child(6) {
+  width: 25%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Contratos: 4 columnas, sin Asesor, con Tipo más amplio */
+.detail-table-ventas-contratos th:nth-child(1),
+.detail-table-ventas-contratos td:nth-child(1) {
+  width: 18%;
+}
+
+.detail-table-ventas-contratos th:nth-child(2),
+.detail-table-ventas-contratos td:nth-child(2) {
+  width: 24%;
+}
+
+.detail-table-ventas-contratos th:nth-child(3),
+.detail-table-ventas-contratos td:nth-child(3) {
+  width: 43%;
+}
+
+.detail-table-ventas-contratos th:nth-child(4),
+.detail-table-ventas-contratos td:nth-child(4) {
+  width: 15%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+
+/* ================================
+   Tablas de Servicios
+================================ */
+
+.detail-table-servicios th:nth-child(1),
+.detail-table-servicios td:nth-child(1) {
+  width: 58%;
+}
+
+.detail-table-servicios th:nth-child(2),
+.detail-table-servicios td:nth-child(2) {
+  width: 20%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-servicios th:nth-child(3),
+.detail-table-servicios td:nth-child(3) {
+  width: 22%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-servicios-recientes th:nth-child(1),
+.detail-table-servicios-recientes td:nth-child(1) {
+  width: 18%;
+}
+
+.detail-table-servicios-recientes th:nth-child(2),
+.detail-table-servicios-recientes td:nth-child(2) {
+  width: 16%;
+}
+
+.detail-table-servicios-recientes th:nth-child(3),
+.detail-table-servicios-recientes td:nth-child(3) {
+  width: 30%;
+}
+
+.detail-table-servicios-recientes th:nth-child(4),
+.detail-table-servicios-recientes td:nth-child(4) {
+  width: 18%;
+}
+
+.detail-table-servicios-recientes th:nth-child(5),
+.detail-table-servicios-recientes td:nth-child(5) {
+  width: 18%;
+}
+
+/* ================================
+   Servicios por tipo + modalidad parque
+================================ */
+
+#tablaServiciosTipoBody td:nth-child(1),
+#tablaServiciosTipoBody td:nth-child(2),
+#tablaServiciosTipoBody td:nth-child(3) {
+  text-align: left;
+}
+
+#tablaServiciosTipoBody td:nth-child(4),
+#tablaServiciosTipoBody td:nth-child(5) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-servicios th:nth-child(1),
+.detail-table-servicios td:nth-child(1) {
+  width: 20%;
+}
+
+.detail-table-servicios th:nth-child(2),
+.detail-table-servicios td:nth-child(2) {
+  width: 28%;
+}
+
+.detail-table-servicios th:nth-child(3),
+.detail-table-servicios td:nth-child(3) {
+  width: 24%;
+}
+
+.detail-table-servicios th:nth-child(4),
+.detail-table-servicios td:nth-child(4) {
+  width: 12%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-servicios th:nth-child(5),
+.detail-table-servicios td:nth-child(5) {
+  width: 16%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ================================
+   Servicios por tipo de servicio
+   Tabla específica de 4 columnas con detalle expandible
+================================ */
+
+.detail-table-servicios-tipo {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.detail-table-servicios-tipo th,
+.detail-table-servicios-tipo td {
+  vertical-align: middle;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.detail-table-servicios-tipo thead tr:first-child th {
+  padding: 12px 10px;
+  line-height: 1.2;
+}
+
+.detail-table-servicios-tipo .table-filter-row th {
+  padding: 6px 8px 10px;
+}
+
+.detail-table-servicios-tipo th:nth-child(1),
+.detail-table-servicios-tipo td:nth-child(1) {
+  width: 12%;
+  text-align: left;
+}
+
+.detail-table-servicios-tipo th:nth-child(2),
+.detail-table-servicios-tipo td:nth-child(2) {
+  width: 60%;
+  text-align: left;
+}
+
+.detail-table-servicios-tipo th:nth-child(3),
+.detail-table-servicios-tipo td:nth-child(3) {
+  width: 10%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-servicios-tipo th:nth-child(4),
+.detail-table-servicios-tipo td:nth-child(4) {
+  width: 18%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.servicios-tipo-row.is-clickable {
+  cursor: pointer;
+}
+
+.servicios-tipo-row.is-clickable:hover {
+  background: #f8fafc;
+}
+
+.servicios-tipo-row.is-expanded {
+  background: #eff6ff;
+}
+
+.servicios-tipo-detail-row {
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.servicios-detail-label {
+  padding-left: 28px !important;
+  font-weight: 700;
+}
+
+/* ================================
+   KPIs de Servicios en 5 columnas
+================================ */
+
+.detail-kpi-grid-5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (max-width: 1200px) {
+  .detail-kpi-grid-5 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .detail-kpi-grid-5 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================================
+   Gráficas del dashboard
+================================ */
+
+.chart-card {
+  margin-top: 20px;
+}
+
+.chart-card-full {
+  width: 100%;
+}
+
+.chart-container {
+  position: relative;
+  width: 100%;
+  margin-top: 14px;
+}
+
+.chart-container-line {
+  height: 320px;
+}
+
+.chart-container-pie {
+  height: 340px;
+  max-width: 540px;
+  min-height: 340px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ================================
+   Gráfica pie de ingresos por categoría
+================================ */
+
+.chart-container-pie-categoria {
+  height: 360px;
+  max-width: 540px;
+  min-height: 360px;
+}
+
+/* ================================
+   Gráficas de Egresos
+================================ */
+
+.chart-container-pie-egresos-rubro {
+  height: 380px;
+  max-width: 560px;
+  min-height: 380px;
+}
+
+/* ================================
+   Gráficas de Ventas
+================================ */
+
+.chart-container-bar {
+  height: 360px;
+  min-height: 360px;
+  width: 100%;
+}
+
+/* ================================
+   Flujo de efectivo neto
+================================ */
+
+.flujo-card {
+  overflow: hidden;
+}
+
+.flujo-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.flujo-card-header h2 {
+  margin: 0;
+}
+
+.flujo-card-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.flujo-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.flujo-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.flujo-table th:nth-child(1),
+.flujo-table td:nth-child(1) {
+  width: 52%;
+}
+
+.flujo-table th:nth-child(2),
+.flujo-table td:nth-child(2) {
+  width: 24%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.flujo-table th:nth-child(3),
+.flujo-table td:nth-child(3) {
+  width: 24%;
+  text-align: right;
+}
+
+.flujo-row-grupo {
+  cursor: pointer;
+}
+
+.flujo-row-grupo td {
+  border-top: 1px solid #cbd5e1;
+  font-weight: 700;
+}
+
+.flujo-row-detalle td {
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.flujo-row-detalle td:first-child {
+  padding-left: 42px;
+  font-style: italic;
+}
+
+.flujo-row-resultado td {
+  border-top: 2px solid #0f172a;
+  border-bottom: 2px solid #0f172a;
+  font-weight: 800;
+  background: #f8fafc;
+}
+
+.flujo-row-resultado-final td {
+  border-top: 2px solid #0f172a;
+  border-bottom: 2px solid #0f172a;
+  font-weight: 900;
+  background: #ecfdf5;
+}
+
+.flujo-toggle {
+  width: 24px;
+  border: none;
+  background: transparent;
+  color: #1f4e79;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.flujo-toggle:disabled {
+  color: #94a3b8;
+  cursor: default;
+}
+
+.flujo-total.positivo {
+  color: #0f172a;
+}
+
+.flujo-total.negativo {
+  color: #991b1b;
+}
+
+.flujo-total.detalle {
+  color: #64748b;
+}
+
+.flujo-percent-wrapper {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.flujo-percent-text {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.flujo-percent-track {
+  display: block;
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.flujo-percent-bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.flujo-percent-bar.positivo {
+  background: #22c55e;
+}
+
+.flujo-percent-bar.negativo {
+  background: #ef4444;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ================================
+   Página principal: flujo + metas
+================================ */
+
+.grid-main {
+  align-items: stretch;
+}
+
+.grid-main > .card {
+  height: 100%;
+}
+
+.flujo-card,
+.metas-cobranza-card {
+  min-height: 560px;
+  display: flex;
+  flex-direction: column;
+}
+
+.flujo-table-scroll,
+.metas-table-scroll {
+  flex: 1;
+  overflow: auto;
+}
+
+.metas-card-header {
+  margin-bottom: 14px;
+}
+
+.metas-card-header h2 {
+  margin: 0;
+}
+
+.metas-card-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.metas-status-box {
+  margin-bottom: 14px;
+  font-weight: 700;
+}
+
+.metas-cobranza-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.metas-cobranza-table th,
+.metas-cobranza-table td {
+  vertical-align: middle;
+}
+
+.metas-cobranza-table th:nth-child(1),
+.metas-cobranza-table td:nth-child(1) {
+  width: 22%;
+  text-align: left;
+}
+
+.metas-cobranza-table th:nth-child(2),
+.metas-cobranza-table td:nth-child(2),
+.metas-cobranza-table th:nth-child(3),
+.metas-cobranza-table td:nth-child(3),
+.metas-cobranza-table th:nth-child(5),
+.metas-cobranza-table td:nth-child(5) {
+  width: 18%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.metas-cobranza-table th:nth-child(4),
+.metas-cobranza-table td:nth-child(4) {
+  width: 24%;
+}
+
+.meta-progress-wrapper {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.meta-progress-text {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #0f172a;
+  text-align: right;
+}
+
+.meta-progress-track {
+  height: 12px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+  display: block;
+}
+
+.meta-progress-bar {
+  height: 100%;
+  display: block;
+  border-radius: 999px;
+}
+
+.meta-progress-bar.pendiente {
+  background: #f59e0b;
+}
+
+.meta-progress-bar.cumplido {
+  background: #22c55e;
+}
+
+.metas-total-row td {
+  border-top: 2px solid #0f172a;
+  font-weight: 900;
+  background: #f8fafc;
+}
+
+@media (max-width: 1100px) {
+  .flujo-card,
+  .metas-cobranza-card {
+    min-height: auto;
+  }
+
+  .metas-cobranza-table {
+    min-width: 760px;
+  }
+}
+
+/* ================================
+   Página principal: columnas iguales
+================================ */
+
+.grid-main {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: stretch;
+}
+
+.grid-main > .card {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+}
+
+.flujo-card,
+.metas-cobranza-card {
+  width: 100%;
+  min-width: 0;
+}
+
+.flujo-table-scroll,
+.metas-table-scroll {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+/* ================================
+   Ajuste visual tabla metas cobranza
+================================ */
+
+.metas-cobranza-table {
+  min-width: 720px;
+}
+
+.metas-cobranza-table th,
+.metas-cobranza-table td {
+  font-size: 0.88rem;
+}
+
+.metas-cobranza-table th:nth-child(1),
+.metas-cobranza-table td:nth-child(1) {
+  width: 18%;
+}
+
+.metas-cobranza-table th:nth-child(2),
+.metas-cobranza-table td:nth-child(2),
+.metas-cobranza-table th:nth-child(3),
+.metas-cobranza-table td:nth-child(3),
+.metas-cobranza-table th:nth-child(5),
+.metas-cobranza-table td:nth-child(5) {
+  width: 19%;
+}
+
+.metas-cobranza-table th:nth-child(4),
+.metas-cobranza-table td:nth-child(4) {
+  width: 25%;
+}
+
+/* ================================
+   Metas cobranza sin scroll horizontal
+================================ */
+
+/* ================================
+   Tabla metas cobranza responsiva
+   - Sin scroll en escritorio si cabe
+   - Con scroll horizontal en pantallas chicas
+================================ */
+
+.metas-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.metas-cobranza-table {
+  width: 100%;
+  min-width: 760px;   /* conserva forma de columnas */
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.metas-cobranza-table th,
+.metas-cobranza-table td {
+  font-size: 0.82rem;
+  padding: 10px 8px;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metas-cobranza-table th {
+  white-space: nowrap;
+  line-height: 1.1;
+}
+
+.metas-cobranza-table td {
+  white-space: nowrap;
+}
+
+/* Columna 1: Área */
+.metas-cobranza-table th:nth-child(1),
+.metas-cobranza-table td:nth-child(1) {
+  width: 18%;
+  text-align: left;
+}
+
+/* Columna 2: Real cobrado */
+.metas-cobranza-table th:nth-child(2),
+.metas-cobranza-table td:nth-child(2) {
+  width: 18%;
+  text-align: right;
+}
+
+/* Columna 3: Meta mensual */
+.metas-cobranza-table th:nth-child(3),
+.metas-cobranza-table td:nth-child(3) {
+  width: 18%;
+  text-align: right;
+}
+
+/* Columna 4: % cumplido */
+.metas-cobranza-table th:nth-child(4),
+.metas-cobranza-table td:nth-child(4) {
+  width: 24%;
+  text-align: left;
+}
+
+/* Columna 5: Por cumplir */
+.metas-cobranza-table th:nth-child(5),
+.metas-cobranza-table td:nth-child(5) {
+  width: 22%;
+  text-align: right;
+}
+
+.meta-progress-wrapper {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.meta-progress-text {
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.meta-progress-track {
+  width: 100%;
+  min-width: 0;
+  height: 10px;
+}
+
+.metas-total-row td {
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+/* En pantallas grandes, si el espacio alcanza, que no se vea "encerrado" */
+@media (min-width: 1280px) {
+  .metas-cobranza-table {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+/* ================================
+   Regla global: scroll horizontal responsivo en tablas
+   - En escritorio las tablas usan el ancho disponible
+   - En pantalla reducida conservan columnas y aparece scroll
+================================ */
+
+/* Contenedores generales de tablas */
+.table-scroll,
+.flujo-table-scroll,
+.metas-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Contenedores con altura fija: conservar scroll vertical y permitir horizontal */
+.table-scroll-10,
+.table-scroll-15,
+.table-scroll-20 {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+
+/* Evita que las tarjetas obliguen a comprimir el contenido */
+.detail-section-card,
+.detail-column,
+.card,
+.flujo-card,
+.metas-cobranza-card {
+  min-width: 0;
+}
+
+/* En escritorio: las tablas se adaptan al ancho disponible sin forzar scroll */
+.table-scroll > table,
+.flujo-table,
+.metas-cobranza-table {
+  width: 100%;
+  max-width: none;
+  table-layout: fixed;
+}
+
+/* Escritorio / pantalla completa: sin min-width forzado */
+@media (min-width: 1101px) {
+  .table-scroll > table,
+  .flujo-table,
+  .metas-cobranza-table,
+  .detail-table,
+  .detail-table-egresos-rubro,
+  .detail-table-egresos-pendientes,
+  .detail-table-ventas,
+  .detail-table-ventas-asesor,
+  .detail-table-ventas-servicio,
+  .detail-table-ventas-contratos,
+  .detail-table-servicios,
+  .detail-table-servicios-tipo,
+  .detail-table-servicios-recientes {
+    min-width: 0 !important;
+    width: 100%;
+  }
+}
+
+/* Pantallas reducidas: conservar tamaño de columnas y activar scroll horizontal */
+@media (max-width: 1100px) {
+  .table-scroll > table,
+  .detail-table {
+    min-width: 640px;
+  }
+
+  /* Flujo de efectivo neto */
+  .flujo-table {
+    min-width: 620px;
+  }
+
+  /* Metas de cobranza */
+  .metas-cobranza-table {
+    min-width: 760px;
+  }
+
+  /* Egresos */
+  .detail-table-egresos-rubro {
+    min-width: 860px;
+  }
+
+  .detail-table-egresos-pendientes {
+    min-width: 760px;
+  }
+
+  /* Ventas */
+  .detail-table-ventas,
+  .detail-table-ventas-asesor {
+    min-width: 880px;
+  }
+
+  .detail-table-ventas-servicio {
+    min-width: 720px;
+  }
+
+  .detail-table-ventas-contratos {
+    min-width: 820px;
+  }
+
+  /* Servicios */
+  .detail-table-servicios {
+    min-width: 640px;
+  }
+
+  .detail-table-servicios-tipo {
+    min-width: 680px;
+  }
+
+  .detail-table-servicios-recientes {
+    min-width: 840px;
+  }
+}
+
+/* ================================
+   KPIs principales: ajuste de tamaño
+================================ */
+
+.kpi-value {
+  font-size: clamp(24px, 1.55vw, 28px);
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+/* Evita que la regla de pantallas grandes vuelva a subirlos demasiado */
+@media (min-width: 1400px) {
+  .kpi-value {
+    font-size: clamp(24px, 1.55vw, 28px);
+  }
+}
+
+/* Ajuste específico para pantallas medianas */
+@media (max-width: 1200px) {
+  .kpi-value {
+    font-size: clamp(24px, 3vw, 30px);
+  }
+}
+
+/* Ajuste para móvil */
+@media (max-width: 700px) {
+  .kpi-value {
+    font-size: 28px;
+  }
+}
+
+/* ================================
+   Ventas: gráfica barras por asesor con scroll
+================================ */
+
+.chart-container-bar-ventas-asesor {
+  height: 432px;
+  min-height: 432px;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.chart-scroll-inner-ventas-asesor {
+  position: relative;
+  width: 100%;
+  min-height: 432px;
+}
+
+.chart-container-bar-ventas-asesor canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ================================
+   Ventas: eje X fijo en gráfica por asesor
+================================ */
+
+.chart-ventas-asesor-wrapper {
+  width: 100%;
+}
+
+.chart-ventas-asesor-axis {
+  position: relative;
+  width: 100%;
+  height: 56px;
+  min-height: 56px;
+  margin-top: 8px;
+  margin-bottom: 0;
+  padding-left: 0;
+  background: #ffffff;
+  z-index: 3;
+}
+
+.chart-ventas-asesor-axis canvas {
+  width: 100% !important;
+  height: 56px !important;
+}
+
+.chart-container-bar-ventas-asesor {
+  margin-top: 0;
+}
+
+/* ================================
+   Ventas por asesor: ajuste de columnas
+================================ */
+
+.detail-table-ventas-asesor {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* Asesor */
+.detail-table-ventas-asesor th:nth-child(1),
+.detail-table-ventas-asesor td:nth-child(1) {
+  width: 20%;
+  text-align: left;
+}
+
+/* Registros */
+.detail-table-ventas-asesor th:nth-child(2),
+.detail-table-ventas-asesor td:nth-child(2) {
+  width: 8%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Unidades */
+.detail-table-ventas-asesor th:nth-child(3),
+.detail-table-ventas-asesor td:nth-child(3) {
+  width: 9%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Total venta */
+.detail-table-ventas-asesor th:nth-child(4),
+.detail-table-ventas-asesor td:nth-child(4) {
+  width: 21%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Meta mensual */
+.detail-table-ventas-asesor th:nth-child(5),
+.detail-table-ventas-asesor td:nth-child(5) {
+  width: 21%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* % cumplimiento */
+.detail-table-ventas-asesor th:nth-child(6),
+.detail-table-ventas-asesor td:nth-child(6) {
+  width: 21%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Reducir un poco el texto para evitar empalmes */
+.detail-table-ventas-asesor th,
+.detail-table-ventas-asesor td {
+  font-size: 0.82rem;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+/* ================================
+   Ventas por asesor: encabezados con wrap
+   y columnas estables
+================================ */
+
+.detail-table-ventas-asesor {
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* Permitir que los títulos se partan en 2 líneas si no caben */
+.detail-table-ventas-asesor th {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.15;
+  vertical-align: middle;
+  text-align: center;
+}
+
+/* Mantener los datos en una línea */
+.detail-table-ventas-asesor td {
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+/* Asesor */
+.detail-table-ventas-asesor th:nth-child(1),
+.detail-table-ventas-asesor td:nth-child(1) {
+  width: 20% !important;
+  text-align: left;
+}
+
+/* Registros */
+.detail-table-ventas-asesor th:nth-child(2),
+.detail-table-ventas-asesor td:nth-child(2) {
+  width: 10% !important;
+  text-align: right;
+}
+
+/* Unidades */
+.detail-table-ventas-asesor th:nth-child(3),
+.detail-table-ventas-asesor td:nth-child(3) {
+  width: 10% !important;
+  text-align: right;
+}
+
+/* Total venta */
+.detail-table-ventas-asesor th:nth-child(4),
+.detail-table-ventas-asesor td:nth-child(4) {
+  width: 20% !important;
+  text-align: right;
+}
+
+/* Meta mensual */
+.detail-table-ventas-asesor th:nth-child(5),
+.detail-table-ventas-asesor td:nth-child(5) {
+  width: 20% !important;
+  text-align: right;
+}
+
+/* % cumplimiento */
+.detail-table-ventas-asesor th:nth-child(6),
+.detail-table-ventas-asesor td:nth-child(6) {
+  width: 20% !important;
+  text-align: right;
+}
+
+/* Mejorar lectura de encabezados */
+.detail-table-ventas-asesor th {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-size: 0.76rem;
+}
+
+/* Mantener datos compactos */
+.detail-table-ventas-asesor td {
+  font-size: 0.82rem;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+/* ================================
+   Ventas: contratos recientes ajuste final
+================================ */
+
+.detail-table-ventas-contratos {
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* Permitir que encabezados se acomoden sin cortar */
+.detail-table-ventas-contratos th {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  line-height: 1.15;
+  vertical-align: middle;
+}
+
+/* Columna Contrato: más angosta */
+.detail-table-ventas-contratos th:nth-child(1),
+.detail-table-ventas-contratos td:nth-child(1) {
+  width: 25% !important;
+  text-align: left;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+/* Columna Cliente: más amplia */
+.detail-table-ventas-contratos th:nth-child(2),
+.detail-table-ventas-contratos td:nth-child(2) {
+  width: 29% !important;
+  text-align: left;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+/* Columna Tipo: más amplia */
+.detail-table-ventas-contratos th:nth-child(3),
+.detail-table-ventas-contratos td:nth-child(3) {
+  width: 31% !important;
+  text-align: left;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+/* Columna Total */
+.detail-table-ventas-contratos th:nth-child(4),
+.detail-table-ventas-contratos td:nth-child(4) {
+  width: 15% !important;
+  text-align: right;
+  white-space: nowrap !important;
+}
+
+/* Compactar texto sin cambiar estructura */
+.detail-table-ventas-contratos th,
+.detail-table-ventas-contratos td {
+  font-size: 0.82rem;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+/* ================================
+   Servicios por tipo de servicio
+   Ajuste definitivo de columnas
+================================ */
+
+.detail-table-servicios-tipo {
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+
+/* ORIGEN - más angosto */
+.detail-table-servicios-tipo th:nth-child(1),
+.detail-table-servicios-tipo td:nth-child(1) {
+  width: 14% !important;
+  max-width: 14% !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+}
+
+/* TIPO DE SERVICIO - más ancho y en un solo renglón */
+.detail-table-servicios-tipo th:nth-child(2),
+.detail-table-servicios-tipo td:nth-child(2) {
+  width: 58% !important;
+  max-width: 58% !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* REGISTROS - más angosto */
+.detail-table-servicios-tipo th:nth-child(3),
+.detail-table-servicios-tipo td:nth-child(3) {
+  width: 10% !important;
+  max-width: 10% !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+/* % SERVICIOS */
+.detail-table-servicios-tipo th:nth-child(4),
+.detail-table-servicios-tipo td:nth-child(4) {
+  width: 18% !important;
+  max-width: 18% !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+/* Filtros dentro del encabezado */
+.detail-table-servicios-tipo thead input {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Evita que el icono desplegable rompa línea */
+.detail-table-servicios-tipo .expand-toggle,
+.detail-table-servicios-tipo .servicio-expand-toggle {
+  display: inline-block !important;
+  margin-right: 6px !important;
+  vertical-align: middle !important;
+}
+
+/* ================================
+   KPIs Ventas - 6 columnas
+================================ */
+
+.detail-kpi-grid-6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+@media (max-width: 1400px) {
+  .detail-kpi-grid-6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .detail-kpi-grid-6 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ================================
+   Ventas - contratos del mes
+================================ */
+
+.table-scroll-ventas-contratos {
+  max-height: 640px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.detail-table-ventas-contratos {
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* ================================
+   Ventas por tipo de servicio - 5 columnas
+================================ */
+
+.detail-table-ventas-servicio {
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+
+.detail-table-ventas-servicio th:nth-child(1),
+.detail-table-ventas-servicio td:nth-child(1) {
+  width: 34% !important;
+  text-align: left !important;
+}
+
+.detail-table-ventas-servicio th:nth-child(2),
+.detail-table-ventas-servicio td:nth-child(2) {
+  width: 14% !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+.detail-table-ventas-servicio th:nth-child(3),
+.detail-table-ventas-servicio td:nth-child(3) {
+  width: 14% !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+.detail-table-ventas-servicio th:nth-child(4),
+.detail-table-ventas-servicio td:nth-child(4) {
+  width: 22% !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+.detail-table-ventas-servicio th:nth-child(5),
+.detail-table-ventas-servicio td:nth-child(5) {
+  width: 16% !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+
+/* ================================
+   Página principal - Servicios del día
+================================ */
+
+.servicios-dia-section {
+  margin-top: 1.5rem;
+}
+
+.servicios-dia-card {
+  padding: 1.5rem;
+}
+
+.servicios-dia-timestamp {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.servicios-dia-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.servicios-dia-panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1rem;
+  background: #ffffff;
+  min-width: 0;
+}
+
+.servicios-dia-panel h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.servicios-dia-scroll {
+  max-height: 260px;
+  overflow: auto;
+}
+
+.servicios-dia-table {
+  width: 100%;
+  min-width: 760px;
+  table-layout: fixed;
+}
+
+.servicios-dia-table th,
+.servicios-dia-table td {
+  font-size: 0.82rem;
+  vertical-align: top;
+}
+
+.servicios-dia-table th {
+  white-space: nowrap;
+}
+
+.servicios-dia-table td {
+  white-space: normal;
+}
+
+.servicios-dia-table th:nth-child(1),
+.servicios-dia-table td:nth-child(1) {
+  width: 24%;
+}
+
+.servicios-dia-table th:nth-child(2),
+.servicios-dia-table td:nth-child(2) {
+  width: 18%;
+}
+
+.servicios-dia-table th:nth-child(3),
+.servicios-dia-table td:nth-child(3) {
+  width: 12%;
+}
+
+.servicios-dia-table th:nth-child(4),
+.servicios-dia-table td:nth-child(4) {
+  width: 22%;
+}
+
+.servicios-dia-table th:nth-child(5),
+.servicios-dia-table td:nth-child(5),
+.servicios-dia-table th:nth-child(6),
+.servicios-dia-table td:nth-child(6) {
+  width: 12%;
+  white-space: nowrap;
+}
+
+@media (max-width: 1200px) {
+  .servicios-dia-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================================
+   Servicios del día - Agenda
+================================ */
+
+.servicios-dia-section {
+  margin-top: 1.5rem;
+}
+
+.servicios-dia-card {
+  padding: 1.5rem;
+}
+
+.servicios-dia-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.servicios-dia-header h2 {
+  margin: 0;
+}
+
+.servicios-dia-header p {
+  margin: 0.35rem 0 0;
+  color: #475569;
+}
+
+.servicios-dia-hora {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.servicios-dia-resumen {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 220px));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.servicios-dia-resumen-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  background: #f8fafc;
+}
+
+.servicios-dia-resumen-item span {
+  display: block;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.servicios-dia-resumen-item strong {
+  display: block;
+  margin-top: 0.25rem;
+  color: #0f172a;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.servicios-dia-resumen-item.activo {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+}
+
+.servicios-dia-resumen-item.programado {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.servicios-agenda-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.servicios-agenda-column {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 1rem;
+  background: #ffffff;
+  min-width: 0;
+}
+
+.servicios-agenda-column-header {
+  margin-bottom: 0.85rem;
+}
+
+.servicios-agenda-column-header h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.servicios-agenda-column-header p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.servicios-agenda-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.servicios-agenda-empty {
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 1rem;
+  color: #64748b;
+  background: #f8fafc;
+  font-size: 0.9rem;
+}
+
+.servicio-agenda-card {
+  border: 1px solid #e2e8f0;
+  border-left: 5px solid #94a3b8;
+  border-radius: 16px;
+  padding: 1rem;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.servicio-agenda-card.is-activo {
+  border-left-color: #22c55e;
+}
+
+.servicio-agenda-card.is-programado {
+  border-left-color: #f59e0b;
+}
+
+.servicio-agenda-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.servicio-agenda-badge,
+.servicio-agenda-origin {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.servicio-agenda-badge.is-activo {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.servicio-agenda-badge.is-programado {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.servicio-agenda-origin.origen-capillas {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.servicio-agenda-origin.origen-parque {
+  color: #7c2d12;
+  background: #ffedd5;
+}
+
+.servicio-agenda-body h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.servicio-agenda-meta {
+  margin-top: 0.35rem;
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.servicio-agenda-detail {
+  margin-top: 0.25rem;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.servicio-agenda-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.servicio-agenda-footer span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.servicio-agenda-footer strong {
+  color: #0f172a;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 1100px) {
+  .servicios-agenda-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .servicios-dia-header {
+    flex-direction: column;
+  }
+
+  .servicios-dia-resumen {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .servicios-dia-resumen {
+    grid-template-columns: 1fr;
+  }
+
+  .servicio-agenda-top,
+  .servicio-agenda-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* ================================
+   Servicios del día dentro de columna derecha
+================================ */
+
+.home-right-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  height: 100%;
+}
+
+.home-right-stack > .card {
+  width: 100%;
+  min-width: 0;
+}
+
+.home-right-stack .metas-cobranza-card {
+  min-height: auto;
+  flex: 1;
+}
+
+.servicios-resumen-card {
+  padding: 1.25rem;
+  min-height: auto;
+}
+
+.servicios-resumen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.servicios-resumen-header h2 {
+  margin: 0;
+}
+
+.servicios-resumen-header p {
+  margin: 0.35rem 0 0;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.servicios-resumen-hora {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.servicios-dia-resumen-top {
+  margin-bottom: 0;
+}
+
+.servicios-dia-detail-section {
+  margin-top: 1.5rem;
+}
+
+.servicios-dia-header-simple {
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 1100px) {
+  .home-right-stack {
+    height: auto;
+  }
+
+  .servicios-resumen-header {
+    flex-direction: column;
+  }
+}
+
+/* ================================
+   Servicios del día - Separado por Capillas / Parque
+================================ */
+
+.servicios-resumen-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.servicios-resumen-group {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1rem;
+  background: #ffffff;
+  min-width: 0;
+}
+
+.servicios-resumen-group-title {
+  margin-bottom: 0.75rem;
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.servicios-resumen-group .servicios-dia-resumen {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0;
+}
+
+.servicios-resumen-group .servicios-dia-resumen-item {
+  min-width: 0;
+  min-height: 78px;
+}
+
+.servicios-detalle-bloque {
+  margin-top: 1.25rem;
+}
+
+.servicios-detalle-bloque:first-of-type {
+  margin-top: 0;
+}
+
+.servicios-detalle-bloque + .servicios-detalle-bloque {
+  padding-top: 1.25rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.servicios-detalle-titulo {
+  margin-bottom: 0.85rem;
+}
+
+.servicios-detalle-titulo h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.servicios-detalle-bloque .servicios-agenda-grid {
+  margin-top: 0;
+}
+
+@media (max-width: 1300px) {
+  .servicios-resumen-groups {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .servicios-resumen-group .servicios-dia-resumen {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ================================
+   Servicios Capillas - Servicios recientes
+   Anchos exactos de columnas
+================================ */
+
+.tabla-servicios-recientes-capillas {
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+
+/* No. Servicio: recuadro rojo */
+.tabla-servicios-recientes-capillas .col-servicio-numero {
+  width: 115px !important;
+}
+
+/* Fecha: recuadro azul */
+.tabla-servicios-recientes-capillas .col-servicio-fecha {
+  width: 120px !important;
+}
+
+/* Finado: recuadro verde, ocupa el espacio restante */
+.tabla-servicios-recientes-capillas .col-servicio-finado {
+  width: auto !important;
+}
+
+/* Ubicación y Tipo se quedan compactas */
+.tabla-servicios-recientes-capillas .col-servicio-ubicacion {
+  width: 120px !important;
+}
+
+.tabla-servicios-recientes-capillas .col-servicio-tipo {
+  width: 160px !important;
+}
+
+/* Celdas */
+.tabla-servicios-recientes-capillas th,
+.tabla-servicios-recientes-capillas td {
+  box-sizing: border-box !important;
+}
+
+/* No. Servicio */
+.tabla-servicios-recientes-capillas th:nth-child(1),
+.tabla-servicios-recientes-capillas td:nth-child(1) {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Fecha */
+.tabla-servicios-recientes-capillas th:nth-child(2),
+.tabla-servicios-recientes-capillas td:nth-child(2) {
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+
+/* Finado */
+.tabla-servicios-recientes-capillas th:nth-child(3),
+.tabla-servicios-recientes-capillas td:nth-child(3) {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Ubicación */
+.tabla-servicios-recientes-capillas th:nth-child(4),
+.tabla-servicios-recientes-capillas td:nth-child(4) {
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+
+/* Tipo */
+.tabla-servicios-recientes-capillas th:nth-child(5),
+.tabla-servicios-recientes-capillas td:nth-child(5) {
+  white-space: normal !important;
+}
+
+/* Filtros dentro de columnas */
+.tabla-servicios-recientes-capillas .table-filter-input {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Filtro de No. Servicio más compacto */
+.tabla-servicios-recientes-capillas th:nth-child(1) .table-filter-input {
+  font-size: 0.72rem !important;
+  padding-left: 0.35rem !important;
+  padding-right: 0.35rem !important;
+}
+
+/* Filtro de Fecha compacto */
+.tabla-servicios-recientes-capillas th:nth-child(2) .table-filter-input {
+  font-size: 0.75rem !important;
+  padding-left: 0.4rem !important;
+  padding-right: 0.4rem !important;
+}
+
+/* ================================
+   Tabla de propiedades de Parque
+================================ */
+
+.parque-propiedades-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tabla-parque-propiedades {
+  width: 100%;
+  min-width: 1450px;
+  table-layout: auto;
+  border-collapse: collapse;
+}
+
+.tabla-parque-propiedades th,
+.tabla-parque-propiedades td {
+  white-space: nowrap;
+  font-size: 0.84rem;
+  vertical-align: middle;
+}
+
+.tabla-parque-propiedades th:nth-child(1),
+.tabla-parque-propiedades td:nth-child(1) {
+  min-width: 140px;
+}
+
+.tabla-parque-propiedades th:nth-child(2),
+.tabla-parque-propiedades td:nth-child(2) {
+  min-width: 110px;
+}
+
+.tabla-parque-propiedades th:nth-child(3),
+.tabla-parque-propiedades td:nth-child(3),
+.tabla-parque-propiedades th:nth-child(4),
+.tabla-parque-propiedades td:nth-child(4),
+.tabla-parque-propiedades th:nth-child(5),
+.tabla-parque-propiedades td:nth-child(5),
+.tabla-parque-propiedades th:nth-child(6),
+.tabla-parque-propiedades td:nth-child(6),
+.tabla-parque-propiedades th:nth-child(7),
+.tabla-parque-propiedades td:nth-child(7),
+.tabla-parque-propiedades th:nth-child(8),
+.tabla-parque-propiedades td:nth-child(8),
+.tabla-parque-propiedades th:nth-child(9),
+.tabla-parque-propiedades td:nth-child(9),
+.tabla-parque-propiedades th:nth-child(10),
+.tabla-parque-propiedades td:nth-child(10),
+.tabla-parque-propiedades th:nth-child(11),
+.tabla-parque-propiedades td:nth-child(11),
+.tabla-parque-propiedades th:nth-child(12),
+.tabla-parque-propiedades td:nth-child(12) {
+  min-width: 110px;
+}
+
+.tabla-parque-propiedades .numeric {
+  text-align: right;
+}
+
+.tabla-parque-propiedades tfoot th,
+.tabla-parque-propiedades tfoot td {
+  font-weight: 700;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+/* ================================
+   Servicios Parque - corrección final
+   KPIs en una fila + tabla compacta
+================================ */
+
+/* KPIs de Parque en una sola fila en escritorio */
+#pageServiciosParque .parque-kpi-grid {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+}
+
+#pageServiciosParque .parque-kpi-grid .detail-kpi-card {
+  min-width: 0 !important;
+  min-height: 86px !important;
+  padding: 14px 16px !important;
+}
+
+#pageServiciosParque .parque-kpi-grid .detail-kpi-label {
+  font-size: 0.68rem !important;
+  line-height: 1.15 !important;
+  margin-bottom: 8px !important;
+}
+
+#pageServiciosParque .parque-kpi-grid strong {
+  font-size: 1.35rem !important;
+  line-height: 1.1 !important;
+}
+
+/* En pantallas chicas sí puede partirse */
+@media (max-width: 1200px) {
+  #pageServiciosParque .parque-kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 800px) {
+  #pageServiciosParque .parque-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 560px) {
+  #pageServiciosParque .parque-kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Contenedor de tabla Parque: sin scroll horizontal en escritorio */
+#pageServiciosParque .parque-propiedades-scroll {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+/* Tabla Parque: mismo estilo base, pero compacta para 12 columnas */
+#pageServiciosParque .tabla-parque-propiedades {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+}
+
+/* Encabezados y celdas compactas */
+#pageServiciosParque .tabla-parque-propiedades th,
+#pageServiciosParque .tabla-parque-propiedades td {
+  padding: 9px 6px !important;
+  font-size: 0.76rem !important;
+  line-height: 1.15 !important;
+  vertical-align: middle !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Encabezados pueden partirse en 2 líneas */
+#pageServiciosParque .tabla-parque-propiedades th {
+  white-space: normal !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  text-align: right !important;
+}
+
+/* Datos en una sola línea */
+#pageServiciosParque .tabla-parque-propiedades td {
+  white-space: nowrap !important;
+}
+
+/* Columna 1: Categoría */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(1),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(1) {
+  width: 10% !important;
+  text-align: left !important;
+}
+
+/* Columna 2: Tipo */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(2),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(2) {
+  width: 7% !important;
+  text-align: left !important;
+}
+
+/* Columna 3: Proyectado */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(3),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(3) {
+  width: 9% !important;
+  text-align: right !important;
+}
+
+/* Columna 4: Construido */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(4),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(4) {
+  width: 9% !important;
+  text-align: right !important;
+}
+
+/* Columna 5: No construido */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(5),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(5) {
+  width: 10% !important;
+  text-align: right !important;
+}
+
+/* Columna 6: Vendido */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(6),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(6) {
+  width: 8.5% !important;
+  text-align: right !important;
+}
+
+/* Columna 7: Ocupado */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(7),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(7) {
+  width: 8.5% !important;
+  text-align: right !important;
+}
+
+/* Columna 8: Disponible */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(8),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(8) {
+  width: 9% !important;
+  text-align: right !important;
+}
+
+/* Columna 9: Separado */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(9),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(9) {
+  width: 7.5% !important;
+  text-align: right !important;
+}
+
+/* Columna 10: Suspendido */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(10),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(10) {
+  width: 8.5% !important;
+  text-align: right !important;
+}
+
+/* Columna 11: % vendido */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(11),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(11) {
+  width: 6.5% !important;
+  text-align: right !important;
+}
+
+/* Columna 12: % ocupado */
+#pageServiciosParque .tabla-parque-propiedades th:nth-child(12),
+#pageServiciosParque .tabla-parque-propiedades td:nth-child(12) {
+  width: 6.5% !important;
+  text-align: right !important;
+}
+
+/* Fila de filtros igual que las demás, pero compacta */
+#pageServiciosParque .tabla-parque-propiedades .table-filter-row th {
+  padding: 6px 4px 8px !important;
+  background: #f8fafc !important;
+}
+
+#pageServiciosParque .tabla-parque-propiedades .table-filter-input {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  padding: 6px 5px !important;
+  font-size: 0.68rem !important;
+  border-radius: 7px !important;
+  box-sizing: border-box !important;
+}
+
+/* Fila total */
+#pageServiciosParque .tabla-parque-propiedades tfoot th,
+#pageServiciosParque .tabla-parque-propiedades tfoot td {
+  font-weight: 800 !important;
+  background: rgba(15, 23, 42, 0.04) !important;
+}
+
+#pageServiciosParque .tabla-parque-propiedades tfoot th:first-child {
+  text-align: left !important;
+}
+
+/* ================================
+   Selector de periodo: Año / Desde / Hasta
+================================ */
+
+.period-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 132px;
+}
+
+.period-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.select-period {
+  min-width: 132px;
+}
+
+.header-actions {
+  align-items: flex-end;
+}
+
+@media (max-width: 700px) {
+  .period-filter {
+    width: 100%;
+  }
+
+  .select-period {
+    width: 100%;
+  }
+}
+
+/* ================================
+   Modal: histórico de ventas por asesor
+================================ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.58);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal-card {
+  width: min(980px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.28);
+  padding: 24px;
+}
+
+.ventas-asesor-modal-card {
+  min-height: 520px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.modal-header p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.modal-close-button {
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #0f172a;
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modal-close-button:hover {
+  background: #e2e8f0;
+}
+
+.ventas-asesor-modal-chart {
+  height: 390px;
+  min-height: 390px;
+}
+
+@media (max-width: 700px) {
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .modal-card {
+    border-radius: 18px;
+    padding: 18px;
+  }
+
+  .modal-header {
+    gap: 12px;
+  }
+
+  .modal-header h2 {
+    font-size: 20px;
+  }
+
+  .ventas-asesor-modal-chart {
+    height: 320px;
+    min-height: 320px;
+  }
+}
+
+/* ================================
+   Modal ventas asesor: KPIs
+================================ */
+
+.ventas-asesor-modal-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.ventas-asesor-modal-kpi {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 10px;
+  min-width: 0;
+}
+
+.ventas-asesor-modal-kpi span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.ventas-asesor-modal-kpi strong {
+  display: block;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1000px) {
+  .ventas-asesor-modal-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .ventas-asesor-modal-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================================
+   Ventas: Uso Inmediato por responsable
+================================ */
+
+.detail-table-ventas-ui-responsable {
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+
+.detail-table-ventas-ui-responsable th,
+.detail-table-ventas-ui-responsable td {
+  font-size: 0.78rem;
+  vertical-align: middle;
+}
+
+.detail-table-ventas-ui-responsable th {
+  white-space: normal !important;
+  line-height: 1.15;
+}
+
+.detail-table-ventas-ui-responsable td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detail-table-ventas-ui-responsable th:nth-child(1),
+.detail-table-ventas-ui-responsable td:nth-child(1) {
+  width: 22%;
+  text-align: left;
+}
+
+.detail-table-ventas-ui-responsable th:nth-child(2),
+.detail-table-ventas-ui-responsable td:nth-child(2),
+.detail-table-ventas-ui-responsable th:nth-child(4),
+.detail-table-ventas-ui-responsable td:nth-child(4) {
+  width: 14%;
+  text-align: right;
+}
+
+.detail-table-ventas-ui-responsable th:nth-child(3),
+.detail-table-ventas-ui-responsable td:nth-child(3),
+.detail-table-ventas-ui-responsable th:nth-child(5),
+.detail-table-ventas-ui-responsable td:nth-child(5) {
+  width: 18%;
+  text-align: right;
+}
+
+.detail-table-ventas-ui-responsable th:nth-child(6),
+.detail-table-ventas-ui-responsable td:nth-child(6) {
+  width: 14%;
+  text-align: right;
+}
+
+@media (max-width: 1100px) {
+  .detail-table-ventas-ui-responsable {
+    min-width: 920px;
+  }
+}
+
+/* ================================
+   Modal: detalle egresos por tipo de gasto
+================================ */
+
+.egresos-tipo-gasto-modal-card {
+  width: min(1280px, calc(100vw - 48px));
+  min-height: 560px;
+}
+
+.egresos-tipo-gasto-modal-scroll {
+  max-height: 430px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.egresos-tipo-gasto-modal-table {
+  width: 100%;
+  min-width: 1180px;
+  table-layout: fixed;
+}
+
+.egresos-tipo-gasto-modal-table th,
+.egresos-tipo-gasto-modal-table td {
+  font-size: 0.76rem;
+  vertical-align: middle;
+}
+
+.egresos-tipo-gasto-modal-table th:nth-child(1),
+.egresos-tipo-gasto-modal-table td:nth-child(1) {
+  width: 82px;
+  max-width: 82px;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.egresos-tipo-gasto-modal-table th:nth-child(2),
+.egresos-tipo-gasto-modal-table td:nth-child(2) {
+  width: 210px;
+  max-width: 210px;
+}
+
+.egresos-tipo-gasto-modal-table th:nth-child(3),
+.egresos-tipo-gasto-modal-table td:nth-child(3) {
+  width: 160px;
+  max-width: 160px;
+}
+
+.egresos-tipo-gasto-modal-table th:nth-child(4),
+.egresos-tipo-gasto-modal-table td:nth-child(4) {
+  width: 490px;
+  max-width: 490px;
+}
+
+.egresos-tipo-gasto-modal-table th:nth-child(5),
+.egresos-tipo-gasto-modal-table td:nth-child(5),
+.egresos-tipo-gasto-modal-table th:nth-child(6),
+.egresos-tipo-gasto-modal-table td:nth-child(6) {
+  width: 115px;
+  max-width: 115px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.egresos-tipo-gasto-modal-table td:nth-child(2),
+.egresos-tipo-gasto-modal-table td:nth-child(3),
+.egresos-tipo-gasto-modal-table td:nth-child(4) {
+  white-space: normal;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.egresos-tipo-gasto-modal-table .table-filter-input {
+  width: 100%;
+  min-width: 0;
+}
+
+/* ================================
+   Egresos: filas clickeables y total modal
+================================ */
+
+.egresos-tipo-gasto-row.is-clickable {
+  cursor: pointer;
+}
+
+.egresos-tipo-gasto-row.is-clickable:hover {
+  background: #f1f5f9;
+}
+
+.egresos-tipo-gasto-row.is-clickable td:first-child {
+  font-weight: 800;
+  color: #1f4e79;
+}
+
+.modal-total-row {
+  background: #f8fafc;
+  border-top: 2px solid var(--border);
+}
+
+.modal-total-row td {
+  font-weight: 900;
+}
+
+/* ================================
+   Override final: modal egresos tipo gasto
+   Ajuste definitivo de columnas
+================================ */
+
+#egresosTipoGastoModal .egresos-tipo-gasto-modal-card {
+  width: min(1380px, calc(100vw - 48px)) !important;
+  min-height: 560px !important;
+}
+
+#egresosTipoGastoModal .egresos-tipo-gasto-modal-scroll {
+  max-height: 430px !important;
+  overflow: auto !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+}
+
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table {
+  width: 100% !important;
+  min-width: 1280px !important;
+  table-layout: fixed !important;
+}
+
+/* Base */
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table th,
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table td {
+  font-size: 0.76rem !important;
+  vertical-align: middle !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+/* Fecha: angosta */
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table th:nth-child(1),
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table td:nth-child(1) {
+  width: 90px !important;
+  max-width: 90px !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+}
+
+/* Beneficiario */
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table th:nth-child(2),
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table td:nth-child(2) {
+  width: 220px !important;
+  max-width: 220px !important;
+  text-align: left !important;
+  white-space: normal !important;
+  line-height: 1.2 !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* Rubro */
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table th:nth-child(3),
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table td:nth-child(3) {
+  width: 170px !important;
+  max-width: 170px !important;
+  text-align: left !important;
+  white-space: normal !important;
+  line-height: 1.2 !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* Contexto: más ancho */
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table th:nth-child(4),
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table td:nth-child(4) {
+  width: 550px !important;
+  max-width: 550px !important;
+  text-align: left !important;
+  white-space: normal !important;
+  line-height: 1.2 !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* Pagado / Por pagar */
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table th:nth-child(5),
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table td:nth-child(5),
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table th:nth-child(6),
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table td:nth-child(6) {
+  width: 125px !important;
+  max-width: 125px !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+/* Filtros */
+#egresosTipoGastoModal table.detail-table.egresos-tipo-gasto-modal-table .table-filter-input {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* ================================
+   Ingresos: tabla por subcategoría con scroll
+================================ */
+
+.table-scroll-ingresos-subcategoria {
+  max-height: 360px;
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+}
+
+.table-scroll-ingresos-subcategoria thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
+}
+
+.detail-table-ingresos-subcategoria {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.detail-table-ingresos-subcategoria th,
+.detail-table-ingresos-subcategoria td {
+  font-size: 0.82rem;
+  vertical-align: middle;
+}
+
+.detail-table-ingresos-subcategoria th:nth-child(1),
+.detail-table-ingresos-subcategoria td:nth-child(1) {
+  width: 44%;
+  text-align: left;
+}
+
+.detail-table-ingresos-subcategoria th:nth-child(2),
+.detail-table-ingresos-subcategoria td:nth-child(2) {
+  width: 16%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ingresos-subcategoria th:nth-child(3),
+.detail-table-ingresos-subcategoria td:nth-child(3) {
+  width: 24%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-table-ingresos-subcategoria th:nth-child(4),
+.detail-table-ingresos-subcategoria td:nth-child(4) {
+  width: 16%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.notifications-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.notifications-button {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.notifications-button:hover {
+  background: #f8fafc;
+}
+
+.notifications-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.notifications-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+  box-shadow: 0 0 0 2px #ffffff;
+}
+
+.notifications-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 390px;
+  max-height: 520px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+  z-index: 1200;
+  overflow: hidden;
+}
+
+.notifications-panel-header {
+  padding: 16px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+.notifications-panel-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.notifications-panel-header p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.notifications-list {
+  max-height: 430px;
+  overflow-y: auto;
+}
+
+.notifications-empty {
+  padding: 18px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.notification-item {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.notification-item.is-unread {
+  background: #fff7ed;
+}
+
+.notification-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.notification-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.notification-priority {
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.notification-priority.prioridad-critica {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.notification-priority.prioridad-alta {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.notification-priority.prioridad-media {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.notification-priority.prioridad-informativa {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.notification-message {
+  margin: 0;
+  font-size: 12px;
+  color: #334155;
+  line-height: 1.45;
+}
+
+.notification-meta {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.notification-new-label {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.notification-toast-container {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(420px, calc(100vw - 32px));
+}
+
+.notification-toast {
+  background: #ffffff;
+  border-left: 5px solid #dc2626;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+  border-top: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 14px 16px;
+  animation: notificationToastIn 0.25s ease-out;
+}
+
+.notification-toast-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.notification-toast-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.notification-toast-close {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.notification-toast-message {
+  margin: 0;
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.45;
+}
+
+@keyframes notificationToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.notification-item {
+  cursor: pointer;
+}
+
+.notification-item:hover {
+  background: #f8fafc;
+}
+
+.notification-item.is-unread:hover {
+  background: #ffedd5;
+}
+
+.notification-detail-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2600;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.notification-detail-card {
+  width: min(980px, 100%);
+  max-height: 88vh;
+  background: #ffffff;
+  border-radius: 22px;
+  box-shadow: 0 30px 90px rgba(15, 23, 42, 0.35);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-detail-header {
+  padding: 22px 26px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.notification-detail-header h2 {
+  margin: 8px 0 4px;
+  font-size: 24px;
+  color: #0f172a;
+}
+
+.notification-detail-header p {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.notification-detail-close {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #0f172a;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.notification-detail-close:hover {
+  background: #cbd5e1;
+}
+
+.notification-detail-priority {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.notification-detail-priority.prioridad-critica {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.notification-detail-priority.prioridad-alta {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.notification-detail-priority.prioridad-media {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.notification-detail-priority.prioridad-informativa {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.notification-detail-body {
+  padding: 24px 26px;
+  overflow-y: auto;
+}
+
+.notification-detail-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.notification-detail-kpi {
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 14px;
+  background: #ffffff;
+}
+
+.notification-detail-kpi span {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.notification-detail-kpi strong {
+  display: block;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+.notification-detail-message {
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #334155;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.notification-detail-table-scroll {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+}
+
+.notification-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.notification-detail-table th,
+.notification-detail-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  font-size: 13px;
+}
+
+.notification-detail-table th {
+  background: #f8fafc;
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.notification-detail-table td.numeric,
+.notification-detail-table th.numeric {
+  text-align: right;
+}
+
+.notification-detail-table tr:last-child td {
+  border-bottom: none;
+}
+
+.notification-detail-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notification-detail-progress-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.notification-detail-progress-bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #f59e0b;
+}
+
+.notification-detail-progress-bar.is-critical {
+  background: #dc2626;
+}
+
+.notification-detail-progress-bar.is-good {
+  background: #16a34a;
+}
+
+@media (max-width: 820px) {
+  .notification-detail-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.detail-kpi-grid-8 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .detail-kpi-grid-8 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .detail-kpi-grid-8 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.detail-kpi-grid-9 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 1100px) {
+  .detail-kpi-grid-9 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .detail-kpi-grid-9 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================================
+   Header: iconos de acción
+================================ */
+
+.dashboard-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  position: relative;
+}
+
+.toolbar-icon-button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid #4b1d0f;
+  border-radius: 999px;
+  background: #4b1d0f;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  padding: 0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  transition:
+    transform 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.toolbar-icon-button:hover {
+  background: #5a2615;
+  border-color: #5a2615;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10);
+}
+
+.toolbar-icon-button:focus {
+  outline: 3px solid rgba(75, 29, 15, 0.22);
+  outline-offset: 2px;
+}
+
+.toolbar-icon {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+/* Los 3 iconos con el mismo formato */
+.toolbar-refresh-button,
+.toolbar-user-button,
+.toolbar-notifications-button {
+  background: #4b1d0f;
+  border-color: #4b1d0f;
+  color: #ffffff;
+  border-radius: 999px;
+}
+
+.toolbar-refresh-button:hover,
+.toolbar-user-button:hover,
+.toolbar-notifications-button:hover {
+  background: #5a2615;
+  border-color: #5a2615;
+  color: #ffffff;
+}
+
+.toolbar-refresh-button:focus,
+.toolbar-user-button:focus,
+.toolbar-notifications-button:focus {
+  outline: 3px solid rgba(75, 29, 15, 0.22);
+  outline-offset: 2px;
+}
+
+/* Menú de usuario */
+.user-menu-wrapper {
+  position: relative;
+}
+
+.user-menu-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 260px;
+  background: #ffffff;
+  border: 1px solid #d8dee8;
+  border-radius: 16px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+  padding: 14px;
+  z-index: 2600;
+}
+
+.user-menu-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.user-menu-email {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 700;
+  word-break: break-word;
+  line-height: 1.35;
+  margin-bottom: 12px;
+}
+
+.user-menu-logout {
+  width: 100%;
+  min-height: 40px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 10px 12px;
+}
+
+.user-menu-logout:hover {
+  background: var(--primary-dark);
+}
+
+/* Ajuste de notificaciones con el nuevo botón */
+.notifications-wrapper {
+  position: relative;
+  overflow: visible;
+  flex: 0 0 auto;
+}
+
+.notifications-button {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  position: relative;
+  overflow: visible;
+}
+
+.notifications-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  border: 2px solid #f8fafc;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.notifications-badge.hidden {
+  display: none !important;
+}
+
+/* Evita que reglas anteriores afecten al nuevo menú */
+.user-box {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .dashboard-toolbar {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .toolbar-icon-button,
+  .notifications-button {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+  }
+
+  .user-menu-panel,
+  .notifications-panel {
+    right: 0;
+    width: min(320px, calc(100vw - 48px));
+  }
+}
+
+/* ================================
+   Corrección final: tamaño uniforme de iconos header
+================================ */
+
+.dashboard-toolbar .toolbar-icon-button,
+.dashboard-toolbar .notifications-button {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  flex: 0 0 44px !important;
+  border-radius: 999px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.dashboard-toolbar .toolbar-icon,
+.dashboard-toolbar .toolbar-icon-svg {
+  width: 21px !important;
+  height: 21px !important;
+  min-width: 21px !important;
+  max-width: 21px !important;
+  min-height: 21px !important;
+  max-height: 21px !important;
+  display: block !important;
+  color: currentColor !important;
+  fill: currentColor;
+  flex-shrink: 0 !important;
+}
+
+.dashboard-toolbar .toolbar-refresh-button .toolbar-icon-svg {
+  width: 21px !important;
+  height: 21px !important;
+}
+
+/* SVG de refresh: mantener trazo blanco, sin relleno */
+.dashboard-toolbar .toolbar-refresh-button .toolbar-icon-svg path {
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 2.4 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+
+/* Fondo uniforme para los 3 botones */
+.dashboard-toolbar .toolbar-refresh-button,
+.dashboard-toolbar .toolbar-user-button,
+.dashboard-toolbar .toolbar-notifications-button {
+  background: #4b1d0f !important;
+  border-color: #4b1d0f !important;
+  color: #ffffff !important;
+}
+
+.dashboard-toolbar .toolbar-refresh-button:hover,
+.dashboard-toolbar .toolbar-user-button:hover,
+.dashboard-toolbar .toolbar-notifications-button:hover {
+  background: #5a2615 !important;
+  border-color: #5a2615 !important;
+  color: #ffffff !important;
+}
+
+/* ================================
+   Corrección definitiva badge notificaciones
+================================ */
+
+.header,
+.header-actions,
+.dashboard-toolbar,
+.notifications-wrapper {
+  overflow: visible !important;
+}
+
+.dashboard-toolbar .toolbar-notifications-button,
+.dashboard-toolbar .notifications-button {
+  position: relative !important;
+  overflow: visible !important;
+}
+
+.dashboard-toolbar .notifications-badge {
+  position: absolute !important;
+  top: -5px !important;
+  right: -5px !important;
+  min-width: 18px !important;
+  height: 18px !important;
+  padding: 0 5px !important;
+  border-radius: 999px !important;
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border: 2px solid #f8fafc !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  line-height: 14px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 9999 !important;
+  pointer-events: none !important;
+  box-sizing: border-box !important;
+  clip-path: none !important;
+}
+
+.dashboard-toolbar .notifications-badge.hidden {
+  display: none !important;
+}
+
+/* =========================================================
+   PÁGINA DE MARKETING
+   ========================================================= */
+
+/* Separación general entre los nuevos bloques */
+#pageMarketing .detail-section-card {
+  margin-top: 20px;
+}
+
+/*
+  El primer bloque contiene:
+  - Gráfica Venta digital vs meta
+  - Tabla Venta digital mensual
+*/
+.marketing-main-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+
+.marketing-main-columns > .detail-column {
+  min-width: 0;
+}
+
+.marketing-main-columns .detail-section-card {
+  margin-top: 0;
+}
+
+/*
+  Columna izquierda con las dos gráficas.
+*/
+.marketing-chart-stack {
+  gap: 20px;
+}
+
+.marketing-chart-stack .detail-section-card {
+  flex: 0 0 auto;
+  height: auto;
+}
+
+/*
+  Ambas gráficas conservan exactamente
+  la misma altura.
+*/
+.marketing-chart-stack .chart-container-line {
+  height: 330px;
+  min-height: 330px;
+}
+
+/*
+  La tabla de la derecha ocupa la altura
+  total generada por las dos gráficas.
+*/
+.marketing-main-columns > .detail-column:last-child
+.detail-section-card {
+  height: 100%;
+}
+
+.marketing-venta-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.marketing-venta-card .table-scroll {
+  flex: 1;
+}
+
+/* =========================================================
+   GRÁFICAS DE MARKETING
+   ========================================================= */
+
+#pageMarketing .chart-container-line {
+  height: 330px;
+  min-height: 330px;
+}
+
+.marketing-medios-chart {
+  height: 390px;
+  min-height: 390px;
+}
+
+.marketing-redes-chart {
+  height: 360px;
+  min-height: 360px;
+  margin-top: 0;
+}
+
+#pageMarketing .chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* =========================================================
+   TABLAS DE MARKETING — REGLA GENERAL
+   ========================================================= */
+
+.marketing-venta-table,
+.marketing-monthly-table,
+.marketing-medios-table,
+.marketing-redes-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.marketing-venta-table th,
+.marketing-venta-table td,
+.marketing-monthly-table th,
+.marketing-monthly-table td,
+.marketing-medios-table th,
+.marketing-medios-table td,
+.marketing-redes-table th,
+.marketing-redes-table td {
+  font-size: 0.8rem;
+  padding: 10px 8px;
+  vertical-align: middle;
+}
+
+/* Encabezados compactos, permitiendo dos líneas */
+.marketing-venta-table th,
+.marketing-monthly-table th,
+.marketing-medios-table th,
+.marketing-redes-table th {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.15;
+}
+
+/* Datos en una sola línea */
+.marketing-venta-table td,
+.marketing-monthly-table td,
+.marketing-medios-table td,
+.marketing-redes-table td {
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Primera columna siempre alineada a la izquierda */
+.marketing-venta-table th:first-child,
+.marketing-venta-table td:first-child,
+.marketing-monthly-table th:first-child,
+.marketing-monthly-table td:first-child,
+.marketing-medios-table th:first-child,
+.marketing-medios-table td:first-child,
+.marketing-redes-table th:first-child,
+.marketing-redes-table td:first-child {
+  text-align: left !important;
+}
+
+/* Resto de las columnas numéricas alineadas a la derecha */
+.marketing-venta-table th:not(:first-child),
+.marketing-venta-table td:not(:first-child),
+.marketing-monthly-table th:not(:first-child),
+.marketing-monthly-table td:not(:first-child),
+.marketing-medios-table th:not(:first-child),
+.marketing-medios-table td:not(:first-child),
+.marketing-redes-table th:not(:first-child),
+.marketing-redes-table td:not(:first-child) {
+  text-align: right !important;
+}
+
+/* =========================================================
+   TABLA: VENTA DIGITAL MENSUAL
+   6 columnas
+   ========================================================= */
+
+.marketing-venta-table th:nth-child(1),
+.marketing-venta-table td:nth-child(1) {
+  width: 13% !important;
+}
+
+.marketing-venta-table th:nth-child(2),
+.marketing-venta-table td:nth-child(2) {
+  width: 20% !important;
+}
+
+.marketing-venta-table th:nth-child(3),
+.marketing-venta-table td:nth-child(3),
+.marketing-venta-table th:nth-child(4),
+.marketing-venta-table td:nth-child(4) {
+  width: 18% !important;
+}
+
+.marketing-venta-table th:nth-child(5),
+.marketing-venta-table td:nth-child(5) {
+  width: 17% !important;
+}
+
+.marketing-venta-table th:nth-child(6),
+.marketing-venta-table td:nth-child(6) {
+  width: 14% !important;
+  text-align: center !important;
+}
+
+/* =========================================================
+   TABLA: RESULTADOS MENSUALES
+   10 columnas
+   ========================================================= */
+
+.marketing-monthly-card {
+  overflow: hidden;
+}
+
+.marketing-monthly-table {
+  min-width: 1120px;
+}
+
+.marketing-monthly-table th:nth-child(1),
+.marketing-monthly-table td:nth-child(1) {
+  width: 9% !important;
+}
+
+.marketing-monthly-table th:nth-child(2),
+.marketing-monthly-table td:nth-child(2),
+.marketing-monthly-table th:nth-child(3),
+.marketing-monthly-table td:nth-child(3) {
+  width: 10% !important;
+}
+
+.marketing-monthly-table th:nth-child(4),
+.marketing-monthly-table td:nth-child(4) {
+  width: 10% !important;
+}
+
+.marketing-monthly-table th:nth-child(5),
+.marketing-monthly-table td:nth-child(5) {
+  width: 8% !important;
+}
+
+.marketing-monthly-table th:nth-child(6),
+.marketing-monthly-table td:nth-child(6) {
+  width: 12% !important;
+}
+
+.marketing-monthly-table th:nth-child(7),
+.marketing-monthly-table td:nth-child(7),
+.marketing-monthly-table th:nth-child(8),
+.marketing-monthly-table td:nth-child(8) {
+  width: 9% !important;
+}
+
+.marketing-monthly-table th:nth-child(9),
+.marketing-monthly-table td:nth-child(9) {
+  width: 14% !important;
+}
+
+.marketing-monthly-table th:nth-child(10),
+.marketing-monthly-table td:nth-child(10) {
+  width: 9% !important;
+}
+
+/* =========================================================
+   TABLA: DESEMPEÑO POR MEDIO
+   10 columnas
+   ========================================================= */
+
+.marketing-medios-table {
+  min-width: 1140px;
+}
+
+.marketing-medios-table th:nth-child(1),
+.marketing-medios-table td:nth-child(1) {
+  width: 15% !important;
+}
+
+.marketing-medios-table th:nth-child(2),
+.marketing-medios-table td:nth-child(2),
+.marketing-medios-table th:nth-child(3),
+.marketing-medios-table td:nth-child(3) {
+  width: 9% !important;
+}
+
+.marketing-medios-table th:nth-child(4),
+.marketing-medios-table td:nth-child(4) {
+  width: 10% !important;
+}
+
+.marketing-medios-table th:nth-child(5),
+.marketing-medios-table td:nth-child(5) {
+  width: 8% !important;
+}
+
+.marketing-medios-table th:nth-child(6),
+.marketing-medios-table td:nth-child(6) {
+  width: 11% !important;
+}
+
+.marketing-medios-table th:nth-child(7),
+.marketing-medios-table td:nth-child(7) {
+  width: 13% !important;
+}
+
+.marketing-medios-table th:nth-child(8),
+.marketing-medios-table td:nth-child(8),
+.marketing-medios-table th:nth-child(9),
+.marketing-medios-table td:nth-child(9) {
+  width: 8% !important;
+}
+
+.marketing-medios-table th:nth-child(10),
+.marketing-medios-table td:nth-child(10) {
+  width: 9% !important;
+}
+
+/* =========================================================
+   REDES SOCIALES
+   ========================================================= */
+
+.marketing-redes-card {
+  overflow: hidden;
+}
+
+/*
+  Los cinco KPIs de redes permanecen en un solo renglón
+  cuando existe espacio suficiente.
+*/
+.marketing-redes-kpis {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 18px;
+  margin-bottom: 20px;
+}
+
+.marketing-redes-kpis .detail-kpi-card {
+  min-width: 0;
+}
+
+.marketing-redes-kpis .detail-kpi-card strong {
+  font-size: clamp(21px, 1.65vw, 27px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*
+  Gráfica y tabla de redes en dos columnas.
+*/
+.marketing-redes-content {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 20px;
+  align-items: center;
+  min-width: 0;
+}
+
+.marketing-redes-content > * {
+  min-width: 0;
+}
+
+/* Tabla de redes: 6 columnas */
+.marketing-redes-table {
+  min-width: 720px;
+}
+
+.marketing-redes-table th:nth-child(1),
+.marketing-redes-table td:nth-child(1) {
+  width: 20% !important;
+}
+
+.marketing-redes-table th:nth-child(2),
+.marketing-redes-table td:nth-child(2) {
+  width: 16% !important;
+}
+
+.marketing-redes-table th:nth-child(3),
+.marketing-redes-table td:nth-child(3) {
+  width: 16% !important;
+}
+
+.marketing-redes-table th:nth-child(4),
+.marketing-redes-table td:nth-child(4) {
+  width: 17% !important;
+}
+
+.marketing-redes-table th:nth-child(5),
+.marketing-redes-table td:nth-child(5) {
+  width: 18% !important;
+}
+
+.marketing-redes-table th:nth-child(6),
+.marketing-redes-table td:nth-child(6) {
+  width: 13% !important;
+}
+
+/* =========================================================
+   ESTATUS DE META
+   Estas clases se usarán posteriormente desde app.js
+   ========================================================= */
+
+.marketing-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 82px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.marketing-status.is-success {
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+}
+
+.marketing-status.is-warning {
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+}
+
+.marketing-status.is-danger {
+  color: #991b1b;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+}
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media (max-width: 1300px) {
+  .marketing-main-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .marketing-redes-content {
+    grid-template-columns: 1fr;
+  }
+
+  .marketing-redes-chart {
+    height: 330px;
+    min-height: 330px;
+  }
+}
+
+@media (max-width: 1100px) {
+  /*
+    Las tablas conservan el ancho de sus columnas y aparece
+    scroll horizontal, igual que el resto del dashboard.
+  */
+  .marketing-venta-table {
+    min-width: 820px !important;
+  }
+
+  .marketing-monthly-table {
+    min-width: 1120px !important;
+  }
+
+  .marketing-medios-table {
+    min-width: 1140px !important;
+  }
+
+  .marketing-redes-table {
+    min-width: 720px !important;
+  }
+
+  .marketing-redes-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .marketing-redes-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  #pageMarketing .chart-container-line,
+  .marketing-medios-chart,
+  .marketing-redes-chart {
+    height: 290px;
+    min-height: 290px;
+  }
+
+  .marketing-venta-table th,
+  .marketing-venta-table td,
+  .marketing-monthly-table th,
+  .marketing-monthly-table td,
+  .marketing-medios-table th,
+  .marketing-medios-table td,
+  .marketing-redes-table th,
+  .marketing-redes-table td {
+    font-size: 0.76rem;
+  }
+}
+
+/* =========================================================
+   AJUSTES EXCLUSIVOS PARA MÓVIL
+   No modifica la presentación de escritorio
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  /* =======================================================
+     1. HEADER: ICONOS ARRIBA DEL TÍTULO
+     ======================================================= */
+
+  .app {
+    padding: 18px 16px 28px;
+  }
+
+  .header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: 14px !important;
+    width: 100%;
+  }
+
+  /*
+    Permite que los filtros y la barra de botones
+    participen directamente en el grid del header.
+  */
+  .header-actions {
+    display: contents !important;
+  }
+
+  /*
+    Primera fila:
+    refrescar, usuario y notificaciones.
+  */
+  .dashboard-toolbar {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: auto !important;
+    max-width: none !important;
+    justify-self: end !important;
+    justify-content: flex-end !important;
+    margin: 0 0 2px !important;
+  }
+
+  /*
+    Segunda fila:
+    título y descripción.
+  */
+  .header-title {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+  }
+
+  .header-title h1 {
+    font-size: 32px !important;
+    line-height: 1.08 !important;
+  }
+
+  .header-title p {
+    font-size: 15px !important;
+    line-height: 1.4 !important;
+  }
+
+  /*
+    Filas tercera, cuarta y quinta:
+    Año, Desde y Hasta.
+  */
+  .header-actions .period-filter:nth-child(1) {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+  }
+
+  .header-actions .period-filter:nth-child(2) {
+    grid-column: 1 !important;
+    grid-row: 4 !important;
+  }
+
+  .header-actions .period-filter:nth-child(3) {
+    grid-column: 1 !important;
+    grid-row: 5 !important;
+  }
+
+  .header-actions .period-filter {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .header-actions .period-filter .select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /*
+    Mantiene los tres botones juntos.
+  */
+  .dashboard-toolbar .toolbar-icon-button,
+  .dashboard-toolbar .notifications-button {
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    flex: 0 0 44px !important;
+  }
+
+
+  /* =======================================================
+     2. TODAS LAS SECCIONES DE DOS COLUMNAS PASAN A UNA
+     ======================================================= */
+
+  .grid-main,
+  .detail-columns,
+  .detail-section-grid,
+  .servicios-dia-grid,
+  .servicios-agenda-grid,
+  .servicios-resumen-groups,
+  .servicios-resumen-group .servicios-dia-resumen,
+  .marketing-main-columns,
+  .marketing-redes-content {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .grid-main > *,
+  .detail-columns > *,
+  .detail-section-grid > *,
+  .servicios-dia-grid > *,
+  .servicios-agenda-grid > *,
+  .servicios-resumen-groups > *,
+  .marketing-main-columns > *,
+  .marketing-redes-content > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /*
+    Evita que la columna de Flujo y la columna de Metas
+    permanezcan una junto a la otra.
+  */
+  .grid-main {
+    display: grid !important;
+    gap: 18px !important;
+  }
+
+  /*
+    Las columnas internas de Ingresos, Egresos,
+    Ventas y Servicios quedan apiladas.
+  */
+  .detail-columns {
+    display: grid !important;
+    gap: 18px !important;
+  }
+
+  /*
+    Cada tarjeta conserva su ancho completo.
+  */
+  .detail-column,
+  .detail-section-card,
+  .home-right-stack {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+
+  /* =======================================================
+     3. KPIs DE INGRESOS: EVITAR DESBORDAMIENTO
+     ======================================================= */
+
+  #pageIngresos .detail-kpi-card {
+    padding: 14px 12px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #pageIngresos .detail-kpi-label {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+  }
+
+  /*
+    Valores monetarios largos.
+  */
+  #pageIngresos .detail-kpi-card strong {
+    font-size: clamp(18px, 5vw, 20px) !important;
+    line-height: 1.1 !important;
+    letter-spacing: -0.04em !important;
+    white-space: nowrap !important;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+    Los valores más cortos pueden permanecer un poco mayores.
+  */
+  #pageIngresos #pageIngresosCumplimiento,
+  #pageIngresos #pageIngresosRegistros {
+    font-size: 24px !important;
+  }
+
+
+  /* =======================================================
+     4. GRÁFICA DE VENTAS POR ASESOR
+     ======================================================= */
+
+  /*
+    En móvil se oculta el eje independiente.
+    El eje se mostrará dentro de la gráfica principal
+    mediante el ajuste de app.js.
+  */
+  .chart-ventas-asesor-axis {
+    display: none !important;
+  }
+
+  .chart-ventas-asesor-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .chart-container-bar-ventas-asesor {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    overflow-x: visible !important;
+  }
+
+  .chart-scroll-inner-ventas-asesor {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  #chartVentasAsesor {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* =========================================================
+   INFORMACIÓN DE VERSIÓN Y ÚLTIMA ACTUALIZACIÓN
+   ========================================================= */
+
+/*
+  Computadora:
+  - Botones arriba.
+  - Versión y actualización debajo.
+*/
+.dashboard-toolbar-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.dashboard-build-info {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  width: 100%;
+  color: #6b7280;
+  font-size: 10px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.dashboard-build-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.dashboard-build-item strong {
+  color: #475569;
+  font-size: inherit;
+  font-weight: 700;
+}
+
+.dashboard-build-separator {
+  color: #94a3b8;
+}
+
+
+/* =========================================================
+   INFORMACIÓN DE VERSIÓN — MÓVIL
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  /*
+    header-actions ya participa en el grid móvil.
+  */
+  .header-actions {
+    display: contents !important;
+  }
+
+  /*
+    Primera fila completa:
+    - información a la izquierda
+    - botones a la derecha
+  */
+@media (max-width: 700px) {
+  /*
+    Los botones permanecen en la esquina superior derecha.
+  */
+  .dashboard-toolbar-block {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+
+    width: auto !important;
+    max-width: none !important;
+
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: flex-end !important;
+
+    justify-self: end !important;
+    margin: 0 !important;
+  }
+
+  /*
+    Versión y actualización permanecen en la esquina
+    superior izquierda, opuestas a los botones.
+  */
+  .header-actions > .dashboard-build-info {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+
+    width: calc(100% - 156px) !important;
+    max-width: calc(100% - 156px) !important;
+
+    justify-self: start !important;
+    align-self: start !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+
+    gap: 2px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+
+    font-size: 9px !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+  }
+
+  .dashboard-build-separator {
+    display: none !important;
+  }
+}
+
+  /*
+    Parte superior izquierda.
+  */
+  .dashboard-build-info {
+    order: 1;
+
+    width: auto !important;
+    min-width: 0 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+
+    gap: 2px !important;
+
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+    white-space: normal !important;
+  }
+
+  .dashboard-build-item {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 3px !important;
+  }
+
+  /*
+    En móvil no se necesita el punto separador,
+    porque cada dato estará en una línea.
+  */
+  .dashboard-build-separator {
+    display: none !important;
+  }
+
+  /*
+    Parte superior derecha.
+    Neutraliza la posición grid que tenía directamente
+    dashboard-toolbar en las reglas móviles anteriores.
+  */
+  .dashboard-toolbar-block .dashboard-toolbar {
+    order: 2;
+
+    grid-column: auto !important;
+    grid-row: auto !important;
+
+    width: auto !important;
+    max-width: none !important;
+
+    justify-self: auto !important;
+    justify-content: flex-end !important;
+
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+  }
+}
+
+/* =========================================================
+   VERSIÓN DEBAJO DE LOS SELECTORES — ESCRITORIO
+   ========================================================= */
+
+.header-actions {
+  display: grid;
+  grid-template-columns:
+    minmax(100px, 132px)
+    minmax(120px, 142px)
+    minmax(120px, 142px)
+    auto;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  row-gap: 5px;
+  align-items: end;
+}
+
+/* Año, Desde y Hasta permanecen en la primera fila */
+.header-actions > .period-filter:nth-child(1) {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.header-actions > .period-filter:nth-child(2) {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.header-actions > .period-filter:nth-child(3) {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+/* Botones a la derecha sin ser desplazados por el texto */
+.dashboard-toolbar-block {
+  grid-column: 4;
+  grid-row: 1;
+  align-self: end;
+
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+
+  min-width: max-content;
+}
+
+/* Versión y actualización debajo de los tres selectores */
+.header-actions > .dashboard-build-info {
+  grid-column: 1 / 4;
+  grid-row: 2;
+
+  width: 100%;
+  justify-content: flex-start;
+
+  padding-left: 1px;
+  margin-top: 0;
+
+  font-size: 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   HOME - KPIs PRINCIPALES
+   Tamaño uniforme + alineación + sin desbordamiento
+   ========================================================= */
+
+.dashboard-portal-page #dashboardPage .grid-kpis {
+  align-items: stretch !important;
+}
+
+/* Todas las tarjetas mantienen la misma estructura */
+.dashboard-portal-page #dashboardPage .grid-kpis > .card {
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  padding: 20px 18px !important;
+}
+
+/* Todos los títulos ocupan exactamente la misma zona */
+.dashboard-portal-page #dashboardPage .grid-kpis > .card .kpi-label {
+  display: block !important;
+  width: 100% !important;
+
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+
+  margin: 0 !important;
+
+  font-size: 14px !important;
+  line-height: 1.15 !important;
+  font-weight: 700 !important;
+
+  overflow: hidden !important;
+}
+
+/* Todos los números quedan sobre la misma línea inferior */
+.dashboard-portal-page #dashboardPage .grid-kpis > .card .kpi-value {
+  display: flex !important;
+  align-items: flex-end !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+
+  min-height: 34px !important;
+
+  margin-top: auto !important;
+
+  /*
+    Todos usan EXACTAMENTE el mismo tamaño.
+    El tamaño disminuye automáticamente cuando
+    la pantalla tiene menos espacio.
+  */
+  font-size: clamp(16px, 1.3vw, 30px) !important;
+
+  line-height: 1 !important;
+  letter-spacing: -0.035em !important;
+  font-weight: 800 !important;
+
+  white-space: nowrap !important;
+
+  font-variant-numeric: tabular-nums !important;
+}
+
+
+/* Este fragmento se concatena a deploy/styles.css durante el workflow.
+   Los cambios visuales del encabezado quedan finalmente dentro de styles.css.
+   La referencia visual oficial es la barra superior de Mapa del Panteon. */
+body.dashboard-portal-page .dashboard-portal-toolbar {
+  background: #fff;
+  border-bottom: 2px solid #fdbb2d;
+  box-shadow: 0 6px 20px rgba(58,17,9,.06);
+}
+
+body.dashboard-portal-page .dashboard-portal-toolbar-inner {
+  width: min(1180px, calc(100% - 36px));
+  min-height: 86px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+}
+
+body.dashboard-portal-page .dashboard-portal-title {
+  min-width: 0;
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+body.dashboard-portal-page .dashboard-portal-title::before {
+  content: "";
+  display: block;
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  background: url('/mapa/assets/logo.jpg') center / contain no-repeat;
+}
+
+body.dashboard-portal-page .dashboard-portal-title-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+body.dashboard-portal-page .dashboard-portal-title-text strong {
+  order: 0;
+  color: #3a1109;
+  font-size: 24px;
+  line-height: 1.15;
+  font-weight: 700;
+}
+
+body.dashboard-portal-page .dashboard-portal-title-text span {
+  order: 1;
+  color: #0b4e7d;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+body.dashboard-portal-page .dashboard-portal-toolbar-inner::before {
+  content: "Indicadores financieros, comerciales y operativos";
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+  color: #5f554f;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+body.dashboard-portal-page .dashboard-portal-actions {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  margin-left: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+body.dashboard-portal-page .dashboard-portal-back {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 17px;
+  color: #3a1109;
+  background: #fff;
+  border: 1px solid #e3d3c8;
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+body.dashboard-portal-page .dashboard-portal-back:hover,
+body.dashboard-portal-page .dashboard-portal-back:focus-visible {
+  background: #fff8e6;
+  border-color: #fdbb2d;
+  outline: none;
+}
+
+body.dashboard-portal-page .dashboard-portal-toolbar .account-trigger {
+  width: 46px !important;
+  min-width: 46px !important;
+  max-width: 46px !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  max-height: 46px !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  color: #fff !important;
+  background: #3a1109 !important;
+  border: 3px solid rgba(253,187,45,.55) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 5px 14px rgba(58,17,9,.18) !important;
+  overflow: hidden !important;
+}
+
+body.dashboard-portal-page .dashboard-portal-toolbar .account-trigger svg {
+  width: 23px !important;
+  height: 23px !important;
+  display: block !important;
+}
+
+/* Herramientas comunes de tablas: ordenamiento tipo Excel */
+body.dashboard-portal-page table thead th[data-dashboard-sortable="1"] {
+  position: relative;
+  padding-right: 30px;
+  cursor: pointer;
+  user-select: none;
+}
+
+body.dashboard-portal-page table thead th[data-dashboard-sortable="1"]::after {
+  content: "⇅";
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8b817a;
+  font-size: 12px;
+  font-weight: 700;
+  opacity: .72;
+}
+
+body.dashboard-portal-page table thead th[data-dashboard-sortable="1"][data-sort-direction="asc"]::after {
+  content: "↑";
+  color: #225b8a;
+  opacity: 1;
+}
+
+body.dashboard-portal-page table thead th[data-dashboard-sortable="1"][data-sort-direction="desc"]::after {
+  content: "↓";
+  color: #225b8a;
+  opacity: 1;
+}
+
+body.dashboard-portal-page table thead th[data-dashboard-sortable="1"]:hover,
+body.dashboard-portal-page table thead th[data-dashboard-sortable="1"]:focus-visible {
+  background: #f7f3ed;
+  outline: none;
+}
+
+body.dashboard-portal-page table thead th[data-dashboard-sortable="1"]:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(34,91,138,.28);
+}
+
+body.dashboard-portal-page #tablaEgresosTipoGastoBody tr.dashboard-row-selected > td {
+  background: #fff7df !important;
+}
+
+body.dashboard-portal-page .dashboard-pdf-button {
+  min-height: 40px;
+  margin-left: auto;
+  padding: 0 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: #225b8a;
+  border: 1px solid #225b8a;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+body.dashboard-portal-page .dashboard-pdf-button:hover,
+body.dashboard-portal-page .dashboard-pdf-button:focus-visible {
+  background: #19496f;
+  border-color: #19496f;
+  outline: none;
+}
+
+body.dashboard-portal-page .dashboard-pdf-button[hidden] {
+  display: none !important;
+}
+
+/* Carga historica completa: visualmente distinta del refresh incremental */
+body.dashboard-portal-page #fullRefreshButton {
+  color: #3a1109;
+  background: #fff8e6;
+  border-color: #f0c65c;
+}
+
+body.dashboard-portal-page #fullRefreshButton:hover,
+body.dashboard-portal-page #fullRefreshButton:focus-visible {
+  color: #3a1109;
+  background: #ffefbd;
+  border-color: #d8a829;
+  outline: none;
+}
+
+body.dashboard-portal-page #fullRefreshButton[aria-busy="true"] {
+  opacity: .7;
+  cursor: wait;
+}
+
+@media (max-width: 1000px) {
+  body.dashboard-portal-page .dashboard-portal-toolbar-inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  body.dashboard-portal-page .dashboard-portal-toolbar-inner::before {
+    display: none;
+  }
+
+  body.dashboard-portal-page .dashboard-portal-actions {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 720px) {
+  body.dashboard-portal-page .dashboard-portal-toolbar-inner {
+    width: calc(100% - 24px);
+    min-height: 78px;
+    gap: 10px;
+  }
+
+  body.dashboard-portal-page .dashboard-portal-title::before {
+    width: 46px;
+    height: 46px;
+    flex-basis: 46px;
+  }
+
+  body.dashboard-portal-page .dashboard-portal-title-text strong {
+    font-size: 19px;
+  }
+
+  body.dashboard-portal-page .dashboard-portal-title-text span {
+    display: none;
+  }
+
+  body.dashboard-portal-page .dashboard-portal-back {
+    min-height: 38px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
+  body.dashboard-portal-page .dashboard-pdf-button {
+    min-height: 36px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+}
