@@ -65,7 +65,7 @@ function egSources(string $token):array {
         throw new RuntimeException('Carpeta de pagos con paginación pendiente; se conserva la última versión.');
     $found=[];
     foreach($page['value']??[] as $item){
-        if(empty($item['file'])||!preg_match('/^RELACION DE PAGOS (20\d\d)\.xlsx$/iD',(string)($item['name']??''),$matches))continue;
+        if(!array_key_exists('file',$item)||!preg_match('/^RELACION DE PAGOS (20\d\d)\.xlsx$/iD',(string)($item['name']??''),$matches))continue;
         $year=(int)$matches[1];
         if($year<EG_MIN_YEAR)continue;
         if(empty($item['id'])||isset($found[$year]))
