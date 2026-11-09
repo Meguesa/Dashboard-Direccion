@@ -77,7 +77,7 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
             throw new RuntimeException('No fue posible preparar el nuevo motor.');
         chmod($temp,0600);
         $messages=[];$result=1;
-        exec(escapeshellarg(PHP_BINARY).' -l '.escapeshellarg($temp).' 2>&1',$messages,$result);
+        exec('php -l '.escapeshellarg($temp).' 2>&1',$messages,$result);
         if($result!==0)throw new RuntimeException('Validación sintáctica del motor fallida.');
         if(!hash_equals(hash('sha256',$new),hash_file('sha256',$temp)))
             throw new RuntimeException('El archivo temporal no supera verificación SHA-256.');
