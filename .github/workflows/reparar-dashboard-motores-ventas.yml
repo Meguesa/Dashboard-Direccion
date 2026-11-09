@@ -1,0 +1,120 @@
+name: Reparar gestor de motores y diagnostico de Ventas (FTPS puntual)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/reparar-motores-ventas-20261109.txt'
+  workflow_dispatch:
+    inputs:
+      confirmacion:
+        description: 'Escribe REPARAR_MOTORES para autorizar solo estos dos PHP'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dashboard-direccion
+  cancel-in-progress: false
+
+jobs:
+  reparar:
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.confirmacion == 'REPARAR_MOTORES') || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Descargar version autorizada de main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Preparar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Probar paquete y limites de publicacion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p test_excel_directo_build.py
+          php -l cpanel-preview-20261105/dashboard-egresos-preview/actualizar-motores.php
+          php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel-preview.php
+          test -f ops/reparar-motores-ventas-20261109.txt
+
+      - name: Instalar cliente FTPS
+        shell: bash
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+
+      - name: Publicar DOS archivos de forma secuencial y verificar bytes de servidor
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "${FTP_SERVER:-}"
+          test -n "${FTP_USERNAME:-}"
+          test -n "${FTP_PASSWORD:-}"
+          # A diferencia del mirror de 30 archivos, son dos operaciones
+          # independientes, sin varias transferencias FTPS en paralelo.
+          for file in ventas-excel-preview.php actualizar-motores.php; do
+            src="cpanel-preview-20261105/dashboard-egresos-preview/$file"
+            verified=0
+            for attempt in 1 2 3; do
+              echo "FTPS: $file, intento $attempt"
+              local_copy="$RUNNER_TEMP/$file"
+              rm -f "$local_copy"
+              # Archivos ocultos de staging; .htaccess existente los bloquea.
+              if timeout --kill-after=5s 85s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+                set cmd:fail-exit yes;
+                set ftp:passive-mode true;
+                set ftp:ssl-force true;
+                set ftp:ssl-protect-data true;
+                set ftp:ssl-auth TLS;
+                set ftp:sync-mode true;
+                set ssl:verify-certificate yes;
+                set ssl:check-hostname yes;
+                set net:timeout 18;
+                set net:max-retries 2;
+                put $src -o .$file.upload;
+                mv .$file.upload $file;
+                get $file -o $local_copy;
+                bye;
+              " && cmp -s "$src" "$local_copy"; then
+                echo "Transferencia verificada: $file SHA-256 $(sha256sum "$src" | cut -d' ' -f1)"
+                verified=1
+                break
+              fi
+              echo "::warning::No se pudo verificar $file en el intento $attempt"
+              if [ "$attempt" -lt 3 ]; then sleep 8; fi
+            done
+            if [ "$verified" -ne 1 ]; then
+              echo "::error::Fallo la publicacion/verificacion de $file. No se modifica index.php."
+              exit 1
+            fi
+          done
+
+      - name: Comprobar que el diagnostico responde (sin asumir sesion admin)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for page in ventas-excel-preview.php actualizar-motores.php; do
+            status="$(curl -sS --max-time 18 -o /dev/null -w '%{http_code}' "https://portal.juanpablo.com.mx/dashboard/$page")"
+            echo "$page: HTTP $status (sin autenticacion)"
+            if [ "$status" = 404 ] || [ "$status" = 000 ] || [ "$status" = 500 ]; then
+              echo "::error::$page no esta accesible en el servidor HTTP ($status)."
+              exit 1
+            fi
+          done
+
+      - name: Resumen
+        run: |
+          echo '### Reparacion FTPS puntual completada' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Solo se publicaron los PHP de diagnóstico de Ventas y gestor de motores.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Ambos fueron descargados desde el servidor para verificar integridad.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No se cambio index.php, Graph, Excel, Power Automate, cron ni motores privados.' >> "$GITHUB_STEP_SUMMARY"

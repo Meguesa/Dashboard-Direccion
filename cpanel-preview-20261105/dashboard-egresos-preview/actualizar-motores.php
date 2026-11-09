@@ -32,11 +32,27 @@ function engineInfo(string $dir,array $p):array {
     $sourceVersion=is_string($new)?engineVersion($new,$p['const']):null;
     $privateVersion=is_string($old)?engineVersion($old,$p['const']):null;
     $same=is_string($new)&&is_string($old)&&hash_equals(hash('sha256',$new),hash('sha256',$old));
+    $published=is_string($new)&&$sourceVersion!==null;
+    $sameVersion=$published&&is_string($old)&&$sourceVersion===$privateVersion;
+    $writable=is_dir($dir)&&is_writable($dir);
+    if(!$published){
+        $state='Sin versión publicada';
+    }elseif($same){
+        $state='Sin cambios';
+    }elseif($sameVersion){
+        $state='Misma versión, contenido diferente: revisión requerida';
+    }elseif(!is_string($old)){
+        $state='Motor no instalado';
+    }else{
+        $state='Nueva versión disponible';
+    }
     return [
         'github'=>$sourceVersion,'instalado'=>$privateVersion,
         'igual'=>$same,
-        'origenDisponible'=>is_string($new)&&$sourceVersion!==null,
-        'carpetaEscribible'=>is_dir($dir)&&is_writable($dir),
+        'estado'=>$state,
+        'actualizable'=>$published&&!$same&&!$sameVersion&&$writable,
+        'origenDisponible'=>$published,
+        'carpetaEscribible'=>$writable,
         'motorPrivadoDisponible'=>is_string($old),
     ];
 }
@@ -67,6 +83,11 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
         $old=is_file($destination)?file_get_contents($destination):null;
         if(is_file($destination)&&!is_string($old))
             throw new RuntimeException('No fue posible leer el motor privado existente.');
+        if(is_string($old)&&!str_contains($old,'function '.$f['function'].'('))
+            throw new RuntimeException('El motor privado existente no tiene el contrato esperado.');
+        $oldVersion=is_string($old)?engineVersion($old,$f['const']):null;
+        if(is_string($old)&&$oldVersion===$version&&!hash_equals(hash('sha256',$old),hash('sha256',$new)))
+            throw new RuntimeException('Misma versión con contenido distinto. No se instalará una revisión silenciosa. Publica primero una nueva versión del motor en GitHub.');
         if(is_string($old)&&hash_equals(hash('sha256',$old),hash('sha256',$new))){
             echo json_encode(['estado'=>'sin_cambios','motor'=>$target,'version'=>$version]);exit;
         }
@@ -117,10 +138,10 @@ foreach($allowed as $k=>$v)$statuses[$k]=engineInfo($dir,$v);
 <!doctype html><html lang="es"><meta charset="utf-8"><title>Motores privados · GitHub</title>
 <style>body{font:16px system-ui;max-width:900px;margin:30px auto;padding:0 20px;color:#203d3a}table{width:100%;border-collapse:collapse}th,td{padding:12px;border-bottom:1px solid #dae5e1;text-align:left}button{padding:8px 12px;border:0;background:#145d51;color:#fff;border-radius:6px;cursor:pointer}button:disabled{background:#777}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f1f5f4;padding:12px}a{color:#145d51}</style>
 <h1>Motores financieros versionados en GitHub</h1>
-<p>El código publicado se comprueba y se instala en la carpeta privada con respaldo automático. Esta operación no cambia los Excel ni reinicia el cron. Solo aparece un botón cuando el motor de GitHub es distinto del instalado.</p>
+<p>El código publicado se comprueba y se instala en la carpeta privada con respaldo automático. Esta operación no cambia los Excel ni reinicia el cron. El botón se habilita solamente si hay una versión publicable distinta y un directorio privado escribible. Si el identificador de versión coincide pero el contenido es diferente, se bloquea el reemplazo hasta revisar y versionar el cambio.</p>
 <table><thead><tr><th>Motor</th><th>Versión GitHub</th><th>Versión privada</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
 <?php foreach($statuses as $key=>$s): ?>
-<tr><td><?=htmlspecialchars(ucfirst($key))?></td><td><?=htmlspecialchars((string)($s['github']??'Sin archivo'))?></td><td><?=htmlspecialchars((string)($s['instalado']??'No instalado'))?></td><td><?=$s['igual']?'Sin cambios':'Pendiente / no disponible'?></td><td><button data-motor="<?=htmlspecialchars($key)?>" <?=($s['igual']||!$s['origenDisponible']||!$s['carpetaEscribible'])?'disabled':''?>>Instalar versión GitHub</button></td></tr>
+<tr><td><?=htmlspecialchars(ucfirst($key))?></td><td><?=htmlspecialchars((string)($s['github']??'Sin archivo'))?></td><td><?=htmlspecialchars((string)($s['instalado']??'No instalado'))?></td><td><?=htmlspecialchars($s['estado'],ENT_QUOTES,'UTF-8')?></td><td><button data-motor="<?=htmlspecialchars($key)?>" <?=$s['actualizable']?'':'disabled'?>>Instalar versión GitHub</button></td></tr>
 <?php endforeach; ?></tbody></table>
 <p><a href="egresos-excel.php?modo=admin">Auditoría de Egresos</a> · <a href="ingresos-historico.php?modo=admin">Auditoría de Ingresos</a></p><pre id="result"></pre>
 <script>
