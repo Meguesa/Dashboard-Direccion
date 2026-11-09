@@ -304,6 +304,17 @@ async function escribirDashboardCacheIndexedDb() {
         self.assertIn("No fue posible", source)
         self.assertIn("Gestionar todos los motores (GitHub)", self.read("egresos-excel.php"))
 
+    def test_sales_original_xlsx_audit_is_preview_only(self):
+        auditor = (ROOT / "tools/auditar_ventas_excel.py").read_text(encoding="utf-8")
+        compile(auditor, "tools/auditar_ventas_excel.py", "exec")
+        self.assertIn("sheet.reset_dimensions()", auditor)
+        self.assertIn("read_only=True", auditor)
+        self.assertIn("Decimal(str(value))", auditor)
+        self.assertIn("claves_duplicadas", auditor)
+        self.assertIn("listo_para_produccion", auditor)
+        self.assertIn("False", auditor)
+        self.assertNotIn("BI_Ventas", auditor.split("def main():")[0].replace("BI_Ventas.",""))
+
     def test_sales_migration_requires_explicit_approval(self):
         # Sales remains on BI_Ventas until individual Excel contract records
         # and advisor totals have been independently reconciled.
