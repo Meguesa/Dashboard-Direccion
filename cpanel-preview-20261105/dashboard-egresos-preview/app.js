@@ -923,7 +923,7 @@ function coincideMesGenerico(item, mesSeleccionado) {
 async function guardarDatosEnCache() {
   // Consolidar llamadas simultáneas y omitir guardados sin cambios.
   if (cacheEscrituraEnCurso) {
-    await cacheEscrituraEnCurso;
+    try { await cacheEscrituraEnCurso; } catch (_) { /* reintento tras error */ }
     return guardarDatosEnCache();
   }
   const firma = obtenerFirmaCacheDashboard();
