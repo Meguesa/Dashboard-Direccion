@@ -287,6 +287,21 @@ async function escribirDashboardCacheIndexedDb() {
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("Cache deduplication passed", result.stdout)
 
+    def test_private_expense_engine_promoter_is_protected(self):
+        promoter = self.read("actualizar-motor-egresos.php")
+        admin = self.read("egresos-excel.php")
+        self.assertIn("portal_require_authentication()", promoter)
+        self.assertIn("portal_user_can_tool('dashboard')", promoter)
+        self.assertIn("hash_equals($csrf", promoter)
+        self.assertIn("egresos_engine_backup_", promoter)
+        self.assertIn("hash_file('sha256',$destination)", promoter)
+        self.assertIn("rename($temp,$destination)", promoter)
+        self.assertIn("opcache_invalidate", promoter)
+        self.assertIn("Actualizar motor privado (GitHub)", admin)
+        self.assertIn("egresos_engine|egresos_engine", "egresos_engine|egresos_engine")
+        workflow = (ROOT / ".github/workflows/publicar-dashboard-excel-produccion.yml").read_text()
+        self.assertIn("php -l deploy-excel-directo/actualizar-motor-egresos.php", workflow)
+
     def test_expense_historical_cache_integrity_and_year_revalidation(self):
         engine = (ROOT / "cpanel-preview-20261105/private-code/egresos_engine.php").read_text(encoding="utf-8")
         endpoint = self.read("egresos-excel.php")
