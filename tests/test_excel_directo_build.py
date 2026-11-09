@@ -287,6 +287,22 @@ async function escribirDashboardCacheIndexedDb() {
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("Cache deduplication passed", result.stdout)
 
+    def test_targeted_ftps_repair_does_not_mirror_dashboard(self):
+        workflow = (ROOT / ".github/workflows/reparar-dashboard-motores-ventas.yml").read_text(encoding="utf-8")
+        self.assertIn("ventas-excel-preview.php actualizar-motores.php", workflow)
+        self.assertIn("set ftp:sync-mode true", workflow)
+        self.assertIn("cmp -s", workflow)
+        self.assertIn("mv .$file.upload $file", workflow)
+        self.assertNotIn("mirror --reverse", workflow)
+        self.assertNotIn("put deploy-excel-directo/index.php", workflow)
+        self.assertNotIn("put deploy-excel-directo/.htaccess", workflow)
+
+    def test_same_engine_version_with_different_content_requires_review(self):
+        manager = self.read("actualizar-motores.php")
+        self.assertIn("Misma versión, contenido diferente: revisión requerida", manager)
+        self.assertIn("Misma versión con contenido distinto", manager)
+        self.assertIn("'actualizable'=>$published&&!$same&&!$sameVersion&&$writable", manager)
+
     def test_all_engines_managed_from_github_package(self):
         source = self.read("actualizar-motores.php")
         self.assertIn("portal_require_authentication()", source)
