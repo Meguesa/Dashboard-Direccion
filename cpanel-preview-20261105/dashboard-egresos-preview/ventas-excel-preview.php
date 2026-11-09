@@ -25,11 +25,20 @@ $items=[
         'name'=>'CONTRATOS.xlsx',
     ],
 ];
-$out=['build'=>'20261109-ventas-preflight-1','comprobacionUTC'=>gmdate('c'),'fuente'=>'archivos_excel_originales',
+$out=['build'=>'20261109-ventas-preflight-2','comprobacionUTC'=>gmdate('c'),'fuente'=>'archivos_excel_originales',
       'modo'=>'SOLO_METADATA','lecturaHabilitada'=>false,'archivos'=>[]];
 try{
     // Token de la aplicación de producción, no token delegado del usuario.
     $token=hsToken();
+    // Mostrar solo nombres de roles de aplicación, nunca el token.
+    $pieces=explode('.',$token);
+    if(count($pieces)===3){
+        $claims=json_decode((string)base64_decode(strtr($pieces[1],'-_','+/')),true);
+        $out['rolesAplicacion']=array_values(array_filter(
+            is_array($claims['roles']??null)?$claims['roles']:[],
+            static fn($role):bool=>is_string($role)
+        ));
+    }
     foreach($items as $code=>$entry){
         try{
             $a=hsRemoteJson($entry['drive'],'/items/'.rawurlencode($entry['id']).'?%24select=id,name,size,eTag,lastModifiedDateTime,parentReference',$token);
@@ -37,15 +46,28 @@ try{
               &&!empty($a['eTag'])&&is_numeric($a['size']??null);
             $out['archivos'][$code]=[
                 'localizado'=>$valid,'nombreEsperado'=>$entry['name'],
+                'httpGraph'=>200,
                 'eTagPresente'=>!empty($a['eTag']),'tamanoBytes'=>$valid?(int)$a['size']:null,
                 'modificacionUTC'=>$a['lastModifiedDateTime']??null,
                 'mensaje'=>$valid?'Identidad validada con token de aplicación.':'La identidad o metadatos no coincidieron.',
             ];
         }catch(Throwable $e){
-            // No mostrar URLs de Graph con credenciales o respuestas completas.
+            // hsRequest devuelve "HTTP NNN ...". Exponer solo el codigo, NUNCA
+            // el cuerpo, URL firmada, token o mensaje libre de la excepcion.
+            $m=[];
+            $http=preg_match('/\\bHTTP\\s+(\\d{3})\\b/i',$e->getMessage(),$m)?(int)$m[1]:null;
+            $detail=match($http){
+                401=>'El token de aplicación fue rechazado.',
+                403=>'Acceso denegado al recurso para el token de aplicación. Revisar consentimiento y asignación Selected.',
+                404=>'Archivo inaccesible para la aplicación o ruta/identificador incorrecto. La lectura delegada confirma que el archivo existe.',
+                429=>'Microsoft Graph aplicó un límite temporal de solicitudes.',
+                500,502,503,504=>'Microsoft Graph presenta un error transitorio.',
+                default=>'Fallo de la solicitud de metadatos; consultar registros protegidos del servidor.'
+            };
             $out['archivos'][$code]=[
                 'localizado'=>false,'nombreEsperado'=>$entry['name'],
-                'mensaje'=>'No fue posible leer los metadatos con el token de aplicación. Verificar permisos seleccionados de Microsoft Graph.'
+                'httpGraph'=>$http,
+                'mensaje'=>$detail
             ];
         }
     }
@@ -69,5 +91,6 @@ a{color:#175f50}</style>
 <p>Comprobación de lectura de metadatos con la cuenta de aplicación de Microsoft Graph. No modifica Excel, Power Automate ni el Dashboard de Dirección.</p>
 <pre><?=htmlspecialchars(json_encode($out,JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),ENT_QUOTES,'UTF-8')?></pre>
 <p><strong>La migración de Ventas no está activada.</strong> Debe conciliarse el detalle de contratos y los importes por asesor antes de reemplazar BI_Ventas.</p>
+<p>Cuando Comercial devuelva HTTP 403 o 404, revisar la concesión de lectura a la aplicación <strong>Portal Interno JJP</strong> en la carpeta VENTAS. No es necesario asignar acceso global al sitio; la autorización seleccionada debe realizarla un administrador autorizado.</p>
 <a href="./">Regresar al Dashboard</a>
 </html>

@@ -1,0 +1,3 @@
+Autorizar despliegue FTPS puntual del diagnostico de Ventas mejorado.
+Exclusivamente actualizar-motores.php y ventas-excel-preview.php con verificaciones.
+No se modifican los permisos Microsoft Graph, archivos Excel, motores privados ni listas BI.
