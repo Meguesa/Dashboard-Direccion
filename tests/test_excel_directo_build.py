@@ -46,6 +46,100 @@ class ExcelDirectBuildChecks(unittest.TestCase):
         self.assertIn("HUELLA_EXCEL_INCOMPLETA", endpoint)
         self.assertIn("excelSha256", endpoint)
 
+    def test_legacy_income_fingerprint_requires_same_workbook_version(self):
+        # Previously validated snapshots may have an eTag but lack sha256.
+        # Recovery must never disable the financial audit nor accept another file.
+        source = self.read("ingresos-historico.php")
+        self.assertIn("($ingresos['auditoria']['validado']??false)", source)
+        self.assertIn("if($etag==='')", source)
+        self.assertIn("$huellaLegada=!$shaValido;", source)
+        self.assertIn("$shaDescargado=(string)($descarga['sha256']??'');", source)
+        self.assertIn("if($shaValido&&!hash_equals($sha,$shaDescargado))", source)
+        self.assertIn("if($huellaLegada&&!preg_match", source)
+        self.assertIn("$resultado['excelSha256']=$shaValido?$sha:$shaDescargado;", source)
+        self.assertIn("($metaFinal['eTag']??'')!==$etag", source)
+        self.assertIn("EXCEL_MODIFICADO_DURANTE_LECTURA", source)
+        self.assertIn("version_guardada_tras_reintentos", source)
+        self.assertIn("EXCEL_ACTUAL_NO_DISPONIBLE", source)
+        self.assertIn("huellaLegada", source)
+        self.assertIn("hsMetaDesdeExcel($descarga['temporal'],$mes)", source)
+        self.assertIn("hsWrite($nombre,$resultado)", source)
+
+    def test_legacy_meta_sha_recovery_and_etag_guard_runtime(self):
+        """Exercise the actual PHP routine with synthetic caches and mocked Graph."""
+        source = self.read("ingresos-historico.php")
+        start = source.index("function hsMetaMesValidado(")
+        end = source.index("\n$mode=$_GET", start)
+        php_function = source[start:end]
+        script = """<?php
+declare(strict_types=1);
+const HS_RULES=2;
+const HS_DIR=__DIR__;
+const JJP_COBRANZA_DRIVE_ID='FAKE';
+$GLOBALS['data']=[
+ 'cache_excel_ingresos_2026-08.json'=>[
+   'auditoria'=>['validado'=>true], 'reglasVersion'=>2,
+   'excel'=>['etag'=>'book-v1']],
+ 'historico_catalogo.json'=>['meses'=>['2026-08'=>['id'=>'I1']]]];
+$GLOBALS['sha']=hash('sha256','book-v1');
+$GLOBALS['finalEtag']='book-v1';
+$GLOBALS['method']='contenido_actual_guardado';
+function hsRead(string $name,array $fallback=[]):array{
+ return $GLOBALS['data'][$name]??$fallback;
+}
+function hsWrite(string $name,array $data):void{$GLOBALS['data'][$name]=$data;}
+function hsCacheName(string $month):string{return 'cache_excel_ingresos_'.$month.'.json';}
+function hsToken():string{return 'fake';}
+function hsSources(string $token):array{return [];}
+function hsGraph(string $path,string $token):array{
+ return ['eTag'=>str_contains($path,'$select')?$GLOBALS['finalEtag']:'book-v1'];
+}
+function hsSnapshotDownload(string $drive,array $meta,string $token):array{
+ $path=tempnam(__DIR__,'test_xls_');
+ file_put_contents($path,'book-v1');
+ return ['temporal'=>$path,'metodo'=>$GLOBALS['method'],
+   'nuevaVersionPendiente'=>false,'sha256'=>$GLOBALS['sha']];
+}
+function hsMetaDesdeExcel(string $archivo,string $mes):array{
+ return ['mes'=>$mes,'metas'=>[['area'=>'Panteon','metaMensual'=>100]],
+   'metaTotal'=>100,'realTotal'=>120];
+}
+""" + php_function + """
+function check(bool $ok,string $msg):void{
+ if(!$ok)throw new RuntimeException($msg);
+}
+$token=null;
+$res=hsMetaMesValidado('2026-08',$token);
+check(($res['validado']??false)===true,'expected recovery');
+check(($res['excelSha256']??null)===hash('sha256','book-v1'),'missing SHA not recovered');
+check(($GLOBALS['data']['cache_metas_cobranza_excel_2026-08.json']['excelEtag']??'')==='book-v1','cache missing');
+$GLOBALS['data']['cache_metas_cobranza_excel_2026-08.json']=[];
+$GLOBALS['finalEtag']='book-v2';
+$token=null;
+$res=hsMetaMesValidado('2026-08',$token);
+check(($res['validado']??false)===false,'changed eTag accepted');
+check(($res['motivo']??'')==='EXCEL_MODIFICADO_DURANTE_LECTURA','wrong reason for eTag mismatch');
+$GLOBALS['data']['cache_excel_ingresos_2026-08.json']['excel']['sha256']=hash('sha256','book-old');
+$GLOBALS['finalEtag']='book-v1';
+$token=null;
+$res=hsMetaMesValidado('2026-08',$token);
+check(($res['validado']??false)===false,'wrong SHA accepted');
+check(($res['motivo']??'')==='EXCEL_MODIFICADO_DURANTE_LECTURA','wrong reason for SHA mismatch');
+$GLOBALS['data']['cache_excel_ingresos_2026-08.json']['excel']['sha256']='';
+$GLOBALS['method']='version_guardada_tras_reintentos';
+$token=null;
+$res=hsMetaMesValidado('2026-08',$token);
+check(($res['validado']??false)===false,'fallback version accepted');
+check(($res['motivo']??'')==='EXCEL_ACTUAL_NO_DISPONIBLE','wrong fallback reason');
+echo 'All legacy fingerprint checks passed';
+"""
+        with tempfile.TemporaryDirectory(prefix="test-metas-legacy-") as tmp:
+            file = Path(tmp) / "verify.php"
+            file.write_text(script, encoding="utf-8")
+            result = subprocess.run(["php", str(file)], text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("All legacy fingerprint checks passed", result.stdout)
+
     def test_real_november_cover_layout_parser(self):
         # Matches the published November cover sheet: B=BANCOS, C:G=areas + total.
         source = self.read("ingresos-historico.php")
