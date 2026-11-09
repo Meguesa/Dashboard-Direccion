@@ -287,6 +287,30 @@ async function escribirDashboardCacheIndexedDb() {
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("Cache deduplication passed", result.stdout)
 
+    def test_all_engines_managed_from_github_package(self):
+        source = self.read("actualizar-motores.php")
+        self.assertIn("portal_require_authentication()", source)
+        self.assertIn("hash_equals($csrf", source)
+        self.assertIn("'ingresos'=>", source)
+        self.assertIn("'egresos'=>", source)
+        self.assertIn("'ventas'=>", source)
+        self.assertIn("egresos_engine.php", source)
+        self.assertIn("function engineVersion(", source)
+        self.assertIn("motores_deploy.lock", source)
+        self.assertIn("php.bak", source)
+        self.assertIn("hash_file('sha256',$destination)", source)
+        self.assertIn("opcache_invalidate", source)
+        self.assertIn("exec('php -l '", source)
+        self.assertIn("No fue posible", source)
+        self.assertIn("Gestionar todos los motores (GitHub)", self.read("egresos-excel.php"))
+
+    def test_sales_migration_requires_explicit_approval(self):
+        # Sales remains on BI_Ventas until individual Excel contract records
+        # and advisor totals have been independently reconciled.
+        graph = self.read("graph.js")
+        self.assertIn("obtenerVentasSharePoint(", graph)
+        self.assertNotIn("cargarVentasExcelProduccion()", graph)
+
     def test_private_expense_engine_promoter_is_protected(self):
         promoter = self.read("actualizar-motor-egresos.php")
         admin = self.read("egresos-excel.php")
