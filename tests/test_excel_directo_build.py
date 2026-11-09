@@ -211,6 +211,71 @@ echo json_encode(hsMetaDesdeFilas($rows,'2024-07'));
         self.assertNotIn("fetch(\"BI_Metas_Cobranza", historical)
         self.assertNotIn("obtenerMetasCobranzaSharePoint", historical)
 
+    def test_fifteen_minute_refresh_without_background_polling(self):
+        app = self.read("app.js")
+        income = self.read("ingresos-historico.js")
+        expense = self.read("egresos-excel.js")
+        self.assertIn("const DASHBOARD_REFRESH_MS = 15 * 60 * 1000;", app)
+        self.assertIn("if (intervaloActualizacionDashboard) return;", app)
+        self.assertIn("}, DASHBOARD_REFRESH_MS);", app)
+        self.assertNotIn("setInterval(async()=>{if(ingresosExcelActualizando)", income)
+        self.assertNotIn("setInterval(async()=>{if(egresosExcelActualizando)", expense)
+        self.assertNotIn("setInterval(refrescarMetasHistoricasEnSegundoPlano, 5000)", income)
+        self.assertIn("async function refrescarMetasHistoricasEnSegundoPlano()", income)
+        self.assertIn("metasHistoricasProximaRevision = Date.now() + DASHBOARD_REFRESH_MS;", income)
+        self.assertIn("await guardarDatosEnCache();", income)
+        self.assertIn("if (firma === ultimaFirmaCacheDashboard) return true;", app)
+
+    def test_indexeddb_writes_only_when_snapshot_changes(self):
+        app = self.read("app.js")
+        begin = app.index("const cacheReferencias = new WeakMap();")
+        end = app.index("window.dashboardCacheReady =", begin)
+        variables_and_fingerprint = app[begin:end]
+        begin = app.index("async function guardarDatosEnCache()")
+        end = app.index("async function cargarDatosDesdeCache()", begin)
+        save = app[begin:end]
+        script = """
+const state = {
+  anioSeleccionado: "2026", mesSeleccionado: "2026-08",
+  mesInicioSeleccionado: "2026-08", mesFinSeleccionado: "2026-08",
+  datos: {ingresos:[{importe:100}], egresos:[], metasCobranza:[]}
+};
+const DASHBOARD_CACHE_KEY="test";
+const DASHBOARD_CACHE_KEY_BASE="test";
+const localStorage={};
+let writes=0;
+async function escribirDashboardCacheIndexedDb() {
+  writes += 1;
+  await Promise.resolve();
+}
+""" + variables_and_fingerprint + save + """
+(async()=>{
+  // Concurrencia: tres disparos sobre el mismo estado no triplican escrituras.
+  const outcomes=await Promise.all([
+    guardarDatosEnCache(), guardarDatosEnCache(), guardarDatosEnCache()
+  ]);
+  if (outcomes.some(v=>v!==true) || writes!==1)
+    throw Error('Duplicated initial IndexedDB write: '+writes);
+  await guardarDatosEnCache();
+  if(writes!==1)throw Error('Unchanged state was rewritten');
+  state.mesInicioSeleccionado="2026-07";
+  await guardarDatosEnCache();
+  if(writes!==2)throw Error('Period change not saved');
+  state.datos.metasCobranza=[{mes:"2026-07",metaMensual:4450000}];
+  await guardarDatosEnCache();
+  if(writes!==3)throw Error('Historical metas change not saved');
+  await guardarDatosEnCache();
+  if(writes!==3)throw Error('Unchanged metas were rewritten');
+  process.stdout.write('Cache deduplication passed');
+})().catch(e=>{console.error(e);process.exitCode=1});
+"""
+        with tempfile.TemporaryDirectory(prefix="dashboard-cache-") as tmp:
+            js = Path(tmp) / "test.js"
+            js.write_text(script, encoding="utf-8")
+            result = subprocess.run(["node", str(js)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Cache deduplication passed", result.stdout)
+
     def test_expense_file_discovery_with_mock_graph(self):
         source = (ROOT / "cpanel-preview-20261105/private-code/egresos_engine.php").as_posix()
         php = """<?php

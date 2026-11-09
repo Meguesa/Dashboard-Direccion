@@ -50,9 +50,8 @@ function renderEstadoIngresosExcel() {
   if(estado.puedeActualizar){const link=document.createElement('a');link.href='ingresos-historico.php?modo=admin';link.textContent=' Auditar / actualizar histórico';link.target='_blank';link.rel='noopener';el.append(link);}
   if(!ingresosExcelDisponibles(meses))for(const id of ['kpiIngresos','kpiFlujo','pageIngresosTotal','pageIngresosReal','pageIngresosRegistros','pageIngresosPromedio','pageIngresosCumplimiento','metasCobranzaCumplimiento']){const n=document.getElementById(id);if(n){n.textContent='Información no disponible';n.style.whiteSpace='normal';n.style.overflowWrap='anywhere';n.style.fontSize='1rem';}}
 }
-// El sondeo de cachés no recarga las listas de los demás módulos.
-let ingresosExcelActualizando=false;
-setInterval(async()=>{if(ingresosExcelActualizando)return;ingresosExcelActualizando=true;try{const rows=await cargarIngresosExcelHistorico();state.datos.ingresos=rows;renderDashboard();}catch(e){console.warn('Ingresos Excel',e.message);}finally{ingresosExcelActualizando=false;}},60000);
+// Ingresos se consultan en la carga inicial, el refresco manual y el único
+// ciclo del Dashboard (15 minutos). No se permiten sondeos independientes.
 
 
 /* Metas históricas: extraer de cada carátula validada, sin BI_Metas_Cobranza.
@@ -92,18 +91,24 @@ function mezclarMetasExcelVerificadas(actuales = [], nuevas = [], mesesRevisados
   });
 }
 
-function refrescarMetasHistoricasEnSegundoPlano() {
+// Precarga SOLO cuando llega un manifiesto nuevo de Ingresos: una pasada
+// secuencial sobre los meses faltantes, con prioridad para el periodo visible.
+// No se ejecuta un sondeo de cinco segundos ni se escribe IndexedDB por mes.
+async function refrescarMetasHistoricasEnSegundoPlano() {
   if (metasHistoricasCargando || window.ingresosExcelEstado?.cargando ||
       Date.now() < metasHistoricasProximaRevision) return;
   const disponibles = window.ingresosExcelEstado?.meses || {};
+  const seleccionados = new Set(obtenerMesesRangoSeleccionado());
   const pendientes = mesesHistoricosDeIngresosValidados().filter(m => {
     const huella = disponibles[m]?.excel?.sha256;
+    const etag = disponibles[m]?.excel?.etag;
     const previo = metasCobranzaExcelVerificadas.get(m);
     const actual = (state.datos.metasCobranza || []).filter(row =>
       row.mes === m && row.fuenteOrigen === "excel_original_caratula");
     const validado = actual.length === 4 &&
       actual.every(row => row.excelSha256 &&
-        (!huella || row.excelSha256 === huella));
+        (!huella || row.excelSha256 === huella) &&
+        (!etag || row.excelEtag === etag));
     if (validado && !previo) {
       metasCobranzaExcelVerificadas.set(m, {
         sha: actual[0].excelSha256, filas: actual,
@@ -112,36 +117,48 @@ function refrescarMetasHistoricasEnSegundoPlano() {
     }
     return !validado && !metasCobranzaExcelPendientes.has(m) &&
       (metasCobranzaExcelReintentarEn.get(m) || 0) <= Date.now();
-  });
+  }).sort((a, b) => Number(seleccionados.has(b)) - Number(seleccionados.has(a)));
   if (!pendientes.length) {
-    metasHistoricasProximaRevision = Date.now() + 60000;
+    metasHistoricasProximaRevision = Date.now() + DASHBOARD_REFRESH_MS;
     return;
   }
-  // Una sola descarga de carátula por turno: evita saturar Graph y el cron.
-  const mes = pendientes[0];
+
   metasHistoricasCargando = true;
-  obtenerMetasCobranzaExcel([mes]).then(rows => {
-    if (rows.length === 4) {
-      state.datos.metasCobranza = mezclarMetasExcelVerificadas(
-        state.datos.metasCobranza, rows, [mes]);
+  let huboCambios = false;
+  try {
+    for (const mes of pendientes) {
+      // La selección manual de un mes tiene prioridad y utiliza su propia
+      // solicitud; nunca descargar dos veces la misma carátula en paralelo.
+      if (metasCobranzaExcelPendientes.has(mes) ||
+          (metasCobranzaExcelReintentarEn.get(mes) || 0) > Date.now()) continue;
+      try {
+        const rows = await obtenerMetasCobranzaExcel([mes]);
+        if (rows.length === 4) {
+          state.datos.metasCobranza = mezclarMetasExcelVerificadas(
+            state.datos.metasCobranza, rows, [mes]);
+          huboCambios = true;
+        } else {
+          metasCobranzaExcelReintentarEn.set(mes, Date.now() + DASHBOARD_REFRESH_MS);
+        }
+      } catch (error) {
+        console.warn("Precarga de meta histórica", mes, error.message);
+        metasCobranzaExcelIncidencias.set(mes, "SERVICIO_NO_DISPONIBLE");
+        metasCobranzaExcelReintentarEn.set(mes, Date.now() + DASHBOARD_REFRESH_MS);
+      }
+    }
+  } finally {
+    metasHistoricasCargando = false;
+    metasHistoricasProximaRevision = Date.now() + DASHBOARD_REFRESH_MS;
+    if (huboCambios) {
       if (typeof renderGraficaIngresosMensuales === "function")
         renderGraficaIngresosMensuales();
       if (typeof renderAvanceMetasCobranza === "function")
         renderAvanceMetasCobranza(obtenerMesesRangoSeleccionado());
-      if (typeof guardarDatosEnCache === "function") guardarDatosEnCache();
-    } else {
-      metasCobranzaExcelReintentarEn.set(mes, Date.now() + 15 * 60000);
+      if (typeof guardarDatosEnCache === "function")
+        await guardarDatosEnCache();
     }
-  }).catch(error => {
-    console.warn("Precarga de meta histórica",mes,error.message);
-    metasCobranzaExcelIncidencias.set(mes,"SERVICIO_NO_DISPONIBLE");
-    metasCobranzaExcelReintentarEn.set(mes, Date.now() + 15 * 60000);
-  }).finally(() => {
-    metasHistoricasCargando = false;
-    metasHistoricasProximaRevision = Date.now() + 1000;
-  });
+  }
 }
-setInterval(refrescarMetasHistoricasEnSegundoPlano, 5000);
 
 async function obtenerMetasCobranzaExcel(mesesFiltro = []) {
   const mesesConOrigen = Object.entries(window.ingresosExcelEstado?.meses || {})
@@ -206,11 +223,13 @@ function asegurarMetasCobranzaExcel(mesesSolicitados) {
     .filter(m => disponibles[m]?.cacheDisponible === true);
   for (const mes of meses) {
     const fingerprint = disponibles[mes]?.excel?.sha256 || null;
+    const etag = disponibles[mes]?.excel?.etag || null;
     const cached = metasCobranzaExcelVerificadas.get(mes);
     // El manifiesto puede no contener SHA tras un ciclo sin cambios. En
     // ese caso, conservar el dato validado y dejar que el PHP verifique
     // nuevamente la huella exacta del Excel antes de servir un cambio.
-    if (cached && (!fingerprint || cached.sha === fingerprint)) {
+    if (cached && (!fingerprint || cached.sha === fingerprint) &&
+        (!etag || cached.filas?.every(row => row.excelEtag === etag))) {
       if (!(state.datos.metasCobranza || []).some(row =>
           row.mes === mes && row.fuenteOrigen === "excel_original_caratula")) {
         state.datos.metasCobranza = mezclarMetasExcelVerificadas(

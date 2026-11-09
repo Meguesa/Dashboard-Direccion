@@ -24,5 +24,5 @@ function renderEstadoEgresosExcel(){
  const when=document.createElement('small');when.textContent=' Verificación: '+(m.verificadoUTC?new Date(m.verificadoUTC).toLocaleString('es-MX',{timeZone:'America/Monterrey'}):'pendiente');el.append(when);const a=document.createElement('a');a.href='egresos-excel.php?modo=admin';a.textContent=' Revisar / actualizar Egresos';a.target='_blank';a.rel='noopener';el.append(a);
  if(missing.length)for(const id of ['kpiEgresos','kpiFlujo','pageEgresosTotal','pageEgresosPorPagar','pageEgresosRegistros']){const n=document.getElementById(id);if(n)n.textContent='Información no disponible';}
 }
-let egresosExcelActualizando=false;
-setInterval(async()=>{if(egresosExcelActualizando)return;egresosExcelActualizando=true;try{const rows=await cargarEgresosExcel();state.datos.egresos=rows;renderDashboard();}catch(e){console.warn('Egresos Excel',e.message);}finally{egresosExcelActualizando=false;}},60000);
+// Egresos se consultan en la carga inicial, el refresco manual y el único
+// ciclo del Dashboard (15 minutos). No se permiten sondeos independientes.
