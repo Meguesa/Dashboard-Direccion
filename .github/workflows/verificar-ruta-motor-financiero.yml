@@ -1,0 +1,50 @@
+name: Verificar acceso FTPS al motor privado (solo lectura)
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/verificar-ruta-motor-financiero.yml'
+      - 'cpanel-preview-20261105/private-code/**'
+permissions:
+  contents: read
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Instalar cliente FTPS
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+      - name: Comprobar si el usuario FTPS alcanza el motor privado
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "$FTP_SERVER" ] || [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ]; then
+            echo "::error::Credenciales FTPS no disponibles en esta ejecución."
+            exit 1
+          fi
+          valido=no
+          for candidato in /home/juanpab1/bi-ingresos-privado ../bi-ingresos-privado ../../bi-ingresos-privado ../../../bi-ingresos-privado; do
+            if timeout 40s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 8;
+              set net:max-retries 1;
+              cd $candidato;
+              cls -1 egresos_engine.php;
+              bye;" >/dev/null 2>&1; then
+              echo "Acceso privado comprobado: $candidato"
+              valido=si
+              break
+            else
+              echo "Sin acceso FTPS a: $candidato"
+            fi
+          done
+          echo "acceso_privado=$valido" >> "$GITHUB_STEP_SUMMARY"
