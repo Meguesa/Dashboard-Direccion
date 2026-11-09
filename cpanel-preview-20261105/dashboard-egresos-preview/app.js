@@ -848,8 +848,8 @@ async function actualizarDatosDashboard(opciones = {}) {
     cacheCargadoDashboard = cacheGuardada || cacheCargadoDashboard;
     window.cacheCargadoDashboard = cacheCargadoDashboard;
 
+    // renderDashboard() ya actualiza los servicios del día una sola vez.
     renderDashboard();
-    renderServiciosDelDiaSeguro();
 
     const detalleFinal = mesesRecargados.length > 0
       ? `Actualización incremental completada: ${mesesRecargados.join(", ")}.`
@@ -2947,13 +2947,6 @@ function renderServiciosDelDia() {
     `Hora local: ${formatearFechaHoraCorta(ahora)}`
   );
 
-  console.log("Servicios del día:", {
-    ahora: ahora.toString(),
-    capillasActivos: serviciosCapillasActivos.length,
-    capillasProgramados: serviciosCapillasProgramados.length,
-    parqueActivos: serviciosParqueActivos.length,
-    parqueProgramados: serviciosParqueProgramados.length
-  });
 }
 
 function crearServicioAgendaDia(item, estado, origen) {
@@ -3108,16 +3101,22 @@ function renderTarjetaServicioAgenda(servicio) {
   `;
 }
 
+// La agenda usa los servicios ya cargados; nunca dispara una sincronización.
+// No recalcularla si los datos y la ventana de tiempo siguen siendo iguales.
+let ultimaFuenteServiciosDelDia = null;
+let ultimoMinutoServiciosDelDia = -1;
+
 function renderServiciosDelDiaSeguro() {
-  if (typeof renderServiciosDelDia !== "function") {
-    return;
-  }
+  if (typeof renderServiciosDelDia !== "function") return;
 
+  const fuenteActual = state.datos.servicios || [];
+  const minutoActual = Math.floor(Date.now() / 60000);
+  if (ultimaFuenteServiciosDelDia === fuenteActual &&
+      ultimoMinutoServiciosDelDia === minutoActual) return;
+
+  ultimaFuenteServiciosDelDia = fuenteActual;
+  ultimoMinutoServiciosDelDia = minutoActual;
   renderServiciosDelDia();
-
-  setTimeout(() => {
-    renderServiciosDelDia();
-  }, 500);
 }
 
 function normalizarValorServicioDia(valor) {
