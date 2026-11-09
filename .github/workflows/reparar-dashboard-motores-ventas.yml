@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'ops/reparar-motores-ventas-20261109.txt'
+      - 'ops/diagnostico-graph-ventas-20261109.txt'
   workflow_dispatch:
     inputs:
       confirmacion:
