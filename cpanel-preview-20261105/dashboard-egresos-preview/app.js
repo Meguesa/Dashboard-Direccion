@@ -130,6 +130,33 @@ let actualizacionEnCurso = false;
 let cacheCargadoDashboard = false;
 let statusPanelTimeoutId = null;
 
+// Detectar escrituras idénticas por identidad de las tablas y filtros. Evita
+// serializar decenas de miles de registros al cambiar de pestaña o periodo.
+const cacheReferencias = new WeakMap();
+let cacheReferenciaSiguiente = 0;
+let ultimaFirmaCacheDashboard = null;
+let cacheEscrituraEnCurso = null;
+
+function obtenerFirmaCacheDashboard() {
+  const nombres = [
+    "ingresos", "egresos", "ventas", "servicios", "marketing",
+    "marketingMedios", "marketingRedes", "metasCobranza",
+    "metasVentas", "alertas", "parquePropiedades"
+  ];
+  const referencias = nombres.map(nombre => {
+    const registros = state.datos[nombre];
+    if (!registros || typeof registros !== "object") return nombre + ":vacio";
+    if (!cacheReferencias.has(registros))
+      cacheReferencias.set(registros, ++cacheReferenciaSiguiente);
+    return nombre + ":" + cacheReferencias.get(registros) + ":" + registros.length;
+  });
+  return JSON.stringify([
+    state.anioSeleccionado, state.mesSeleccionado,
+    state.mesInicioSeleccionado, state.mesFinSeleccionado,
+    ...referencias
+  ]);
+}
+
 window.dashboardCacheReady = Promise.resolve(false);
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -894,6 +921,13 @@ function coincideMesGenerico(item, mesSeleccionado) {
 }
 
 async function guardarDatosEnCache() {
+  // Consolidar llamadas simultáneas y omitir guardados sin cambios.
+  if (cacheEscrituraEnCurso) {
+    await cacheEscrituraEnCurso;
+    return guardarDatosEnCache();
+  }
+  const firma = obtenerFirmaCacheDashboard();
+  if (firma === ultimaFirmaCacheDashboard) return true;
   const payload = {
     fechaGuardado: new Date().toISOString(),
     anioSeleccionado: state.anioSeleccionado,
@@ -916,7 +950,9 @@ async function guardarDatosEnCache() {
   };
 
   try {
-    await escribirDashboardCacheIndexedDb(DASHBOARD_CACHE_KEY, payload);
+    cacheEscrituraEnCurso = escribirDashboardCacheIndexedDb(DASHBOARD_CACHE_KEY, payload);
+    await cacheEscrituraEnCurso;
+    ultimaFirmaCacheDashboard = firma;
 
     // El cache grande ya no debe ocupar localStorage. Solo se eliminan las
     // llaves antiguas del Dashboard; MSAL y el resto del portal quedan intactos.
@@ -943,6 +979,8 @@ async function guardarDatosEnCache() {
   } catch (error) {
     console.warn("No se pudo guardar cache IndexedDB del dashboard:", error);
     return false;
+  } finally {
+    cacheEscrituraEnCurso = null;
   }
 }
 
@@ -999,9 +1037,8 @@ async function cargarDatosDesdeCache() {
 }
 
 function iniciarActualizacionAutomatica() {
-  if (intervaloActualizacionDashboard) {
-    clearInterval(intervaloActualizacionDashboard);
-  }
+  // Un solo temporizador por sesión, sin reiniciarlo al re-renderizar.
+  if (intervaloActualizacionDashboard) return;
 
   intervaloActualizacionDashboard = setInterval(async () => {
     if (typeof window.haySesionActiva === "function" && !window.haySesionActiva()) {
