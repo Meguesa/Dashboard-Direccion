@@ -18,7 +18,12 @@ No suspender Power Automate ni eliminar las listas hasta concluir la conciliaci�
 
 - `Ventas 2026.xlsx` contiene hojas por mes (enero a noviembre), cuadros de proyección, totales por asesor, y una tabla tabular de **633 filas** en el momento del análisis. Dicha tabla tiene columnas `Fecha`, `Mes`, `Asesor`, `Semana`, `Monto_Venta`, `Servicios_AF`, `Servicios_CH`, `TS_TSC`, `Propiedades`, `Nichos`, `Total_Unidades`, `Meta_Mensual`, `Tipo_Registro`, `Fuente`, `Clave_Registro`, `Hoja_Origen`, `Fila_Origen`.
 - En `BI_Ventas` había 1,778 filas: **1,141** `Transaccion` de `CONTRATOS` y **637** del archivo de Ventas (**454** `Semanal`, **183** `Mensual`).
-- Desfase provisional en esa foto: **4 filas** entre la tabla de 633 y las 637 sincronizadas desde el libro. Puede ser desfase temporal o transformación; es obligatorio comparar por `Clave_Registro` y huella/eTag de la misma versión antes de concluir que hay errores.
+- Se compararon las **633 claves originales** con las **637 claves** existentes en BI_Ventas: no falta ninguna clave del Excel en la lista, pero hay **4 claves antiguas adicionales en SharePoint**. Deben excluirse al cortar a Excel, no sumarse como registros vigentes. La comparación es una foto y debe repetirse al momento del corte:
+  - `Ventas 2026|JULIO|14|TOTAL|Mensual|MARITZA` — **$0**.
+  - `Ventas 2026|JULIO|22|C|Semanal|Otros(ISMAEL, DANIEL, VICKY)` — **$158,620**.
+  - `Ventas 2026|SEPTIEMBRE|17|D|Semanal|Jorge` — **$35,964**.
+  - `Ventas 2026|SEPTIEMBRE|5|E|Semanal|Lupita Soto` — **$512,851**.
+  - El efecto bruto de las tres filas monetarias extras es **$707,435** en el universo `Semanal`; la fila `Mensual` es $0. Esto no prueba por sí solo que los KPIs del dashboard estén inflados, porque deben respetarse los filtros de `Tipo_Registro`.
 - Importes semanales y mensuales **representan dos granularidades del mismo origen**. No sumar `Mensual` y `Semanal` en un único total; el módulo actual puede usarlos en vistas diferentes.
 - Los registros `Transaccion` contienen referencia/contrato, fecha, total y tipo; no existen en el resumen tabular de `Ventas 2026.xlsx`. Deben leerse desde `CONTRATOS.xlsx`.
 - El rango de datos existente de 2026 no acredita cobertura histórica 2024/2025. No fabricar registros antiguos; localizar libros originales para cada año antes de habilitar esas series.
