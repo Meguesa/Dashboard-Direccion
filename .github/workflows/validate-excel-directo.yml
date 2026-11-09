@@ -54,13 +54,14 @@ jobs:
           cd deploy-excel-directo
           zip -q -r ../dashboard-excel-directo-cpanel.zip .
           cd ..
-          test "$(unzip -Z1 dashboard-excel-directo-cpanel.zip | wc -l)" -eq 29
+          test "$(unzip -Z1 dashboard-excel-directo-cpanel.zip | wc -l)" -eq 30
           unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'index.php'
           unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'graph.js'
           unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'ingresos-historico.php'
           unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'egresos-excel.php'
           unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'actualizar-motor-egresos.php'
           unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'actualizar-motores.php'
+          unzip -Z1 dashboard-excel-directo-cpanel.zip | grep -qx 'ventas-excel-preview.php'
           sha256sum dashboard-excel-directo-cpanel.zip > dashboard-excel-directo-cpanel.sha256
       - name: Dejar ZIP disponible para descarga manual
         uses: actions/upload-artifact@v4

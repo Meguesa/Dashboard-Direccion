@@ -9,6 +9,7 @@ on:
     paths:
       - 'ops/publicar-motor-financiero-20261109.txt'
       - 'ops/publicar-gestor-motores-20261109.txt'
+      - 'ops/publicar-preview-ventas-20261109.txt'
   workflow_dispatch:
     inputs:
       confirmacion:
@@ -46,12 +47,13 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m unittest discover -s tests -p 'test_excel_directo_build.py' -v
-          test "$(find deploy-excel-directo -maxdepth 1 -type f | wc -l)" -eq 29
+          test "$(find deploy-excel-directo -maxdepth 1 -type f | wc -l)" -eq 30
           php -l deploy-excel-directo/index.php
           php -l deploy-excel-directo/ingresos-historico.php
           php -l deploy-excel-directo/egresos-excel.php
           php -l deploy-excel-directo/actualizar-motor-egresos.php
           php -l deploy-excel-directo/actualizar-motores.php
+          php -l deploy-excel-directo/ventas-excel-preview.php
           for archivo in deploy-excel-directo/*.js; do
             node --check "$archivo"
           done
