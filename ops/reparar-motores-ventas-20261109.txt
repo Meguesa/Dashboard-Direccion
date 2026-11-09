@@ -1,0 +1,3 @@
+Autorizo un despliegue FTPS puntual: ventas-excel-preview.php y actualizar-motores.php, exclusivamente.
+No transferir index.php, graph.js, app.js, .htaccess, fuentes Excel ni motores privados.
+Verificar por transferencia de ida y vuelta y comprobacion HTTP.
