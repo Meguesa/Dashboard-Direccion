@@ -287,6 +287,20 @@ async function escribirDashboardCacheIndexedDb() {
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("Cache deduplication passed", result.stdout)
 
+    def test_expense_historical_cache_integrity_and_year_revalidation(self):
+        engine = (ROOT / "cpanel-preview-20261105/private-code/egresos_engine.php").read_text(encoding="utf-8")
+        endpoint = self.read("egresos-excel.php")
+        self.assertIn("function egRun(bool $force=false,?array $years=null)", engine)
+        self.assertIn("if($years!==null&&!in_array((int)$year,$years,true))continue;", engine)
+        self.assertIn("empty($mesEstado['auditoria']['validado'])", engine)
+        self.assertIn("empty($mesEstado['cacheDisponible'])", engine)
+        self.assertIn("empty($cacheMes['auditoria']['validado'])", engine)
+        self.assertIn("!is_file(HS_DIR.'/'.$nombreCache)", engine)
+        self.assertIn("egRun(true,[2024,2025])", endpoint)
+        self.assertIn("Revalidar 2024 y 2025", endpoint)
+        self.assertIn("m.archivos||{}", endpoint)
+        self.assertIn("a.error||", endpoint)
+
     def test_expense_file_discovery_with_mock_graph(self):
         source = (ROOT / "cpanel-preview-20261105/private-code/egresos_engine.php").as_posix()
         php = """<?php
