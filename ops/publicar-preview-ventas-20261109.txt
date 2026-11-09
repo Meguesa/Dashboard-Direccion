@@ -1,0 +1,3 @@
+Despliegue excepcional del diagnostico de permisos de Ventas 2026 y CONTRATOS.
+No hay cambio de BI_Ventas, Excel, Power Automate, dashboard de Ventas ni cron.
+Solo se agrega una pagina administrativa protegida de metadatos Graph.
