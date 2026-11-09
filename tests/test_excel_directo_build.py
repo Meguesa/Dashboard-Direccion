@@ -304,6 +304,19 @@ async function escribirDashboardCacheIndexedDb() {
         self.assertIn("No fue posible", source)
         self.assertIn("Gestionar todos los motores (GitHub)", self.read("egresos-excel.php"))
 
+    def test_sales_app_graph_metadata_preflight_is_isolated(self):
+        preview = self.read("ventas-excel-preview.php")
+        self.assertIn("portal_require_authentication()", preview)
+        self.assertIn("portal_user_can_tool('dashboard')", preview)
+        self.assertIn("hsToken()", preview)
+        self.assertIn("hsRemoteJson(", preview)
+        self.assertIn("VENTAS_2026", preview)
+        self.assertIn("CONTRATOS", preview)
+        self.assertIn("'lecturaHabilitada'=>false", preview)
+        self.assertIn("$out['lecturaHabilitada']=false;", preview)
+        self.assertNotIn("hsSnapshotDownload(", preview)
+        self.assertNotIn("egRun(", preview)
+
     def test_sales_original_xlsx_audit_is_preview_only(self):
         auditor = (ROOT / "tools/auditar_ventas_excel.py").read_text(encoding="utf-8")
         compile(auditor, "tools/auditar_ventas_excel.py", "exec")
