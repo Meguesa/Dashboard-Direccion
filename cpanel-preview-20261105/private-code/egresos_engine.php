@@ -77,7 +77,8 @@ function egSources(string $token):array {
     krsort($found,SORT_NUMERIC);
     return $found;
 }
-function egRun(bool $force=false):array {
+function egRun(bool $force=false,?array $years=null):array {
+    if($years!==null){foreach($years as $year){if(!is_int($year)||$year<EG_MIN_YEAR||$year>2100)throw new InvalidArgumentException('Año solicitado inválido.');}}
     @set_time_limit(180);
     $lock=fopen(HS_DIR.'/egresos.lock','c');
     if(!$lock||!flock($lock,LOCK_EX|LOCK_NB))return ['estado'=>'ocupado'];
@@ -93,6 +94,7 @@ function egRun(bool $force=false):array {
         $sources=egSources($token);
         $state['catalogo']=array_map(fn($src)=>$src['nombre'],$sources);
         foreach($sources as $year=>$source){
+            if($years!==null&&!in_array((int)$year,$years,true))continue;
             if(microtime(true)-$started>140){$run['pendientes'][]=(string)$year;continue;}
             $phase='metadatos_'.$year;
             try{
@@ -103,8 +105,22 @@ function egRun(bool $force=false):array {
                     throw new RuntimeException('Identidad del libro anual no válida.');
                 $prev=$state['archivos'][$year]??[];
                 $monthsOfYear=$prev['meses']??[];
+                // Una auditoría fallida NO es una caché válida. Antes se usaba
+                // isset(auditoria), lo que dejaba años históricos sin volver
+                // a intentarse incluso cuando nunca tuvieron datos publicados.
                 $cacheOK=count($monthsOfYear)>0;
-                foreach($monthsOfYear as $month)if(!isset($state['meses'][$month]['auditoria']))$cacheOK=false;
+                foreach($monthsOfYear as $month){
+                    $mesEstado=$state['meses'][$month]??[];
+                    $nombreCache=egCacheName((string)$month);
+                    $cacheMes=hsRead($nombreCache);
+                    if(empty($mesEstado['auditoria']['validado'])||
+                       empty($mesEstado['cacheDisponible'])||
+                       empty($cacheMes['auditoria']['validado'])||
+                       ($cacheMes['mes']??'')!==$month||
+                       !is_file(HS_DIR.'/'.$nombreCache)){
+                        $cacheOK=false;break;
+                    }
+                }
                 if(!$force&&$cacheOK&&($prev['build']??'')===EG_BUILD&&
                    ($prev['etag']??'')===$etag&&empty($prev['nuevaVersionPendiente'])){
                     $state['archivos'][$year]['verificadoUTC']=hsNow();
