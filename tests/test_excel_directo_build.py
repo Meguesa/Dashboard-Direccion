@@ -300,7 +300,7 @@ async function escribirDashboardCacheIndexedDb() {
         self.assertIn("php.bak", source)
         self.assertIn("hash_file('sha256',$destination)", source)
         self.assertIn("opcache_invalidate", source)
-        self.assertIn("escapeshellarg(PHP_BINARY)", source)
+        self.assertIn("exec('php -l '", source)
         self.assertIn("No fue posible", source)
         self.assertIn("Gestionar todos los motores (GitHub)", self.read("egresos-excel.php"))
 
