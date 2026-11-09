@@ -320,6 +320,17 @@ async function escribirDashboardCacheIndexedDb() {
         self.assertIn("No fue posible", source)
         self.assertIn("Gestionar todos los motores (GitHub)", self.read("egresos-excel.php"))
 
+    def test_sales_preflight_diagnoses_graph_http_without_leaking_tokens(self):
+        source = self.read("ventas-excel-preview.php")
+        self.assertIn("ventas-preflight-2", source)
+        self.assertIn("'httpGraph'=>$http", source)
+        self.assertIn("401=>", source)
+        self.assertIn("403=>", source)
+        self.assertIn("404=>", source)
+        self.assertIn("'rolesAplicacion'", source)
+        self.assertNotIn("'token'=>$token", source)
+        self.assertNotIn("'detalle'=>$e->getMessage()", source)
+
     def test_sales_app_graph_metadata_preflight_is_isolated(self):
         preview = self.read("ventas-excel-preview.php")
         self.assertIn("portal_require_authentication()", preview)
