@@ -15,7 +15,7 @@ VERSION = "20261106-metas-historicas-3"
 FILES = [
     "index.php", "app.js", "graph.js", "auth.js", "config.js",
     "ingresos-historico.php", "ingresos-historico.js",
-    "egresos-excel.php", "egresos-excel.js", "actualizar-motor-egresos.php", "actualizar-motores.php",
+    "egresos-excel.php", "egresos-excel.js", "actualizar-motor-egresos.php", "actualizar-motores.php", "ventas-excel-preview.php",
     "account-menu.css", "portal-integration.css", "styles.css",
     "dashboard-role-access.css", "dashboard-role-access.js",
     "dashboard-table-tools.js", "dashboard-annual-history.js",
