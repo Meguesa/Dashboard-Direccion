@@ -103,8 +103,22 @@ function egRun(bool $force=false):array {
                     throw new RuntimeException('Identidad del libro anual no válida.');
                 $prev=$state['archivos'][$year]??[];
                 $monthsOfYear=$prev['meses']??[];
+                // Una auditoría fallida NO es una caché válida. Antes se usaba
+                // isset(auditoria), lo que dejaba años históricos sin volver
+                // a intentarse incluso cuando nunca tuvieron datos publicados.
                 $cacheOK=count($monthsOfYear)>0;
-                foreach($monthsOfYear as $month)if(!isset($state['meses'][$month]['auditoria']))$cacheOK=false;
+                foreach($monthsOfYear as $month){
+                    $mesEstado=$state['meses'][$month]??[];
+                    $nombreCache=egCacheName((string)$month);
+                    $cacheMes=hsRead($nombreCache);
+                    if(empty($mesEstado['auditoria']['validado'])||
+                       empty($mesEstado['cacheDisponible'])||
+                       empty($cacheMes['auditoria']['validado'])||
+                       ($cacheMes['mes']??'')!==$month||
+                       !is_file(HS_DIR.'/'.$nombreCache)){
+                        $cacheOK=false;break;
+                    }
+                }
                 if(!$force&&$cacheOK&&($prev['build']??'')===EG_BUILD&&
                    ($prev['etag']??'')===$etag&&empty($prev['nuevaVersionPendiente'])){
                     $state['archivos'][$year]['verificadoUTC']=hsNow();
