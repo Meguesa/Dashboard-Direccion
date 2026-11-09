@@ -30,6 +30,22 @@ No suspender Power Automate ni eliminar las listas hasta concluir la conciliaci�
 - **Auditoría directa del libro `CONTRATOS.xlsx`:** su tabla `DASHBOARD` tiene **1,096 Transaccion** y **9 claves duplicadas**, todas en `LOTES`, agosto de 2026, con registros repetidos idénticos. La lista `BI_Ventas` tiene **1,141 Transaccion**, de modo que su contenido ya no coincide con esa tabla generada. Es un impedimento de publicación; verificar qué generador actualiza `DASHBOARD` y usar los contratos originales de las tres hojas en el lector definitivo, con clave única y control de bajas.
 - El rango de datos existente de 2026 no acredita cobertura histórica 2024/2025. No fabricar registros antiguos; localizar libros originales para cada año antes de habilitar esas series.
 
+## Desglose de marzo 2026 en Excel fuente
+
+El descuadre de $4,302 del resumen semanal frente al mensual se localizó en valores **fijos**, no fórmulas, de `MARZO!G5`, `G11`, `G12`, `G13`, `G16` y `G18`.
+
+| Celda | Diferencia de G frente a SUMA(B:F) |
+| --- | ---: |
+| G5, Lupita Soto | -$1 |
+| G11, Heriberto | +$6 |
+| G12, Maribel | +$17 |
+| G13, AnaLilia | +$60 |
+| G16, Ofelia | +$57 |
+| G18, Francisco | +$4,163 |
+| **Total** | **+$4,302** |
+
+`MARZO!G20` sí utiliza `=SUM(G4:G19)` y obtiene $7,128,360, por lo que sumar la columna G reproduce los valores fijos. **No corregir G5/G11/G12/G13/G16/G18 automáticamente**: el equipo Comercial debe determinar si son ajustes legítimos que no quedaron distribuidos por semana, o errores de captura. Hasta resolverlo, el lector nuevo reportará la discrepancia y no sustituirá resultados validados.
+
 ## Reglas del lector definitivo
 
 1. Acceso Microsoft Graph de **aplicación**, mínimo privilegio por cada archivo/carpeta autorizada. No agregar secretos a PHP público.
