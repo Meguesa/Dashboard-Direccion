@@ -1,0 +1,3 @@
+Publicar el gestor de motores PHP de forma excepcional tras aprobar CI y fusionar PR #20.
+La migracion de Ventas NO se activa en este despliegue.
+El ciclo de refresco de 15 minutos y los motores actuales no se modifican.
