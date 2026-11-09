@@ -1,0 +1,5 @@
+Publicacion extraordinaria de Dashboard Excel, 2026-11-09.
+Autoriza una sola ejecucion del workflow al fusionar este marcador a main.
+El workflow conserva FTPS con validaciones de acceso y bloqueos de archivos.
+No instala automaticamente el motor privado: el administrador lo promueve
+desde la nueva pagina protegida con respaldo e integridad verificable.
