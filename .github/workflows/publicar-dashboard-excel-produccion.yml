@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - 'ops/publicar-motor-financiero-20261109.txt'
+      - 'ops/publicar-gestor-motores-20261109.txt'
   workflow_dispatch:
     inputs:
       confirmacion:
