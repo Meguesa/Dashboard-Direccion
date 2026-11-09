@@ -211,6 +211,17 @@ echo json_encode(hsMetaDesdeFilas($rows,'2024-07'));
         self.assertNotIn("fetch(\"BI_Metas_Cobranza", historical)
         self.assertNotIn("obtenerMetasCobranzaSharePoint", historical)
 
+    def test_services_day_does_not_render_or_log_multiple_times(self):
+        app = self.read("app.js")
+        self.assertNotIn('console.log("Servicios del día:"', app)
+        self.assertEqual(app.count("renderServiciosDelDiaSeguro();"), 1)
+        self.assertNotIn("setTimeout(() => {\n    renderServiciosDelDia();", app)
+        self.assertIn("ultimaFuenteServiciosDelDia === fuenteActual", app)
+        self.assertIn("ultimoMinutoServiciosDelDia === minutoActual", app)
+        self.assertIn("Math.floor(Date.now() / 60000)", app)
+        self.assertIn("renderServiciosDelDia();", app)
+        self.assertIn("const DASHBOARD_REFRESH_MS = 15 * 60 * 1000;", app)
+
     def test_fifteen_minute_refresh_without_background_polling(self):
         app = self.read("app.js")
         income = self.read("ingresos-historico.js")
