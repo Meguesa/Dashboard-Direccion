@@ -2,6 +2,12 @@
 name: Publicar Dashboard Excel directo
 
 on:
+  # Despliegue excepcional de una sola ocasión, autorizado en el PR que
+  # incorpora el instalador de motor. Los cambios normales siguen siendo manuales.
+  push:
+    branches: [main]
+    paths:
+      - 'ops/publicar-motor-financiero-20261109.txt'
   workflow_dispatch:
     inputs:
       confirmacion:
@@ -18,7 +24,7 @@ concurrency:
 
 jobs:
   publicar:
-    if: ${{ github.event.inputs.confirmacion == 'PUBLICAR_EXCEL' }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.confirmacion == 'PUBLICAR_EXCEL') || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -39,10 +45,11 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m unittest discover -s tests -p 'test_excel_directo_build.py' -v
-          test "$(find deploy-excel-directo -maxdepth 1 -type f | wc -l)" -eq 27
+          test "$(find deploy-excel-directo -maxdepth 1 -type f | wc -l)" -eq 28
           php -l deploy-excel-directo/index.php
           php -l deploy-excel-directo/ingresos-historico.php
           php -l deploy-excel-directo/egresos-excel.php
+          php -l deploy-excel-directo/actualizar-motor-egresos.php
           for archivo in deploy-excel-directo/*.js; do
             node --check "$archivo"
           done
