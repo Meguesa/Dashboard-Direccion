@@ -102,14 +102,24 @@ function hsMetaMesValidado(string $mes,?string &$token):array {
     $etag=(string)($ingresos['excel']['etag']??'');
     $shaValido=(bool)preg_match('/^[a-f0-9]{64}$/D',$sha);
     if($etag==='')return array_merge($noDisponible,['motivo'=>'ETAG_EXCEL_AUSENTE']);
+    // El manifiesto puede registrar una version nueva mientras la ultima
+    // auditoria mensual aun conserva el Excel anterior: nunca mostrar
+    // reales de otra version junto al KPI de Ingresos.
+    $estadoMes=hsRead('historico_estado.json')['meses'][$mes]??[];
+    $etagEstado=(string)($estadoMes['excel']['etag']??'');
+    if($etagEstado!==''&&$etagEstado!==$etag)
+        return array_merge($noDisponible,['motivo'=>'INGRESOS_PENDIENTES_DE_CONCILIAR']);
     $nombre='cache_metas_cobranza_excel_'.$mes.'.json';
+    // Una lectura de metas en cache solo corresponde al mes vigente cuando
+    // COINCIDEN ambas huellas (eTag y, si existe, SHA) del Excel de Ingresos.
+    // Antes el segundo chequeo bajo lock comparaba "" === "" con SHA legada.
+    $cacheCoincide=static function(array $guardada)use($sha,$etag,$shaValido):bool {
+        return ($guardada['validado']??false)===true
+            && ($guardada['excelEtag']??'')===$etag
+            && (!$shaValido||($guardada['excelSha256']??'')===$sha);
+    };
     $cache=hsRead($nombre);
-    // Si el motor anterior omitio SHA en el manifiesto, la version de Excel
-    // sigue identificada de forma inequívoca por su eTag. No servir otra
-    // version del libro: exigir mismo eTag en la caratula previamente validada.
-    if(($cache['validado']??false)&&
-       ($shaValido ? ($cache['excelSha256']??'')===$sha :
-        ($cache['excelEtag']??'')===$etag))return $cache;
+    if($cacheCoincide($cache))return $cache;
     // Los historicos antiguos pueden tener auditoria validada y eTag, pero
     // carecer de SHA-256. No se rechazan por ello: la version exacta del Excel
     // debe coincidir antes Y despues de obtener la caratula.
@@ -121,7 +131,7 @@ function hsMetaMesValidado(string $mes,?string &$token):array {
     }
     try{
         $cache=hsRead($nombre);
-        if(($cache['validado']??false)&&($cache['excelSha256']??'')===$sha)return $cache;
+        if($cacheCoincide($cache))return $cache;
         if($token===null)$token=hsToken();
         $catalogo=hsRead('historico_catalogo.json')['meses']??[];
         if(!isset($catalogo[$mes]))$catalogo=hsSources($token);
