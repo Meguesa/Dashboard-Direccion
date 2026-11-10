@@ -65,6 +65,73 @@ class ExcelDirectBuildChecks(unittest.TestCase):
         self.assertIn("hsMetaDesdeExcel($descarga['temporal'],$mes)", source)
         self.assertIn("hsWrite($nombre,$resultado)", source)
 
+    def test_income_goal_cache_requires_matching_sha_and_etag(self):
+        """Even a matching SHA must never accept a previous caratula eTag."""
+        source = self.read("ingresos-historico.php")
+        start = source.index("function hsMetaMesValidado(")
+        end = source.index("\n$mode=$_GET", start)
+        php_function = source[start:end]
+        script = """<?php
+declare(strict_types=1);
+const HS_RULES=2;
+const HS_DIR=__DIR__;
+const JJP_COBRANZA_DRIVE_ID='MOCK';
+$sha=hash('sha256','new-excel');
+$GLOBALS['data']=[
+  'cache_excel_ingresos_2026-11.json'=>[
+    'auditoria'=>['validado'=>true], 'reglasVersion'=>2,
+    'excel'=>['sha256'=>$sha,'etag'=>'new-etag']
+  ],
+  'cache_metas_cobranza_excel_2026-11.json'=>[
+    'validado'=>true,'excelSha256'=>$sha,'excelEtag'=>'old-etag',
+    'realTotal'=>570998.84
+  ],
+  'historico_estado.json'=>['meses'=>[
+    '2026-11'=>['excel'=>['etag'=>'new-etag']]
+  ]],
+  'historico_catalogo.json'=>['meses'=>['2026-11'=>['id'=>'item']]]];
+$GLOBALS['downloadCount']=0;
+function hsRead(string $name,array $fallback=[]):array{
+ return $GLOBALS['data'][$name]??$fallback;
+}
+function hsWrite(string $name,array $data):void{$GLOBALS['data'][$name]=$data;}
+function hsCacheName(string $month):string{return 'cache_excel_ingresos_'.$month.'.json';}
+function hsToken():string{return 'test';}
+function hsSources(string $token):array{return [];}
+function hsGraph(string $path,string $token):array{return ['eTag'=>'new-etag'];}
+function hsSnapshotDownload(string $drive,array $meta,string $token):array{
+ $GLOBALS['downloadCount']++;
+ $path=tempnam(__DIR__,'test_');
+ file_put_contents($path,'new-excel');
+ return ['temporal'=>$path, 'metodo'=>'contenido_actual_guardado',
+  'nuevaVersionPendiente'=>false,'sha256'=>hash('sha256','new-excel')];
+}
+function hsMetaDesdeExcel(string $file,string $mes):array{
+ return ['mes'=>$mes,'metas'=>[
+  ['area'=>'Panteon','realCaratula'=>25410.56,'metaMensual'=>120000],
+  ['area'=>'Servicios CH','realCaratula'=>139020.61,'metaMensual'=>950646],
+  ['area'=>'Servicios AF','realCaratula'=>211796.64,'metaMensual'=>1393562.5],
+  ['area'=>'Total Service','realCaratula'=>670378.86,'metaMensual'=>2425791.5]],
+  'metaTotal'=>4890000,'realTotal'=>1046606.67];
+}
+""" + php_function + """
+$token=null;
+$r=hsMetaMesValidado('2026-11',$token);
+if(!($r['validado']??false))throw new RuntimeException('Updated book not validated');
+if(abs(($r['realTotal']??0)-1046606.67)>0.001)throw new RuntimeException('Old real collection served');
+if($GLOBALS['downloadCount']!==1)throw new RuntimeException('Book was not re-read');
+if(($r['excelEtag']??'')!=='new-etag')throw new RuntimeException('Wrong eTag');
+$r2=hsMetaMesValidado('2026-11',$token);
+if($GLOBALS['downloadCount']!==1)throw new RuntimeException('Valid cache re-downloaded');
+echo 'Stale goal cache rejected; updated caratula served';
+"""
+        with tempfile.TemporaryDirectory(prefix="goals-sha-etag-") as tmp:
+            p = Path(tmp) / "verify.php"
+            p.write_text(script, encoding="utf-8")
+            result = subprocess.run(["php", str(p)], text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Stale goal cache rejected", result.stdout)
+
     def test_legacy_meta_sha_recovery_and_etag_guard_runtime(self):
         """Exercise the actual PHP routine with synthetic caches and mocked Graph."""
         source = self.read("ingresos-historico.php")
@@ -152,7 +219,7 @@ function hsCents($v) { return (int) round((float)$v * 100); }
 """ + parser + """
 $rows = [
  [23,[1=>'BANCOS',2=>'Panteon',3=>'Servicios CH',4=>'Servicios AF',5=>'TOTAL SERVICE',6=>'TOTAL'],[]],
- [28,[1=>'Ingreso Total',2=>'2375',3=>'41438.89',4=>'92645.54',5=>'191489.48',6=>'327948.91'],[]],
+ [28,[1=>'Ingreso Total',2=>'25410.56',3=>'139020.61',4=>'211796.64',5=>'670378.86',6=>'1046606.67'],[]],
  [29,[1=>'META',2=>'120000',3=>'950646',4=>'1393562.50',5=>'2425791.50',6=>'4890000'],[]],
 ];
 echo json_encode(hsMetaDesdeFilas($rows,'2026-11'));
@@ -166,7 +233,7 @@ echo json_encode(hsMetaDesdeFilas($rows,'2026-11'));
                              ["Panteon", "Servicios CH", "Servicios AF", "Total Service"])
             self.assertEqual([r["metaMensual"] for r in meta["metas"]],
                              [120000, 950646, 1393562.5, 2425791.5])
-            self.assertAlmostEqual(meta["realTotal"], 327948.91)
+            self.assertAlmostEqual(meta["realTotal"], 1046606.67)
             self.assertEqual(meta["metaTotal"], 4890000)
 
     def test_historical_cover_keeps_original_total_with_warning(self):
