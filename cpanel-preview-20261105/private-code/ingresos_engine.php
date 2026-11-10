@@ -180,6 +180,17 @@ function hsProcess(string $month,array $source,string $token,bool $force=false):
         }
         $a=hsAudit($tmp,$month);$after=hsGraph('/items/'.rawurlencode($source['id']).'?$select=id,eTag,cTag',$token);
         $state['nuevaVersionPendiente']=!empty($download['nuevaVersionPendiente'])||($after['eTag']??null)!==$etag;$state['excel']['etagObservadoFinal']=$after['eTag']??null;
+        // Un cambio entre la metadata inicial y la descarga hace que los
+        // movimientos y la caratula ya no tengan version inequivoca.
+        // Conservar el ultimo snapshot auditado; reintentar el siguiente cron.
+        if($state['nuevaVersionPendiente']){
+            $ultimaValida=($cache['auditoria']['validado']??false)===true;
+            $state['estado']=$ultimaValida?'ultima_validada_con_actualizacion_pendiente':'no_disponible';
+            $state['cacheDisponible']=$ultimaValida;
+            $state['generadoUTC']=$cache['generadoUTC']??null;
+            $state['auditoria']=$ultimaValida?$cache['auditoria']:['validado'=>false,'errores'=>['Excel modificado durante la lectura']];
+            return $state;
+        }
         $mov=$a['movimientos'];unset($a['movimientos']);$state['auditoria']=$a;$state['cacheDisponible']=($a['validado']||!empty($cache['auditoria']['validado']));
         if($a['validado']){$state['estado']='validado';$state['generadoUTC']=hsNow();$snapshot=['version'=>2,'build'=>HS_BUILD,'reglasVersion'=>HS_RULES,'mes'=>$month,'generadoUTC'=>$state['generadoUTC'],'verificadoUTC'=>hsNow(),'excel'=>$state['excel'],'auditoria'=>$a,'movimientos'=>$mov];hsWrite(hsCacheName($month),$snapshot);}
         else{$state['estado']=$state['cacheDisponible']?'ultima_validada_con_incidencia':'no_disponible';$state['generadoUTC']=$cache['generadoUTC']??null;}
@@ -225,8 +236,47 @@ function hsRun(bool $manual=false,bool $force=false,?array $selected=null,bool $
     finally{$run['finUTC']=hsNow();$run['segundos']=round(microtime(true)-$start,2);$run['memoriaMaxBytes']=memory_get_peak_usage(true);hsLog($run);flock($lock,LOCK_UN);fclose($lock);}return $run;
 }
 function hsManifest(bool $admin):array {
-    $sources=hsRead('historico_catalogo.json')['meses']??[];$state=hsRead('historico_estado.json')['meses']??[];$months=[];$now=new DateTimeImmutable('now',new DateTimeZone('America/Monterrey'));$active=[$now->format('Y-m'),$now->modify('first day of this month')->modify('-1 month')->format('Y-m')];
-    foreach($sources as $m=>$src){$s=$state[$m]??['mes'=>$m,'estado'=>'pendiente','cacheDisponible'=>false];$age=isset($s['verificadoUTC'])?time()-strtotime($s['verificadoUTC']):null;if(($s['reglasVersion']??0)!==HS_RULES){$s['cacheDisponible']=false;$s['estado']='pendiente_validacion_version';}$s['antigua']=!empty($s['error'])||str_starts_with((string)($s['estado']??''),'ultima_validada')||!empty($s['nuevaVersionPendiente'])||$age===null||$age>(in_array($m,$active,true)?1200:86400);$months[$m]=$s;}
+    $sources=hsRead('historico_catalogo.json')['meses']??[];
+    $state=hsRead('historico_estado.json')['meses']??[];
+    $months=[];
+    $now=new DateTimeImmutable('now',new DateTimeZone('America/Monterrey'));
+    $active=[$now->format('Y-m'),$now->modify('first day of this month')->modify('-1 month')->format('Y-m')];
+    foreach($sources as $m=>$src){
+        $s=$state[$m]??['mes'=>$m,'estado'=>'pendiente','cacheDisponible'=>false];
+        $cache=hsRead(hsCacheName($m));
+        $snapshotValido=($cache['auditoria']['validado']??false)===true
+            && ($cache['reglasVersion']??0)===HS_RULES
+            && !empty($cache['excel']['etag'])
+            && isset($cache['generadoUTC']);
+        $observada=$s['excel']['etag']??null;
+        if($snapshotValido){
+            // El manifiesto anuncia la huella de los datos realmente servidos
+            // por modo=detalle, nunca la de un intento de cron mas nuevo.
+            // Ingresos y avances deben coincidir en eTag y SHA siempre.
+            $s['excelObservado']=$s['excel']??null;
+            $s['excel']=$cache['excel'];
+            $s['auditoria']=$cache['auditoria'];
+            $s['generadoUTC']=$cache['generadoUTC'];
+            $s['cacheDisponible']=true;
+            $s['datosVerificadosUTC']=$cache['verificadoUTC']??null;
+            if(is_string($observada)&&$observada!==''&&$observada!==$cache['excel']['etag']){
+                $s['nuevaVersionPendiente']=true;
+                $s['estado']='ultima_validada_con_actualizacion_pendiente';
+            }
+        }elseif(($s['reglasVersion']??0)!==HS_RULES){
+            $s['cacheDisponible']=false;
+            $s['estado']='pendiente_validacion_version';
+        }else{
+            $s['cacheDisponible']=false;
+            $s['estado']='no_disponible';
+        }
+        $age=isset($s['verificadoUTC'])?time()-strtotime($s['verificadoUTC']):null;
+        $s['antigua']=!empty($s['error'])||
+            str_starts_with((string)($s['estado']??''),'ultima_validada')||
+            !empty($s['nuevaVersionPendiente'])||
+            $age===null||$age>(in_array($m,$active,true)?1200:86400);
+        $months[$m]=$s;
+    }
     $log=is_file(HS_DIR.'/historico_ciclos.jsonl')?file(HS_DIR.'/historico_ciclos.jsonl',FILE_IGNORE_NEW_LINES|FILE_SKIP_EMPTY_LINES):[];
     return ['build'=>HS_BUILD,'fuente'=>'EXCEL_ORIGINAL','biIngresos'=>false,'servidorUTC'=>hsNow(),'puedeActualizar'=>$admin,'meses'=>$months,'controlProduccion'=>$admin?hsProductionCheck():null,'controlPruebas'=>$admin?hsPreviewCheck():null,'ciclos'=>$admin?array_map(fn($x)=>json_decode($x,true),array_slice($log,-12)):[]];
 }
