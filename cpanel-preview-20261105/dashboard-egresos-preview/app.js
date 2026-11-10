@@ -4692,6 +4692,15 @@ function renderFilaMetaCobranza(fila, esTotal) {
 function obtenerMetasCobranzaMes(mes) {
   return (state.datos.metasCobranza || [])
     .filter((meta) => meta.fuenteOrigen === "excel_original_caratula")
+    // Un valor almacenado en IndexedDB puede pertenecer a una version previa
+    // del Excel. No mostrarlo mientras se obtiene la caratula correspondiente.
+    .filter((meta) => {
+      const expected = window.ingresosExcelEstado?.meses?.[meta.mes]?.excel;
+      if (!expected?.etag || meta.excelEtag !== expected.etag) return false;
+      const sha = expected.sha256;
+      return !(typeof sha === "string" && /^[a-f0-9]{64}$/i.test(sha)) ||
+        meta.excelSha256 === sha;
+    })
     .filter((meta) => {
       const esMes = coincideMesValor(meta.mes, mes);
       const estaActivo = meta.activo !== false;
