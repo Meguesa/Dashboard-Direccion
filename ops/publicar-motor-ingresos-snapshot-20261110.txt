@@ -1,0 +1,3 @@
+Publicacion excepcional, sin sustituir motor privado: staging versionado de ingresos_engine.php y endpoint ingresos-historico.php.
+Origen unico para movimientos y caratula validada del mismo Excel; ninguna alteracion a hojas, formulas o permisos Graph.
+El administrador instalara version nueva del motor con respaldo desde actualizar-motores.php, luego revalidara mes vigente.

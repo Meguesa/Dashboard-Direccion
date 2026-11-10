@@ -105,6 +105,100 @@ console.log('Matched latest Excel eTag and SHA');
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("Matched latest Excel", result.stdout)
 
+    def test_single_verified_income_snapshot_supplies_goals_without_graph(self):
+        """Stored November cover sheet, not a second Graph read, supplies area totals."""
+        engine = (ROOT / "cpanel-preview-20261105/private-code/ingresos_engine.php").read_text(encoding="utf-8")
+        self.assertIn("20261110-historico-2", engine)
+        self.assertIn("'filasMetaCaratula'=>$filasMetaCaratula", engine)
+        self.assertIn("$caratulaEnSnapshot", engine)
+        self.assertIn("if($state['nuevaVersionPendiente'])", engine)
+        endpoint = self.read("ingresos-historico.php")
+        parser = endpoint[endpoint.index("function hsMetaDesdeFilas("):
+                          endpoint.index("function hsMetaDesdeExcel(")]
+        source = endpoint[endpoint.index("function hsMetaMesValidado("):
+                          endpoint.index("\n$mode=$_GET", endpoint.index("function hsMetaMesValidado("))]
+        script = """<?php
+declare(strict_types=1);
+const HS_RULES=2;
+const HS_DIR=__DIR__;
+const JJP_COBRANZA_DRIVE_ID='MOCK';
+function hsText($value):string{return strtoupper(trim((string)$value));}
+function hsCents($value):int{return (int)round((float)$value*100);}
+function hsCacheName(string $month):string{return 'cache_excel_ingresos_'.$month.'.json';}
+$GLOBALS['reads']=0;
+$GLOBALS['snapshot']=[
+  'auditoria'=>['validado'=>true,'filasMetaCaratula'=>[
+    [23,[1=>'BANCOS',2=>'Panteon',3=>'Servicios CH',4=>'Servicios AF',5=>'TOTAL SERVICE',6=>'TOTAL'],[]],
+    [28,[1=>'Ingreso Total',2=>'25410.56',3=>'139020.61',4=>'211796.64',5=>'670378.86',6=>'1046606.67'],[]],
+    [29,[1=>'META',2=>'120000',3=>'950646',4=>'1393562.50',5=>'2425791.50',6=>'4890000'],[]]
+  ]],
+  'reglasVersion'=>2,'verificadoUTC'=>'2026-11-10T20:00:00Z',
+  'excel'=>['etag'=>'validated-1305','sha256'=>hash('sha256','book-1305')]];
+function hsRead(string $name,array $fallback=[]):array{
+ if($name===hsCacheName('2026-11'))return $GLOBALS['snapshot'];
+ if($name==='historico_estado.json')return ['meses'=>['2026-11'=>['excel'=>['etag'=>'newer-1307']]]];
+ return $fallback;
+}
+function hsToken():string{throw new RuntimeException('No second auth expected');}
+function hsGraph(string $path,string $token):array{$GLOBALS['reads']++;throw new RuntimeException('No Graph expected');}
+""" + parser + source + """
+$token=null;
+$r=hsMetaMesValidado('2026-11',$token);
+if(!$r['validado']||!($r['mismoSnapshotIngresos']??false))throw new RuntimeException('Snapshot not used');
+if(($r['excelEtag']??'')!=='validated-1305')throw new RuntimeException('Wrong version');
+if(abs($r['realTotal']-1046606.67)>0.01)throw new RuntimeException('Wrong collection total');
+if(abs($r['metaTotal']-4890000)>0.01)throw new RuntimeException('Wrong monthly goal');
+if($GLOBALS['reads']!==0)throw new RuntimeException('Unexpected second Graph fetch');
+echo 'Verified income snapshot supplied caratula without Graph';
+"""
+        with tempfile.TemporaryDirectory(prefix="ingresos-metas-atomic-") as tmp:
+            p = Path(tmp) / "check.php"
+            p.write_text(script, encoding="utf-8")
+            result = subprocess.run(["php", str(p)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("without Graph", result.stdout)
+
+    def test_income_manifest_reports_verified_snapshot_not_newer_observed_etag(self):
+        engine = (ROOT / "cpanel-preview-20261105/private-code/ingresos_engine.php").read_text(encoding="utf-8")
+        source = engine[engine.index("function hsManifest(bool $admin):array {"):]
+        script = """<?php
+declare(strict_types=1);
+const HS_RULES=2;
+const HS_BUILD='20261110-historico-2';
+const HS_DIR=__DIR__;
+function hsNow():string{return '2026-11-10T23:00:00+00:00';}
+function hsCacheName(string $m):string{return 'cache_excel_ingresos_'.$m.'.json';}
+function hsRead(string $name,array $fallback=[]):array{
+ if($name==='historico_catalogo.json')return ['meses'=>['2026-11'=>['id'=>'mock']]];
+ if($name==='historico_estado.json')return ['meses'=>['2026-11'=>[
+   'mes'=>'2026-11','reglasVersion'=>2,'estado'=>'ultima_validada_con_error',
+   'verificadoUTC'=>'2026-11-10T22:55:00+00:00',
+   'excel'=>['etag'=>'newer-1307'],'cacheDisponible'=>true,
+   'generadoUTC'=>'2026-11-10T22:50:00+00:00']]];
+ if($name==='cache_excel_ingresos_2026-11.json')return [
+   'mes'=>'2026-11','reglasVersion'=>2,'build'=>'20261110-historico-2',
+   'verificadoUTC'=>'2026-11-10T20:00:00+00:00',
+   'generadoUTC'=>'2026-11-10T20:00:00+00:00',
+   'auditoria'=>['validado'=>true,'registros'=>16],
+   'excel'=>['etag'=>'validated-1305','sha256'=>hash('sha256','validated')]];
+ return $fallback;
+}
+""" + source + """
+$m=hsManifest(false)['meses']['2026-11'];
+if(($m['excel']['etag']??'')!=='validated-1305')throw new RuntimeException('Manifest advertised newer unvalidated version');
+if(($m['excelObservado']['etag']??'')!=='newer-1307')throw new RuntimeException('Observed book omitted');
+if(($m['generadoUTC']??'')!=='2026-11-10T20:00:00+00:00')throw new RuntimeException('Wrong generatedUTC');
+if(($m['cacheDisponible']??false)!==true||($m['antigua']??false)!==true)throw new RuntimeException('Stale snapshot not signaled');
+if(($m['estado']??'')!=='ultima_validada_con_actualizacion_pendiente')throw new RuntimeException('Pending status not preserved');
+echo 'Manifest references verified income snapshot';
+"""
+        with tempfile.TemporaryDirectory(prefix="manifest-atomic-") as tmp:
+            p = Path(tmp) / "check.php"
+            p.write_text(script, encoding="utf-8")
+            result = subprocess.run(["php", str(p)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("verified income snapshot", result.stdout)
+
     def test_income_goal_cache_requires_matching_sha_and_etag(self):
         """Even a matching SHA must never accept a previous caratula eTag."""
         source = self.read("ingresos-historico.php")
