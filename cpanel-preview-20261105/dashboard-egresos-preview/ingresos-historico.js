@@ -182,6 +182,17 @@ async function obtenerMetasCobranzaExcel(mesesFiltro = []) {
         body.biMetasCobranza !== false || !body.meses) throw new Error("Respuesta de metas inválida");
     for (const m of lote) {
       const bloque = body.meses[m];
+      const huellaEsperada = window.ingresosExcelEstado?.meses?.[m]?.excel;
+      // Comprobar de nuevo la identidad de la version que cargaron los KPIs.
+      // Una respuesta tardia de otra caratula nunca sustituye al corte actual.
+      if (bloque?.validado &&
+          (!huellaEsperada?.etag || bloque.excelEtag !== huellaEsperada.etag ||
+           (typeof huellaEsperada.sha256 === "string" &&
+            /^[a-f0-9]{64}$/i.test(huellaEsperada.sha256) &&
+            bloque.excelSha256 !== huellaEsperada.sha256))) {
+        metasCobranzaExcelIncidencias.set(m, "CARATULA_DE_OTRA_VERSION");
+        continue;
+      }
       if (!bloque?.validado || bloque.fuente !== "EXCEL_ORIGINAL_CARATULA" ||
           !Array.isArray(bloque.metas) || bloque.metas.length !== 4) {
         metasCobranzaExcelIncidencias.set(m, bloque?.motivo || 'CARATULA_NO_VALIDADA');
