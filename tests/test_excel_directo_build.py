@@ -164,6 +164,7 @@ echo 'Verified income snapshot supplied caratula without Graph';
         script = """<?php
 declare(strict_types=1);
 const HS_RULES=2;
+const HS_BUILD='20261110-historico-2';
 const HS_DIR=__DIR__;
 function hsNow():string{return '2026-11-10T23:00:00+00:00';}
 function hsCacheName(string $m):string{return 'cache_excel_ingresos_'.$m.'.json';}
