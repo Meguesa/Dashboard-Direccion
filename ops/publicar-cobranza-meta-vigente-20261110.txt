@@ -1,0 +1,4 @@
+Publicacion excepcional 10 noviembre 2026 para resolver Avance contra meta de cobranza.
+Autorizar exclusivamente ingresos-historico.php, ingresos-historico.js, app.js e index.php.
+Primero correr tests PHP/JS de eTag y SHA; despues subir secuencialmente y comprobar bytes.
+No tocar Excel originales, BI, motores privados ni programacion del cron.
