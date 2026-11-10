@@ -1,0 +1,122 @@
+name: Publicar correccion de cobranza por area (FTPS puntual)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/publicar-cobranza-meta-vigente-20261110.txt'
+  workflow_dispatch:
+    inputs:
+      confirmacion:
+        description: 'Escribe PUBLICAR_COBRANZA para publicar cuatro archivos'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dashboard-direccion
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.confirmacion == 'PUBLICAR_COBRANZA') || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - name: Obtener main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Preparar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring,zip,dom,xml,xmlreader
+          coverage: none
+
+      - name: Validar montos y la integridad del paquete
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p test_excel_directo_build.py
+          php -l deploy-excel-directo/ingresos-historico.php
+          php -l deploy-excel-directo/index.php
+          node --check deploy-excel-directo/ingresos-historico.js
+          node --check deploy-excel-directo/app.js
+          grep -q "20261110-cobranza-caratula-huella-1" deploy-excel-directo/index.php
+          test -f ops/publicar-cobranza-meta-vigente-20261110.txt
+
+      - name: Preparar cliente FTPS
+        shell: bash
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+
+      - name: Publicar únicamente lector, dashboard y activador de versión
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "${FTP_SERVER:-}"
+          test -n "${FTP_USERNAME:-}"
+          test -n "${FTP_PASSWORD:-}"
+          # Actualizar index.php al final para invalidar cache del JS sin
+          # exponer una pagina que apunte a archivos todavia sin transferir.
+          for file in ingresos-historico.js app.js ingresos-historico.php index.php; do
+            src="deploy-excel-directo/$file"
+            verified=0
+            for attempt in 1 2 3; do
+              echo "Publicando $file, intento $attempt"
+              local_copy="$RUNNER_TEMP/verify-$file"
+              rm -f "$local_copy"
+              if timeout --kill-after=5s 90s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+                set cmd:fail-exit yes;
+                set ftp:passive-mode true;
+                set ftp:ssl-force true;
+                set ftp:ssl-protect-data true;
+                set ftp:ssl-auth TLS;
+                set ftp:sync-mode true;
+                set ssl:verify-certificate yes;
+                set ssl:check-hostname yes;
+                set net:timeout 18;
+                set net:max-retries 2;
+                put $src -o .$file.upload;
+                mv .$file.upload $file;
+                get $file -o $local_copy;
+                bye;
+              " && cmp -s "$src" "$local_copy"; then
+                echo "$file verificado: $(sha256sum "$src" | cut -d' ' -f1)"
+                verified=1
+                break
+              fi
+              echo "::warning::Fallo la transferencia verificada de $file (intento $attempt)"
+              if [ "$attempt" -lt 3 ]; then sleep 8; fi
+            done
+            if [ "$verified" -ne 1 ]; then
+              echo "::error::No se pudo publicar $file. No continuar."
+              exit 1
+            fi
+          done
+
+      - name: Comprobar endpoints sin sesiones autenticadas
+        shell: bash
+        run: |
+          set -euo pipefail
+          for page in "" "ingresos-historico.php?modo=manifest"; do
+            status="$(curl -sS --max-time 18 -o /dev/null -w '%{http_code}' "https://portal.juanpablo.com.mx/dashboard/$page")"
+            echo "dashboard/$page: HTTP $status (sin sesion)"
+            case "$status" in
+              000|404|500|502|503) exit 1 ;;
+            esac
+          done
+
+      - name: Resumen
+        shell: bash
+        run: |
+          echo '### Cobranza por area: publicacion puntual verificada' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Solo se actualizaron cuatro archivos web y se verificaron sus SHA por FTPS.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Los Excel, motores privados, cron y procesos de Power Automate no se modificaron.' >> "$GITHUB_STEP_SUMMARY"
