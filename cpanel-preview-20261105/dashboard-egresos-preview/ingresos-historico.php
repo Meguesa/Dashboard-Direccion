@@ -105,6 +105,30 @@ function hsMetaMesValidado(string $mes,?string &$token):array {
     // El manifiesto puede registrar una version nueva mientras la ultima
     // auditoria mensual aun conserva el Excel anterior: nunca mostrar
     // reales de otra version junto al KPI de Ingresos.
+    // Nueva ruta: las filas de la caratula se guardaron dentro del mismo
+    // snapshot que los movimientos, validados con el mismo eTag y SHA.
+    // No consultar Graph nuevamente, aun si el libro activo se esta editando.
+    $filasDelSnapshot=$ingresos['auditoria']['filasMetaCaratula']??null;
+    if(is_array($filasDelSnapshot)&&count($filasDelSnapshot)>=3){
+        if(!$shaValido)return array_merge($noDisponible,['motivo'=>'HUELLA_EXCEL_INCOMPLETA']);
+        try{
+            $resultado=hsMetaDesdeFilas($filasDelSnapshot,$mes);
+            $resultado['validado']=true;
+            $resultado['estado']='validado';
+            $resultado['fuente']='EXCEL_ORIGINAL_CARATULA';
+            $resultado['biMetasCobranza']=false;
+            $resultado['excelSha256']=$sha;
+            $resultado['excelEtag']=$etag;
+            $resultado['verificadoUTC']=$ingresos['verificadoUTC']??$ingresos['generadoUTC']??null;
+            $resultado['mismoSnapshotIngresos']=true;
+            return $resultado;
+        }catch(Throwable $error){
+            error_log('Validacion de metas en snapshot '.$mes.': '.get_class($error));
+            return array_merge($noDisponible,['motivo'=>'CARATULA_SNAPSHOT_NO_VALIDADA']);
+        }
+    }
+    // Transicion de historicos: motores previos no guardaban la caratula.
+    // Solo en esos casos se conserva la lectura separada con eTag estricto.
     $estadoMes=hsRead('historico_estado.json')['meses'][$mes]??[];
     $etagEstado=(string)($estadoMes['excel']['etag']??'');
     if($etagEstado!==''&&$etagEstado!==$etag)
