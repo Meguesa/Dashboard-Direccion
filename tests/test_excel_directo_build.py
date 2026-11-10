@@ -65,6 +65,46 @@ class ExcelDirectBuildChecks(unittest.TestCase):
         self.assertIn("hsMetaDesdeExcel($descarga['temporal'],$mes)", source)
         self.assertIn("hsWrite($nombre,$resultado)", source)
 
+    def test_dashboard_drops_stale_collection_targets_from_indexeddb(self):
+        app = self.read("app.js")
+        start = app.index("function obtenerMetasCobranzaMes(")
+        end = app.index("\nfunction obtenerAreasOrdenadasMetasCobranza(", start)
+        function = app[start:end]
+        historical = self.read("ingresos-historico.js")
+        self.assertIn('CARATULA_DE_OTRA_VERSION', historical)
+        self.assertIn('bloque.excelEtag !== huellaEsperada.etag', historical)
+        self.assertIn('bloque.excelSha256 !== huellaEsperada.sha256', historical)
+        script = """const sha='a'.repeat(64);
+const window={ingresosExcelEstado:{meses:{'2026-11':{
+  excel:{etag:'new-etag',sha256:sha}
+}}}};
+const state={datos:{metasCobranza:[
+  {mes:'2026-11',area:'Panteon',activo:true,fuenteOrigen:'excel_original_caratula',
+   realCaratula:11010.56,metaMensual:120000,excelEtag:'old-etag',excelSha256:sha},
+  {mes:'2026-11',area:'Servicios CH',activo:true,fuenteOrigen:'excel_original_caratula',
+   realCaratula:139020.61,metaMensual:950646,excelEtag:'new-etag',excelSha256:sha},
+  {mes:'2026-11',area:'Servicios AF',activo:true,fuenteOrigen:'excel_original_caratula',
+   realCaratula:95645.54,metaMensual:1393562.5,excelEtag:'new-etag',excelSha256:'b'.repeat(64)},
+  {mes:'2026-11',area:'Total Service',activo:true,fuenteOrigen:'excel_original_caratula',
+   realCaratula:670378.86,metaMensual:2425791.5,excelEtag:'new-etag',excelSha256:sha}
+]}};
+function coincideMesValor(a,b){return a===b;}
+function normalizarAreaMetaCobranza(a){return a;}
+""" + function + """
+const result=obtenerMetasCobranzaMes('2026-11');
+if(result.length!==2 || !result.some(x=>x.area==='Servicios CH') ||
+   !result.some(x=>x.area==='Total Service')){
+ throw Error('Stale target row accepted or current row rejected: '+JSON.stringify(result));
+}
+console.log('Matched latest Excel eTag and SHA');
+"""
+        with tempfile.TemporaryDirectory(prefix="goals-browser-cache-") as tmp:
+            p = Path(tmp) / "verify.js"
+            p.write_text(script, encoding="utf-8")
+            result = subprocess.run(["node", str(p)], text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Matched latest Excel", result.stdout)
+
     def test_income_goal_cache_requires_matching_sha_and_etag(self):
         """Even a matching SHA must never accept a previous caratula eTag."""
         source = self.read("ingresos-historico.php")
@@ -235,6 +275,8 @@ echo json_encode(hsMetaDesdeFilas($rows,'2026-11'));
                              [120000, 950646, 1393562.5, 2425791.5])
             self.assertAlmostEqual(meta["realTotal"], 1046606.67)
             self.assertEqual(meta["metaTotal"], 4890000)
+            self.assertEqual([round(row["realCaratula"], 2) for row in meta["metas"]],
+                             [25410.56, 139020.61, 211796.64, 670378.86])
 
     def test_historical_cover_keeps_original_total_with_warning(self):
         source = self.read("ingresos-historico.php")
