@@ -11,7 +11,7 @@ import shutil
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "cpanel-preview-20261105" / "dashboard-egresos-preview"
 TARGET = ROOT / "deploy-excel-directo"
-VERSION = "20261106-metas-historicas-3"
+VERSION = "20261110-cobranza-caratula-huella-1"
 FILES = [
     "index.php", "app.js", "graph.js", "auth.js", "config.js",
     "ingresos-historico.php", "ingresos-historico.js",
