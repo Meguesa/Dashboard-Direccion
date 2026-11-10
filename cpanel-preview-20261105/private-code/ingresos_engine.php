@@ -2,7 +2,7 @@
 declare(strict_types=1);
 /* Ingresos originales: solo lectura en SharePoint; publicación atómica privada. */
 const HS_DIR=__DIR__;
-const HS_BUILD='20261105-historico-1';
+const HS_BUILD='20261110-historico-2';
 const HS_RULES=2;
 require_once HS_DIR.'/ingresos_lector_prueba.php';
 umask(0077);ini_set('serialize_precision','-1');
@@ -77,8 +77,20 @@ function hsAudit(string $file,string $month):array {
             }if(!$cols)$errors[]='Encabezados no reconocidos: '.$sheet;$banks[$bank]=['registros'=>$bn,'centavos'=>$bt];$total+=$bt;
         }
         $cover=coverSheetName($zip);$control=null;$controlCell=null;$coverBanks=[];$formulaControl=null;$controlEngProp=null;
+        // Captura exclusivamente encabezado BANCOS y las filas reales/metas
+        // de B:G. Sin datos personales ni una segunda consulta de Excel.
+        // Ambas lecturas comparten la misma copia fisica que se acaba de
+        // auditar para obtener los movimientos de Ingresos.
+        $filasMetaCaratula=[];
         if(!$cover)$errors[]='Carátula ausente';else foreach(hsRows($zip,$cover,$ss) as [$rn,$v,$f]){
-            if($rn>45)break;
+            if($rn>100)break;
+            $etiquetaMeta=hsText($v[1]??'');
+            if(in_array($etiquetaMeta,['BANCOS','INGRESO TOTAL','META'],true)){
+                $columnas=[1=>$etiquetaMeta];
+                for($ci=2;$ci<=6;$ci++)$columnas[$ci]=$v[$ci]??null;
+                $filasMetaCaratula[]=[$rn,$columnas,[]];
+            }
+            if($rn>45)continue;
             if(hsText($v[1]??'')==='INGRESO TOTAL'&&empty($v[2])&&isset($v[3])&&is_numeric($v[3])&&$control===null){$control=hsCents($v[3]);$controlCell=$cover.'!D'.$rn;$formulaControl=$f[3]??null;}
             if($rn===8)$controlEngProp=['valor'=>$v[9]??null,'formula'=>$f[9]??null];
             if($rn>=2&&$rn<=6){$label=hsText($v[1]??'');if($label==='FLORES')$label='CUENTA 18';if(in_array($label,['BANAMEX','BANREGIO','CAJA','JDJP','CUENTA 18'],true))$coverBanks[$label]=hsCents($v[16]??'0');}
@@ -87,7 +99,7 @@ function hsAudit(string $file,string $month):array {
         $diff=$control===null?null:$total-$control;if($diff!==0)$errors[]='Diferencia contra carátula: '.($diff===null?'sin control':number_format($diff/100,2,'.',''));
         if(count($bad))$errors[]=count($bad).' movimientos con fecha inválida o fuera del mes';
         foreach($coverBanks as $bank=>$coverAmount){if(isset($banks[$bank])&&$coverAmount!==$banks[$bank]['centavos'])$errors[]='Diferencia por banco en carátula: '.$bank;}
-        return ['validado'=>!$errors,'mes'=>$month,'registros'=>count($rows),'totalCentavos'=>$total,'total'=>$total/100,'totalCaratula'=>$control===null?null:$control/100,'diferenciaCentavos'=>$diff,'celdaControl'=>$controlCell,'formulaControl'=>$formulaControl,'controlEnganchesPropiedades'=>$controlEngProp,'porBanco'=>$banks,'porCategoriaCentavos'=>$cats,'porBancoCategoriaCentavos'=>$bc,'errores'=>array_values(array_unique($errors)),'fechasInvalidas'=>$bad,'filasResumenExcluidas'=>$summaries,'hojas'=>$sheetNames,'movimientos'=>$rows];
+        return ['validado'=>!$errors,'mes'=>$month,'registros'=>count($rows),'totalCentavos'=>$total,'total'=>$total/100,'totalCaratula'=>$control===null?null:$control/100,'diferenciaCentavos'=>$diff,'celdaControl'=>$controlCell,'formulaControl'=>$formulaControl,'controlEnganchesPropiedades'=>$controlEngProp,'porBanco'=>$banks,'porCategoriaCentavos'=>$cats,'porBancoCategoriaCentavos'=>$bc,'errores'=>array_values(array_unique($errors)),'fechasInvalidas'=>$bad,'filasResumenExcluidas'=>$summaries,'filasMetaCaratula'=>$filasMetaCaratula,'hojas'=>$sheetNames,'movimientos'=>$rows];
     }finally{$zip->close();}
 }
 function hsToken():string {
@@ -150,11 +162,16 @@ function hsSources(string $token):array {
 function hsCacheName(string $month):string {if(!preg_match('/^20\d\d-(0[1-9]|1[0-2])$/D',$month))throw new RuntimeException('Mes inválido.');return 'cache_excel_ingresos_'.$month.'.json';}
 function hsProcess(string $month,array $source,string $token,bool $force=false):array {
     $cache=hsRead(hsCacheName($month));$old=hsRead('historico_estado.json')['meses'][$month]??[];
+    // Reprocesar de forma gradual las caches anteriores que no guardaban
+    // las filas de metas junto a los ingresos. El cron ya limita lotes;
+    // no cambia el contenido del libro ni la cadencia de 15 minutos.
+    $caratulaEnSnapshot=is_array($cache['auditoria']['filasMetaCaratula']??null)
+        && count($cache['auditoria']['filasMetaCaratula'])>=3;
     if($month==='2025-12'&&!empty($cache)&&($cache['reglasVersion']??0)<HS_RULES){rename(HS_DIR.'/'.hsCacheName($month),HS_DIR.'/cuarentena_redondeo_2025-12_'.gmdate('YmdHis').'.json');$cache=[];}
     $meta=hsGraph('/items/'.rawurlencode($source['id']),$token);$etag=(string)($meta['eTag']??'');if(!$etag)throw new RuntimeException('eTag ausente.');
     $state=['excelDescargado'=>false,'lectorVersion'=>HS_BUILD,'reglasVersion'=>HS_RULES,'mes'=>$month,'excel'=>['nombre'=>$source['nombre'],'id'=>$source['id'],'etag'=>$etag,'tamanoBytes'=>(int)($meta['size']??0),'fechaModificacion'=>$meta['lastModifiedDateTime']??null],'verificadoUTC'=>hsNow()];
-    if(!$force&&empty($old['nuevaVersionPendiente'])&&($old['reglasVersion']??0)===HS_RULES&&($old['excel']['etag']??'')===$etag&&isset($old['auditoria']))return array_merge($old,$state,['excel'=>array_merge($cache['excel']??[],$old['excel']??[],$state['excel'])]);
-    if(!$force&&($cache['reglasVersion']??0)===HS_RULES&&($cache['excel']['etag']??'')===$etag&&($cache['auditoria']['validado']??false))return array_merge($state,['excel'=>array_merge($cache['excel']??[],$state['excel']),'estado'=>'validado','cacheDisponible'=>true,'generadoUTC'=>$cache['generadoUTC'],'auditoria'=>$cache['auditoria']]);
+    if(!$force&&$caratulaEnSnapshot&&empty($old['nuevaVersionPendiente'])&&($old['reglasVersion']??0)===HS_RULES&&($old['excel']['etag']??'')===$etag&&isset($old['auditoria']))return array_merge($old,$state,['excel'=>array_merge($cache['excel']??[],$old['excel']??[],$state['excel'])]);
+    if(!$force&&$caratulaEnSnapshot&&($cache['reglasVersion']??0)===HS_RULES&&($cache['excel']['etag']??'')===$etag&&($cache['auditoria']['validado']??false))return array_merge($state,['excel'=>array_merge($cache['excel']??[],$state['excel']),'estado'=>'validado','cacheDisponible'=>true,'generadoUTC'=>$cache['generadoUTC'],'auditoria'=>$cache['auditoria']]);
     $download=hsSnapshotDownload(JJP_COBRANZA_DRIVE_ID,$meta,$token);$tmp=$download['temporal'];
     try{$state['excelDescargado']=true;$state['excel']['versionLeida']=$download['version'];$state['excel']['metodoLectura']=$download['metodo'];$state['excel']['fechaDatosUTC']=$download['fechaDatosUTC'];$state['excel']['sha256']=$download['sha256'];$state['excel']['tamanoBytes']=$download['tamanoBytes'];
         // Una versión de respaldo nunca sustituye una caché vigente ya validada.
