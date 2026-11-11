@@ -1,0 +1,145 @@
+name: Publicar correccion de parser PHP del gestor de motores (FTPS puntual)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/publicar-gestor-motores-parser-20261110.txt'
+  workflow_dispatch:
+    inputs:
+      confirmacion:
+        description: 'Escribe PUBLICAR_PARSER para autorizar este unico PHP'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dashboard-direccion
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.confirmacion == 'PUBLICAR_PARSER') || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Obtener codigo aprobado de main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Preparar PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring,zip,dom,xml,xmlreader,tokenizer
+          coverage: none
+
+      - name: Validar parser, sintaxis, seguridad y regresiones
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l cpanel-preview-20261105/dashboard-egresos-preview/actualizar-motores.php
+          php -r 'token_get_all("<?php function ejemplo(): int { return 1; }",TOKEN_PARSE); try { token_get_all("<?php function roto( {",TOKEN_PARSE); exit(2); } catch (ParseError $e) { echo "Parser PHP detecta errores: OK\\n"; }'
+          grep -q 'token_get_all($new,TOKEN_PARSE)' cpanel-preview-20261105/dashboard-egresos-preview/actualizar-motores.php
+          python3 -m unittest discover -s tests -p 'test_excel_directo_build.py'
+          test -f ops/publicar-gestor-motores-parser-20261110.txt
+
+      - name: Instalar cliente FTPS
+        shell: bash
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+
+      - name: Respaldar gestor vigente y publicar solamente actualizar-motores.php
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "${FTP_SERVER:-}"
+          test -n "${FTP_USERNAME:-}"
+          test -n "${FTP_PASSWORD:-}"
+          source_file="cpanel-preview-20261105/dashboard-egresos-preview/actualizar-motores.php"
+          backup_file="$RUNNER_TEMP/actualizar-motores-before.php"
+          verified_file="$RUNNER_TEMP/actualizar-motores-after.php"
+          # El archivo original se descarga como respaldo temporal del run.
+          timeout --kill-after=5s 90s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ftp:sync-mode true;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            set net:timeout 18;
+            set net:max-retries 2;
+            get actualizar-motores.php -o $backup_file;
+            bye;
+          "
+          test -s "$backup_file"
+          grep -q '^<?php' "$backup_file"
+          echo "Respaldo gestor previo SHA-256: $(sha256sum "$backup_file" | cut -d' ' -f1)"
+          verified=0
+          for attempt in 1 2 3; do
+            rm -f "$verified_file"
+            echo "Publicar gestor, intento $attempt"
+            if timeout --kill-after=5s 90s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ftp:sync-mode true;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 18;
+              set net:max-retries 2;
+              put $source_file -o .actualizar-motores.php.upload;
+              mv .actualizar-motores.php.upload actualizar-motores.php;
+              get actualizar-motores.php -o $verified_file;
+              bye;
+            " && cmp -s "$source_file" "$verified_file"; then
+              verified=1
+              break
+            fi
+            echo "::warning::No se verifico la transferencia intento $attempt"
+            if [ "$attempt" -lt 3 ]; then sleep 8; fi
+          done
+          if [ "$verified" -ne 1 ]; then
+            echo "::error::Publicacion no verificada. Intentar restaurar el archivo anterior."
+            timeout --kill-after=5s 90s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ftp:sync-mode true;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              put $backup_file -o .actualizar-motores.php.rollback;
+              mv .actualizar-motores.php.rollback actualizar-motores.php;
+              bye;
+            " || echo "::error::Restauracion automatica no confirmada; revision manual requerida."
+            exit 1
+          fi
+          echo "Gestor publicado SHA-256: $(sha256sum "$source_file" | cut -d' ' -f1)"
+
+      - name: Comprobar HTTP sin sesion administrativa
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl -sS --max-time 18 -o /dev/null -w '%{http_code}' 'https://portal.juanpablo.com.mx/dashboard/actualizar-motores.php')"
+          echo "Gestor HTTP $status (sin sesion)"
+          case "$status" in 000|404|500|502|503) exit 1 ;; esac
+
+      - name: Resumen
+        shell: bash
+        run: |
+          echo '### Gestor actualizado, sin tocar motores privados' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Solo actualizar-motores.php transferido via FTPS con integridad verificada.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'El administrador debe abrir el gestor, instalar Ingresos version 20261110-historico-2 y revalidar el mes vigente en Auditoria de Ingresos.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No se cambio el cron, Excel, permisos Graph, Power Automate ni el motor privado durante este despliegue.' >> "$GITHUB_STEP_SUMMARY"

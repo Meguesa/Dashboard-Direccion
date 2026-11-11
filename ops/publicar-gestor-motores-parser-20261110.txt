@@ -1,0 +1,11 @@
+Publicacion excepcional y puntual del gestor PHP de motores financieros.
+Se autoriza SOLO cpanel-preview-20261105/dashboard-egresos-preview/actualizar-motores.php
+al directorio existente /dashboard/ por FTPS con SHA-256 de vuelta.
+Motivo: cPanel deshabilita exec; usar token_get_all con TOKEN_PARSE para validar
+el motor de reemplazo antes de instalarlo en carpeta privada.
+
+NO publicar ni activar automaticamente los motores privados.
+NO tocar archivo Excel, Power Automate, metas en SharePoint, cron de 15 minutos,
+cache financiero, BI, index.php, app.js, graph.js ni permisos Graph.
+Instalacion posterior de Ingresos 20261110-historico-2 sera por administrador
+en la pagina autenticada, seguida de revalidacion del mes actual.
