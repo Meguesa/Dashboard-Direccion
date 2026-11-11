@@ -14,8 +14,14 @@ for path in ["app.js","cpanel-preview-20261105/dashboard-egresos-preview/app.js"
     section=src[a:b]
     section=section.replace(patch.NEW_SUBTITLE,patch.OLD_SUBTITLE,1)
     section=section.replace(patch.NEW_HEADER,patch.ORIGINAL_HEADER,1)
-    section=section.replace(patch.NEW_CATEGORY,patch.ORIGINAL_CATEGORY,1)
-    section=section.replace(patch.NEW_PAYMENT,patch.ORIGINAL_PAYMENT,1)
+    import re
+    original = ("      const mesEgreso = normalizarTexto(item.mesHoja || item.mes);\n"
+                "      " + patch.ORIGINAL_CATEGORY + "\n"
+                + patch.ORIGINAL_PAYMENT + "\n")
+    pattern = (r"      const mesEgreso = normalizarTexto\(item\.mesHoja \|\| item\.mes\);\n"
+               r"[\s\S]*?&& pagado > 0;\n")
+    section, count = re.subn(pattern, lambda _: original, section, count=1)
+    assert count == 1, "No se pudo reconstruir el filtro previo"
     before=src[:a]+section+src[b:]
     result=patch.fix(before)
     assert result!=before
