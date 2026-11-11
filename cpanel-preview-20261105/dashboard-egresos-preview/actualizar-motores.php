@@ -91,15 +91,26 @@ if($_SERVER['REQUEST_METHOD']==='POST') {
         if(is_string($old)&&hash_equals(hash('sha256',$old),hash('sha256',$new))){
             echo json_encode(['estado'=>'sin_cambios','motor'=>$target,'version'=>$version]);exit;
         }
-        // Fail closed when PHP cannot validate syntax; no unaudited promotion.
-        if(!function_exists('exec'))throw new RuntimeException('Validación sintáctica PHP no disponible.');
+        // Validate against the web server PHP parser without executing the candidate.
+        // cPanel may disable exec(); never skip syntax validation.
+        $nativeParser=function_exists('token_get_all')&&defined('TOKEN_PARSE');
+        if(!$nativeParser&&!function_exists('exec'))
+            throw new RuntimeException('Validación sintáctica PHP no disponible.');
         $temp=tempnam($dir,'.engine_git_');
         if($temp===false||file_put_contents($temp,$new,LOCK_EX)!==strlen($new))
             throw new RuntimeException('No fue posible preparar el nuevo motor.');
         chmod($temp,0600);
-        $messages=[];$result=1;
-        exec('php -l '.escapeshellarg($temp).' 2>&1',$messages,$result);
-        if($result!==0)throw new RuntimeException('Validación sintáctica del motor fallida.');
+        if($nativeParser){
+            try{
+                token_get_all($new,TOKEN_PARSE);
+            }catch(ParseError $e){
+                throw new RuntimeException('Validación sintáctica del motor fallida.');
+            }
+        }else{
+            $messages=[];$result=1;
+            exec('php -l '.escapeshellarg($temp).' 2>&1',$messages,$result);
+            if($result!==0)throw new RuntimeException('Validación sintáctica del motor fallida.');
+        }
         if(!hash_equals(hash('sha256',$new),hash_file('sha256',$temp)))
             throw new RuntimeException('El archivo temporal no supera verificación SHA-256.');
         $backup=null;
