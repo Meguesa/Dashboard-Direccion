@@ -1,0 +1,25 @@
+name: Auditar conciliacion de Egresos (sin publicar)
+on:
+  pull_request:
+    paths:
+      - 'app.js'
+      - 'cpanel-preview-20261105/dashboard-egresos-preview/app.js'
+      - 'tests/test_egresos_drilldown.js'
+      - '.github/workflows/auditar-egresos-detalle.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  auditoria:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Comprobar sintaxis JavaScript
+        run: |
+          node --check app.js
+          node --check cpanel-preview-20261105/dashboard-egresos-preview/app.js
+          node --check tests/test_egresos_drilldown.js
+      - name: Contrastar agrupaciones y detalle
+        run: node tests/test_egresos_drilldown.js
+      - name: Verificar que no hay despliegue
+        run: echo "Auditoria aislada; no se publicaron archivos."
