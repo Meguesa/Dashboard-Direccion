@@ -21,5 +21,7 @@ jobs:
           node --check tests/test_egresos_drilldown.js
       - name: Contrastar agrupaciones y detalle
         run: node tests/test_egresos_drilldown.js
+      - name: Verificar parche puntual y modos de fallo seguro
+        run: python3 tests/test_egresos_live_patch.py
       - name: Verificar que no hay despliegue
         run: echo "Auditoria aislada; no se publicaron archivos."
