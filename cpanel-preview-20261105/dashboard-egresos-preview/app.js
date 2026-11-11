@@ -6541,7 +6541,7 @@ function renderDetalleModalEgresosTipoGasto(tipoGasto, mes) {
   const totalPorPagar = movimientos.reduce((suma, item) => suma + Number(item.porPagar || 0), 0);
 
   if (subtitle) {
-    subtitle.textContent = `${formatoNumero(movimientos.length)} movimientos · Pagado: ${formatoMoneda(totalPagado)} · Por pagar: ${formatoMoneda(totalPorPagar)}`;
+    subtitle.textContent = `${formatoNumero(movimientos.length)} movimientos pagados · Pagado: ${formatoMoneda(totalPagado)} · Por pagar: ${formatoMoneda(totalPorPagar)}`;
   }
 
   if (movimientos.length === 0) {
@@ -6580,18 +6580,19 @@ function renderDetalleModalEgresosTipoGasto(tipoGasto, mes) {
 }
 
 function obtenerMovimientosEgresosPorTipoGasto(mes, tipoGastoBuscado) {
-  const tipoNormalizado = normalizarClaveComparacion(tipoGastoBuscado);
+  const tipoNormalizado = normalizarClaveComparacion(normalizarTexto(tipoGastoBuscado) || "Sin tipo de gasto");
 
   return (state.datos.egresos || [])
     .filter((item) => {
       const mesEgreso = normalizarTexto(item.mesHoja || item.mes);
-      const tipoGasto = normalizarClaveComparacion(item.tipoGasto);
+      // Igualar la agrupacion del detalle al resumen: vacios => "Sin tipo de gasto".
+      const tipoGasto = normalizarClaveComparacion(normalizarTexto(item.tipoGasto) || "Sin tipo de gasto");
       const pagado = Number(item.pagado || 0);
-      const porPagar = Number(item.porPagar || 0);
 
+      // La columna "Registros" cuenta exclusivamente los pagos realizados.
       return coincideMesValor(mesEgreso, mes)
         && tipoGasto === tipoNormalizado
-        && (pagado !== 0 || porPagar > 0);
+        && pagado > 0;
     })
     .sort((a, b) => {
       const fechaA = obtenerTimestampEgreso(a);

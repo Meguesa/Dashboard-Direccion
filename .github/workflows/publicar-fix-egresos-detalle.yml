@@ -1,0 +1,109 @@
+name: Publicar solo correccion detalle de Egresos
+on:
+  workflow_dispatch:
+    inputs:
+      confirmacion:
+        description: 'Escribe PUBLICAR_SOLO_APP_EGRESOS para autorizar'
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: deploy-dashboard-direccion
+  cancel-in-progress: false
+jobs:
+  publicar:
+    if: github.ref == 'refs/heads/main' && inputs.confirmacion == 'PUBLICAR_SOLO_APP_EGRESOS'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Verificar regresion y parche puntual
+        run: |
+          set -euo pipefail
+          node tests/test_egresos_drilldown.js
+          python3 tests/test_egresos_live_patch.py
+          node --check app.js
+      - name: Preparar FTPS
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+      - name: Descargar app.js real
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            get app.js -o app-antes.js;
+            bye;
+          "
+          test -s app-antes.js
+          sha256sum app-antes.js > antes.sha256
+      - name: Parchar y validar contenido
+        run: |
+          set -euo pipefail
+          python3 tools/patch_egresos_detail_live.py app-antes.js app-despues.js
+          node --check app-despues.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import difflib
+          a=Path("app-antes.js").read_text(encoding="utf-8").splitlines(keepends=True)
+          b=Path("app-despues.js").read_text(encoding="utf-8").splitlines(keepends=True)
+          diff=list(difflib.unified_diff(a,b,fromfile="antes",tofile="despues"))
+          if len(diff)>85: raise SystemExit("Cambio inesperadamente extenso; cancelado")
+          print("".join(diff))
+          PY
+      - name: Guardar respaldo privado 30 dias
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-app-dashboard-${{ github.run_id }}
+          path: |
+            app-antes.js
+            antes.sha256
+          retention-days: 30
+          if-no-files-found: error
+      - name: Publicar solo app.js en cPanel
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            get app.js -o app-prepublicacion.js;
+            bye;
+          "
+          cmp -s app-antes.js app-prepublicacion.js || { echo "::error::Version remota cambio; cancelado"; exit 1; }
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            put app-despues.js -o app-egresos-${{ github.run_id }}.tmp;
+            mv app-egresos-${{ github.run_id }}.tmp app.js;
+            get app.js -o app-verificado.js;
+            bye;
+          "
+          cmp -s app-despues.js app-verificado.js || { echo "::error::Verificacion fallida; restaurar respaldo"; exit 1; }
+          echo "Publicado SOLO app.js; copia remota verificada"
