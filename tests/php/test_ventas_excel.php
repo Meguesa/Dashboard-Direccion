@@ -14,6 +14,11 @@ qaAssert($a['tipos']['SEMANAL']===2&&$a['tipos']['MENSUAL']===1,'Separate monthl
 qaAssert($a['meses']['2026-11']['semanalCentavos']===20030,'Cents weekly');
 qaAssert($a['meses']['2026-11']['mensualCentavos']===20030,'Cents monthly');
 qaAssert($a['meses']['2026-11']['metasMensualesCentavos']===70000,'Goals monthly only');
+$normalized=veLeerRegistrosComercial($base.'/ventas-ok.xlsx');
+qaAssert(count($normalized)===3,'All three normalized rows');
+qaAssert(count(array_filter($normalized,fn($row)=>$row['tipoRegistro']==='Mensual'))===1,'No duplication of monthly granularity');
+qaAssert(abs($normalized[0]['montoVenta']-120.10)<0.001,'Decimal preserved in records');
+qaAssert($normalized[0]['fuenteOrigen']==='excel_original_ventas','Source provenance present');
 qaAssert($a['listoParaActivar']===true,'Balanced fixture passes');
 qaAssert($a['metasTablaIndependiente']['metasCentavos']['2026-11']===70000,'Separate goals table reconciles');
 $a=veAuditVentas($base.'/ventas-meta-diferencia.xlsx');
