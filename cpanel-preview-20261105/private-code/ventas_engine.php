@@ -12,7 +12,7 @@ if(PHP_SAPI!=='cli'&&
  * Dependencias privadas existentes: ingresos_engine.php (Graph/XLSX).
  */
 require_once __DIR__ . '/ingresos_engine.php';
-const VE_BUILD = '20261112-ventas-preflight-1';
+const VE_BUILD = '20261112-ventas-preflight-2';
 const VE_DRIVE_COMERCIAL = 'b!tzGM-V4TiUKbUyHUBBu214AiW7yUyvxPnueBG9lB85Wh0Tv-5FAnQqSNjE7rlEJv';
 const VE_ITEM_COMERCIAL = '01ZBUZ3OT6NWPAZOQW5BDZ77XXJW7IQXPD';
 const VE_DRIVE_COBRANZA = 'b!EAWNGReAT02APufy0uQPFnDnY1ILcuZGv2EfFdV9rplPAV4rL4C_QoZl8LbKac5c';
@@ -34,9 +34,11 @@ function veMes($v,int $year=VE_YEAR):?string {
     if(preg_match('/^(20\d\d)-(0[1-9]|1[0-2])$/D',$s))return $s;
     if(preg_match('/^(\d\d?)$/D',$s)&& (int)$s>=1&&(int)$s<=12)
         return $year.'-'.str_pad($s,2,'0',STR_PAD_LEFT);
-    foreach(VE_MESES as $key=>$month)
-        if($s===$key||preg_match('/^'.preg_quote($key,'/').'\s+20\d\d$/D',$s))
-            return $year.'-'.str_pad((string)$month,2,'0',STR_PAD_LEFT);
+    foreach(VE_MESES as $key=>$month){
+        if($s===$key)return $year.'-'.str_pad((string)$month,2,'0',STR_PAD_LEFT);
+        if(preg_match('/^'.preg_quote($key,'/').'\s+(20\d\d)$/D',$s,$match))
+            return $match[1].'-'.str_pad((string)$month,2,'0',STR_PAD_LEFT);
+    }
     return null;
 }
 function veSheetNames(ZipArchive $zip):array {
@@ -51,6 +53,12 @@ function veSheetNames(ZipArchive $zip):array {
 }
 function veNorm($s):string {
     return trim(preg_replace('/\s+/u',' ',hsText($s))??'');
+}
+/** Normaliza diferencias de acentos/puntuación, sin inventar alias de vendedores. */
+function veClaveAsesor($name):string {
+    $s=veNorm($name);
+    $s=strtr($s,['Á'=>'A','É'=>'E','Í'=>'I','Ó'=>'O','Ú'=>'U','Ü'=>'U','Ñ'=>'N']);
+    return trim((string)preg_replace('/[^\p{L}\p{N}]+/u',' ',$s));
 }
 function veHeaders(array $row):array {
     $cols=[];$dupes=[];
@@ -71,7 +79,7 @@ function vePick(array $row,array $header,string $name) {
  * nombre de hoja. Se publica solo el agregado por mes, nunca nombres/PII.
  */
 function veMetasSeparadas(ZipArchive $zip,array $sheets,array $strings):array {
-    $found=null;$totals=[];$counts=[];
+    $found=null;$totals=[];$counts=[];$byAdvisor=[];$duplicateRows=[];
     $needed=['Fecha_Mes','Mes','Asesor','Nivel','Meta_Mensual'];
     foreach($sheets as $sheet){
         $header=null;$headerRow=0;
@@ -92,12 +100,18 @@ function veMetasSeparadas(ZipArchive $zip,array $sheets,array $strings):array {
             if($month===null)continue;
             try{$amount=hsCents(vePick($v,$header,'Meta_Mensual')??'0');}
             catch(Throwable $e){throw new RuntimeException('Meta inválida en tabla mensual: '.$sheet.'!'.$rn);}
+            $advisor=veClaveAsesor(vePick($v,$header,'Asesor'));
+            if($advisor==='')throw new RuntimeException('Meta sin asesor en fila '.$rn);
+            if(isset($byAdvisor[$month][$advisor]))
+                $duplicateRows[]=['mes'=>$month,'fila'=>$rn];
+            $byAdvisor[$month][$advisor]=['centavos'=>$amount,'fila'=>$rn];
             $totals[$month]=($totals[$month]??0)+$amount;
             $counts[$month]=($counts[$month]??0)+1;
         }
     }
     ksort($totals);
-    return ['hoja'=>$found,'metasCentavos'=>$totals,'registros'=>$counts];
+    return ['hoja'=>$found,'metasCentavos'=>$totals,'registros'=>$counts,
+        'filasMetaDuplicadas'=>$duplicateRows,'_asesores'=>$byAdvisor];
 }
 function veAuditVentas(string $filename):array {
     $zip=new ZipArchive();
@@ -107,7 +121,7 @@ function veAuditVentas(string $filename):array {
         if(!in_array('DASHBOARD',$sheets,true))throw new RuntimeException('No existe tabla normalizada DASHBOARD de Comercial.');
         $strings=readStrings($zip);
         $header=null;$totals=[];$seen=[];$duplicates=[];$exceptions=[];$rowCount=0;
-        $kinds=['SEMANAL'=>0,'MENSUAL'=>0];
+        $kinds=['SEMANAL'=>0,'MENSUAL'=>0];$porAsesor=[];
         $required=['Fecha','Mes','Asesor','Semana','Monto_Venta','Servicios_AF','Servicios_CH','TS_TSC','Propiedades','Nichos','Total_Unidades','Meta_Mensual','Tipo_Registro','Fuente','Clave_Registro','Hoja_Origen','Fila_Origen'];
         foreach(hsRows($zip,'DASHBOARD',$strings) as [$rn,$values,$formulas]) {
             if($header===null) {
@@ -130,6 +144,16 @@ function veAuditVentas(string $filename):array {
             if($month===null){$exceptions[]=['codigo'=>'MES_INVALIDO','hoja'=>'DASHBOARD','fila'=>$rn];continue;}
             try{$amount=hsCents(vePick($values,$header,'Monto_Venta')??'0');$goal=hsCents(vePick($values,$header,'Meta_Mensual')??'0');}
             catch(Throwable $e){$exceptions[]=['codigo'=>'IMPORTE_INVALIDO','hoja'=>'DASHBOARD','fila'=>$rn];continue;}
+            $advisor=veClaveAsesor(vePick($values,$header,'Asesor'));
+            if($advisor===''){$exceptions[]=['codigo'=>'ASESOR_VACIO','hoja'=>'DASHBOARD','fila'=>$rn];continue;}
+            if(!isset($porAsesor[$month][$advisor]))
+                $porAsesor[$month][$advisor]=['semanalCentavos'=>0,'mensualCentavos'=>0,
+                    'conteoSemanal'=>0,'conteoMensual'=>0,'metaMensualCentavos'=>0,'filaMensual'=>null];
+            $a=&$porAsesor[$month][$advisor];
+            if($kind==='SEMANAL'){$a['semanalCentavos']+=$amount;$a['conteoSemanal']++;}
+            else {$a['mensualCentavos']+=$amount;$a['conteoMensual']++;
+                  $a['metaMensualCentavos']+=$goal;$a['filaMensual']=$rn;}
+            unset($a);
             $rowCount++;$kinds[$kind]++;
             if(!isset($totals[$month]))$totals[$month]=['semanalCentavos'=>0,'mensualCentavos'=>0,'registrosSemanal'=>0,'registrosMensual'=>0,'metasMensualesCentavos'=>0];
             $bucket=strtolower($kind).'Centavos';$counter='registros'.ucfirst(strtolower($kind));
@@ -146,6 +170,55 @@ function veAuditVentas(string $filename):array {
             if($diff!==0)$mismatches[]=['mes'=>$month,'diferenciaCentavos'=>$diff,'mensualCentavos'=>$v['mensualCentavos'],'semanalCentavos'=>$v['semanalCentavos']];
         }
         $metasSeparadas=veMetasSeparadas($zip,$sheets,$strings);
+        $metasAsesor=$metasSeparadas['_asesores'];
+        unset($metasSeparadas['_asesores']); // No publicar datos de asesores individuales.
+        $descuadresPorAsesor=[];
+        $mensualesMultiples=[];
+        foreach($porAsesor as $month=>$advisors){
+            foreach($advisors as $advisor=>$amounts){
+                if($amounts['conteoMensual']>1)$mensualesMultiples[]=[
+                    'mes'=>$month,'fila'=>$amounts['filaMensual']];
+                if($amounts['conteoSemanal']===0||$amounts['conteoMensual']===0)continue;
+                $diff=$amounts['mensualCentavos']-$amounts['semanalCentavos'];
+                if($diff===0)continue;
+                if(!isset($descuadresPorAsesor[$month]))
+                    $descuadresPorAsesor[$month]=['mes'=>$month,'asesoresConDiferencia'=>0,
+                        'diferenciaNetaCentavos'=>0,'diferenciaAbsolutaCentavos'=>0];
+                $descuadresPorAsesor[$month]['asesoresConDiferencia']++;
+                $descuadresPorAsesor[$month]['diferenciaNetaCentavos']+=$diff;
+                $descuadresPorAsesor[$month]['diferenciaAbsolutaCentavos']+=abs($diff);
+            }
+        }
+        ksort($descuadresPorAsesor);
+        $diferenciasMetaPorAsesor=[];
+        $sinMetaBi=[];
+        $metasSinFilaMensual=[];
+        foreach($metasAsesor as $month=>$entries){
+            foreach($entries as $advisor=>$entry){
+                $filaMensual=$porAsesor[$month][$advisor]??null;
+                if($filaMensual===null||$filaMensual['conteoMensual']===0){
+                    $metasSinFilaMensual[$month]=($metasSinFilaMensual[$month]??0)+1;
+                    continue; // También existen metas de meses futuros sin venta todavía.
+                }
+                $diff=$entry['centavos']-$filaMensual['metaMensualCentavos'];
+                if($diff===0)continue;
+                if(!isset($diferenciasMetaPorAsesor[$month]))
+                    $diferenciasMetaPorAsesor[$month]=['mes'=>$month,
+                      'asesoresConDiferencia'=>0,'diferenciaNetaCentavos'=>0,
+                      'diferenciaAbsolutaCentavos'=>0];
+                $diferenciasMetaPorAsesor[$month]['asesoresConDiferencia']++;
+                $diferenciasMetaPorAsesor[$month]['diferenciaNetaCentavos']+=$diff;
+                $diferenciasMetaPorAsesor[$month]['diferenciaAbsolutaCentavos']+=abs($diff);
+            }
+        }
+        foreach($porAsesor as $month=>$entries){
+            if(!isset($metasAsesor[$month]))continue;
+            foreach($entries as $advisor=>$entry){
+                if($entry['conteoMensual']>0 && $entry['metaMensualCentavos']>0
+                   && !isset($metasAsesor[$month][$advisor]))
+                    $sinMetaBi[$month]=($sinMetaBi[$month]??0)+1;
+            }
+        }
         $diferenciasMetas=[];
         foreach($metasSeparadas['metasCentavos'] as $month=>$goal){
             $mensual=$totals[$month]['metasMensualesCentavos']??null;
@@ -156,10 +229,17 @@ function veAuditVentas(string $filename):array {
         return [
             'tabla'=>'DASHBOARD','hojas'=>$sheets,'registrosValidos'=>$rowCount,
             'metasTablaIndependiente'=>$metasSeparadas,'diferenciasMetas'=>$diferenciasMetas,
+            'descuadresPorAsesor'=>array_values($descuadresPorAsesor),
+            'diferenciasMetaPorAsesor'=>array_values($diferenciasMetaPorAsesor),
+            'filasMensualesMultiples'=>$mensualesMultiples,
+            'asesoresConMetaSinCorrespondencia'=> $sinMetaBi,
+            'metasSinFilaMensual'=>$metasSinFilaMensual,
             'tipos'=>$kinds,'meses'=>$totals,'clavesDuplicadas'=>count($duplicates),
             'duplicados'=>$duplicates,'incidencias'=>$exceptions,
             'descuadresSemanalMensual'=>$mismatches,
-            'listoParaActivar'=>!$exceptions&&!$duplicates&&!$mismatches&&!$diferenciasMetas&&$metasSeparadas['hoja']!==null
+            'listoParaActivar'=>!$exceptions&&!$duplicates&&!$mismatches&&!$diferenciasMetas
+                &&!$descuadresPorAsesor&&!$diferenciasMetaPorAsesor&&!$mensualesMultiples
+                &&!$sinMetaBi&&!$metasSeparadas['filasMetaDuplicadas']&&$metasSeparadas['hoja']!==null
         ];
     }finally{$zip->close();}
 }
@@ -270,6 +350,7 @@ function veAuditContratos(string $filename):array {
         $missing=array_values(array_diff($required,$sheets));
         if($missing)throw new RuntimeException('Faltan hojas originales: '.implode(', ',$missing));
         $records=[];$sources=[];$months2026=[];$sum=0;
+        $indexedNumbers=[];$indexedReferences=[];
         foreach($required as $sheet){
             $info=['registrosCandidatos'=>0,'fechaNoReconocida'=>0,'fechaAmbigua'=>0,
                    'montoNoNumerico'=>0,'posiblesCancelaciones'=>0,'clavesRepetidas'=>0,
@@ -299,6 +380,8 @@ function veAuditContratos(string $filename):array {
                     }
                 }
                 $identity=veClaveContrato($sheet,$b,$c);
+                $indexedNumbers[$sheet][veNorm($b)]=true;
+                if(veNorm($c)!=='')$indexedReferences[$sheet][veNorm($c)]=true;
                 if(!isset($records[$identity]))$records[$identity]=[];
                 $records[$identity][]=[
                     'fila'=>$rn,'fecha'=>$date['fecha'],'montoCentavos'=>$amount,
@@ -346,7 +429,18 @@ function veAuditContratos(string $filename):array {
                     vePick($row,$header,'Numero_Contrato'),
                     vePick($row,$header,'Referencia'));
                 $matches=$records[$identity]??[];
-                if(count($matches)===0){$report['sinCorrespondencia']++;continue;}
+                if(count($matches)===0){
+                    $report['sinCorrespondencia']++;
+                    $byNumber=isset($indexedNumbers[$sheet][veNorm(vePick($row,$header,'Numero_Contrato'))]);
+                    $byRef=isset($indexedReferences[$sheet][veNorm(vePick($row,$header,'Referencia'))]);
+                    $cause=$byNumber&&$byRef?'NUMERO_Y_REFERENCIA_DISTINTOS':
+                        ($byNumber?'REFERENCIA_DISTINTA':($byRef?'NUMERO_DISTINTO':'SIN_RASTRO'));
+                    $report['sinCorrespondenciaPorCausa'][$cause]=
+                        ($report['sinCorrespondenciaPorCausa'][$cause]??0)+1;
+                    $report['sinCorrespondenciaPorOrigen'][$sheet][$cause]=
+                        ($report['sinCorrespondenciaPorOrigen'][$sheet][$cause]??0)+1;
+                    continue;
+                }
                 if(count($matches)>1){$report['correspondenciaAmbigua']++;continue;}
                 $report['coincidenciasUnicas']++;
                 $found=$matches[0];

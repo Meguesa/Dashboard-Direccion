@@ -27,7 +27,7 @@ permissions:
 
 jobs:
   validar:
-    if: github.event_name != 'workflow_dispatch' || inputs.alcance != 'ventas'
+    if: (github.event_name == 'workflow_dispatch' && inputs.alcance != 'ventas') || (github.event_name == 'pull_request' && github.head_ref != 'feature/ventas-excel-directo-20261112')
     name: Construir, verificar fechas, PHP y JS sin tocar cPanel
     runs-on: ubuntu-latest
     steps:
@@ -90,7 +90,7 @@ jobs:
 
   validar_ventas:
     name: Ventas Excel desde Comercial y Cobranza - pruebas locales sin despliegue
-    if: github.event_name == 'workflow_dispatch' && inputs.alcance == 'ventas'
+    if: (github.event_name == 'workflow_dispatch' && inputs.alcance == 'ventas') || (github.event_name == 'pull_request' && github.head_ref == 'feature/ventas-excel-directo-20261112')
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:

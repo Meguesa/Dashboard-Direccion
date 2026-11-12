@@ -28,7 +28,7 @@ def workbook(rows,path,contracts=False):
    w.create_sheet(name)
   m=w.create_sheet("META_ASESORES")
   m.append(["Fecha_Mes","Mes","Asesor","Nivel","Meta_Mensual"])
-  m.append(["2026-11-01","2026-11","ASESOR FICTICIO","MASTER",701 if "meta-diferencia" in str(path) else 700])
+  m.append(["2026-11-01","2026-11","ASESOR 1","MASTER",701 if "meta-diferencia" in str(path) else 700])
  w.save(path)
 sales=[
  {"Fecha":"2026-11-04","Mes":"NOVIEMBRE","Asesor":"ASESOR 1","Semana":"SEMANA 1","Monto_Venta":120.10,"Meta_Mensual":0,"Tipo_Registro":"Semanal","Fuente":"Ventas 2026","Clave_Registro":"A-S1","Hoja_Origen":"NOVIEMBRE","Fila_Origen":4},
@@ -40,9 +40,22 @@ contracts=[
  {"Fecha":"2026-11-03","Mes":"NOVIEMBRE","Asesor":"ASESOR 2","Monto_Venta":200.00,"Tipo_Registro":"Transaccion","Fuente":"CONTRATOS","Clave_Registro":"CH-101","Hoja_Origen":"CHURUBUSCO","Fila_Origen":2,"Numero_Contrato":"TEST-CH-101","Referencia":"101","Fecha_Contrato":"2026-11-02"}
 ]
 workbook(sales,base/"ventas-ok.xlsx")
+# La suma global cuadra, pero cada asesor está descuadrado; no debe aprobar.
+cruce=[
+ {**sales[0]},
+ {**sales[1]},
+ {**sales[2],"Monto_Venta":210.30},
+ {**sales[0],"Asesor":"ASESOR 2","Monto_Venta":110.0,
+  "Clave_Registro":"B-S1","Meta_Mensual":0},
+ {**sales[2],"Asesor":"ASESOR 2","Monto_Venta":100.0,
+  "Clave_Registro":"B-M","Meta_Mensual":0}
+]
+workbook(cruce,base/"ventas-cruce-asesores.xlsx")
 workbook(sales,base/"ventas-meta-diferencia.xlsx")
 workbook(sales+[{**sales[0],"Clave_Registro":"A-S1"}],base/"ventas-duplicado.xlsx")
 workbook(sales+[{**sales[0],"Clave_Registro":"A-S3","Monto_Venta":1.0}],base/"ventas-diferencia.xlsx")
 workbook(contracts,base/"contratos-ok.xlsx",True)
+workbook([{**contracts[0],"Numero_Contrato":"TEST-OTRO-999"},contracts[1]],
+         base/"contratos-cambio-clave.xlsx",True)
 workbook(contracts+[{**contracts[0],"Clave_Registro":"L-100"}],base/"contratos-duplicado.xlsx",True)
-print("Created 6 synthetic spreadsheets")
+print("Created 8 synthetic spreadsheets")
