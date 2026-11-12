@@ -12,7 +12,7 @@ if(PHP_SAPI!=='cli'&&
  * Dependencias privadas existentes: ingresos_engine.php (Graph/XLSX).
  */
 require_once __DIR__ . '/ingresos_engine.php';
-const VE_BUILD = '20261112-originales-1';
+const VE_BUILD = '20261112-contratos-2';
 const VE_DRIVE_COMERCIAL = 'b!tzGM-V4TiUKbUyHUBBu214AiW7yUyvxPnueBG9lB85Wh0Tv-5FAnQqSNjE7rlEJv';
 const VE_ITEM_COMERCIAL = '01ZBUZ3OT6NWPAZOQW5BDZ77XXJW7IQXPD';
 const VE_DRIVE_COBRANZA = 'b!EAWNGReAT02APufy0uQPFnDnY1ILcuZGv2EfFdV9rplPAV4rL4C_QoZl8LbKac5c';
@@ -246,69 +246,225 @@ function veImporteContrato($value):?int {
     try{return hsCents($text);}
     catch(Throwable $e){return null;}
 }
+/** Código estable. Conserva la clave, pero aparta anotaciones como CANCELADO. */
+function veNumeroContratoCanonico($number):string {
+    $s=veNorm($number);
+    $s=preg_replace('/^PENDIENTE[\s-]+/u','',$s)??$s;
+    $s=preg_replace('/\s*\/{2}.*$/u','',$s)??$s;
+    if(preg_match('/^([A-Z]{1,4}-[A-Z0-9\/-]*\d[A-Z0-9\/-]*)/u',$s,$m))
+        return rtrim($m[1],'-/');
+    return $s;
+}
 function veClaveContrato(string $sheet,$num,$ref):string {
-    return hash('sha256',$sheet.'|'.veNorm($num).'|'.veNorm($ref));
+    return hash('sha256',veNorm($sheet).'|'.veNumeroContratoCanonico($num).'|'.veNorm($ref));
 }
 /**
- * Histórico contractual: lee exclusivamente LOTES, CHURUBUSCO y AGUA FRIA.
- * El identificador es sucursal+número+referencia (no el número de fila).
- * No adjudica cancelaciones ni infiere qué contratos son ventas comerciales.
+ * Clasificación conservadora: SIN MARCA NO SIGNIFICA VIGENTE.
+ * Los comentarios de B pueden señalar cancelación o corrección de un contrato.
  */
-function veAuditContratos(string $filename):array {
+function veEstadoTextoContrato($number):string {
+    $s=veNorm($number);
+    if(preg_match('/CANCELAD|SE\s+CANCELA|ANULAD|RESCISI|DEVOLUC/u',$s))
+        return 'CANCELACION_EXPLICITA';
+    if(preg_match('/PENDIENTE|POR\s+ASIGNAR|POR\s+DEFINIR/u',$s))
+        return 'PENDIENTE_DE_VALIDACION';
+    if(preg_match('/ANTES|AHORA|CORREGID|CAMBIO|REASIGNAD/u',$s))
+        return 'NOTA_DE_MODIFICACION';
+    return 'SIN_ESTADO_DE_VIGENCIA';
+}
+/**
+ * Una lectura sobre las tres hojas ORIGINALES. No consulta hojas generadas.
+ * - audit=true, details=false: estadísticas sin información personal.
+ * - details=true, $month: contratos del mes con anotaciones de incertidumbre.
+ * Filas idénticas se colapsan por clave, pero divergencias de fecha, precio o
+ * servicio no se resuelven arbitrariamente.
+ */
+function veProcesarContratosOriginales(string $filename,?string $month=null,bool $details=false):array {
+    if($month!==null&&!preg_match('/^20\d\d-(0[1-9]|1[0-2])$/D',$month))
+        throw new InvalidArgumentException('Mes de contratos inválido.');
     $zip=new ZipArchive();
     if($zip->open($filename,ZipArchive::CHECKCONS)!==true)
-        throw new RuntimeException('Excel de contratos no es ZIP íntegro.');
+        throw new RuntimeException('Libro de contratos no íntegro.');
     try{
         $sheets=veSheetNames($zip);$ss=readStrings($zip);
-        $needed=['LOTES','CHURUBUSCO','AGUA FRIA'];
-        $missing=array_values(array_diff($needed,$sheets));
-        if($missing)throw new RuntimeException('Faltan hojas de contratos: '.implode(', ',$missing));
-        $sources=[];$months=[];$total=0;$keys=[];$firstRows=[];
-        $ambiguousDates=0;$missingDate=0;$unknownAmount=0;$duplicates=0;
-        foreach($needed as $sheet){
-            $counts=['candidatos'=>0,'clavesDuplicadas'=>0,'fechaAmbigua'=>0,
-                     'sinFecha'=>0,'importeNoNumerico'=>0,'posibleCancelacion'=>0,
-                     'fechasPorAnio'=>[]];
-            foreach(hsRows($zip,$sheet,$ss) as [$rn,$v,$formulas]){
-                $number=veNorm($v[1]??'');
-                if(!preg_match('/[A-Z]{1,4}-[A-Z0-9\/-]*\d/i',$number) ||
-                    str_contains($number,'****'))continue;
-                $reference=veNorm($v[2]??'');
-                $counts['candidatos']++;$total++;
-                $identity=veClaveContrato($sheet,$number,$reference);
-                if(isset($keys[$identity])){
-                    $counts['clavesDuplicadas']++;$duplicates++;
-                }else{$keys[$identity]=true;}
-                $date=veFechaContratoOriginal($v);
-                if($date['fecha']===null){$counts['sinFecha']++;$missingDate++;}
-                if($date['ambigua']){$counts['fechaAmbigua']++;$ambiguousDates++;}
-                $amount=veImporteContrato($v[25]??null);
-                if($amount===null){$counts['importeNoNumerico']++;$unknownAmount++;}
-                if(preg_match('/CANCELAD|ANULAD|CANCELACI[OÓ]N/ui',
-                    (string)($v[18]??'').' '.(string)($v[19]??'')))
-                    $counts['posibleCancelacion']++;
-                if($date['fecha']!==null){
-                    $year=substr($date['fecha'],0,4);
-                    $counts['fechasPorAnio'][$year]=($counts['fechasPorAnio'][$year]??0)+1;
-                    $month=substr($date['fecha'],0,7);
-                    $months[$month][$sheet]=($months[$month][$sheet]??0)+1;
+        $names=['LOTES','CHURUBUSCO','AGUA FRIA'];
+        $missing=array_values(array_diff($names,$sheets));
+        if($missing)throw new RuntimeException('Hojas originales ausentes: '.implode(', ',$missing));
+        $groups=[];$counts=[];$perMonth=[];$candidates=0;
+        $noDate=0;$noReference=0;$noPrice=0;$rawCancelled=0;
+        foreach($names as $sheet){
+            $metrics=['candidatos'=>0,'sinFecha'=>0,'sinReferencia'=>0,
+                'importeNoNumerico'=>0,'cancelacionesExplicitadas'=>0,
+                'años'=>[]];
+            foreach(hsRows($zip,$sheet,$ss) as [$rn,$row,$formulas]){
+                $raw=trim((string)($row[1]??''));
+                if(!preg_match('/[A-Z]{1,4}-[A-Z0-9\/-]*\d/i',$raw)||
+                    str_contains($raw,'****'))continue;
+                $reference=veNorm($row[2]??'');
+                $status=veEstadoTextoContrato($raw);
+                $date=veFechaContratoOriginal($row);
+                $amount=veImporteContrato($row[25]??null);
+                $service=veNorm($row[19]??'');
+                $product=veNorm($row[20]??'');
+                $candidates++;$metrics['candidatos']++;
+                if($reference===''){$noReference++;$metrics['sinReferencia']++;}
+                if($date['fecha']===null){$noDate++;$metrics['sinFecha']++;}
+                if($amount===null){$noPrice++;$metrics['importeNoNumerico']++;}
+                if($status==='CANCELACION_EXPLICITA'){
+                    $rawCancelled++;$metrics['cancelacionesExplicitadas']++;
+                }
+                $part=$date['fecha']===null?null:substr($date['fecha'],0,7);
+                if($part!==null){
+                    $year=substr($part,0,4);
+                    $metrics['años'][$year]=($metrics['años'][$year]??0)+1;
+                    if(!isset($perMonth[$part]))$perMonth[$part]=[
+                        'candidatos'=>0,'porHoja'=>[],'importeNominalCandidatosCentavos'=>0,
+                        'importesSinValor'=>0,'marcasCancelacion'=>0
+                    ];
+                    $m=&$perMonth[$part];
+                    $m['candidatos']++;
+                    $m['porHoja'][$sheet]=($m['porHoja'][$sheet]??0)+1;
+                    if($amount===null)$m['importesSinValor']++;
+                    else $m['importeNominalCandidatosCentavos']+=$amount;
+                    if($status==='CANCELACION_EXPLICITA')$m['marcasCancelacion']++;
+                    unset($m);
+                }
+                $key=veClaveContrato($sheet,$raw,$reference);
+                $fingerprint=hash('sha256',($date['fecha']??'SIN_FECHA').'|'.
+                    ($amount===null?'SIN_IMPORTE':(string)$amount).'|'.$service.'|'.$product);
+                $want=$details&&($month===null||$part===$month);
+                $record=null;
+                if($want){
+                    $customer=trim(implode(' ',array_filter(array_map(
+                        static fn($v)=>trim((string)($v??'')),
+                        [$row[3]??null,$row[4]??null,$row[5]??null]
+                    ),static fn($v)=>$v!=='')));
+                    $record=[
+                        'id'=>'CONTRATO_XLSX|'.$key,
+                        'fuente'=>'CONTRATOS','hojaOrigen'=>$sheet,
+                        'origen'=>'CONTRATOS_ORIGINALES',
+                        'numeroContrato'=>$raw,'referencia'=>$reference,
+                        'fecha'=>$date['fecha'],'fechaContrato'=>$date['fecha'],'mes'=>$part,
+                        'cliente'=>$customer,'tipoServicio'=>trim((string)($row[19]??'')),
+                        'claveProducto'=>trim((string)($row[20]??'')),
+                        'descripcionProducto'=>trim((string)($row[21]??'')),
+                        'importeContrato'=>$amount===null?null:$amount/100,
+                        // Evitar por construcción que se sume a los KPI de Comercial.
+                        'montoVenta'=>null,'total'=>null,
+                        'aportaTotalComercial'=>false,
+                        'filaOrigen'=>$rn,
+                        'estadoFuente'=>$status
+                    ];
+                }
+                if(!isset($groups[$key])){
+                    $groups[$key]=['huella'=>$fingerprint,'cantidad'=>1,
+                        'conflicto'=>false,'cancelacion'=>$status==='CANCELACION_EXPLICITA',
+                        'pendiente'=>$status==='PENDIENTE_DE_VALIDACION',
+                        'nota'=>$status==='NOTA_DE_MODIFICACION',
+                        'sinFecha'=>$date['fecha']===null,'sinReferencia'=>$reference==='',
+                        'sinImporte'=>$amount===null,'ambiguaFecha'=>$date['ambigua'],
+                        'registros'=>$record];
+                }else{
+                    $g=&$groups[$key];
+                    $g['cantidad']++;
+                    if($g['huella']!==$fingerprint)$g['conflicto']=true;
+                    $g['cancelacion']=$g['cancelacion']||$status==='CANCELACION_EXPLICITA';
+                    $g['pendiente']=$g['pendiente']||$status==='PENDIENTE_DE_VALIDACION';
+                    $g['nota']=$g['nota']||$status==='NOTA_DE_MODIFICACION';
+                    $g['sinFecha']=$g['sinFecha']||$date['fecha']===null;
+                    $g['sinReferencia']=$g['sinReferencia']||$reference==='';
+                    $g['sinImporte']=$g['sinImporte']||$amount===null;
+                    $g['ambiguaFecha']=$g['ambiguaFecha']||$date['ambigua'];
+                    if($g['registros']===null&&$record!==null)$g['registros']=$record;
+                    unset($g);
                 }
             }
-            ksort($counts['fechasPorAnio']);
-            $sources[$sheet]=$counts;
+            ksort($metrics['años']);$counts[$sheet]=$metrics;
         }
-        ksort($months);
-        return [
+        $duplicates=0;$exactDuplicates=0;$conflictGroups=0;$uncertain=0;
+        $rows=[];
+        foreach($groups as $entry){
+            $repeated=$entry['cantidad']>1;
+            if($repeated){
+                $duplicates+=$entry['cantidad']-1;
+                if($entry['conflicto'])$conflictGroups++;
+                else $exactDuplicates+=$entry['cantidad']-1;
+            }
+            if($entry['cancelacion']||$entry['pendiente']||$entry['nota']||
+               $entry['conflicto']||$entry['sinFecha']||$entry['sinReferencia']||
+               $entry['sinImporte']||$entry['ambiguaFecha'])$uncertain++;
+            if($details&&$entry['registros']!==null){
+                $item=$entry['registros'];
+                $item['repeticionesOrigen']=$entry['cantidad'];
+                $item['duplicadoIdentico']=$repeated&&!$entry['conflicto'];
+                $item['estadoFuente']=$entry['cancelacion']?'CANCELACION_EXPLICITA':
+                    ($entry['conflicto']?'CLAVE_CON_DATOS_CONFLICTIVOS':
+                    ($entry['pendiente']?'PENDIENTE_DE_VALIDACION':
+                    ($entry['nota']?'NOTA_DE_MODIFICACION':'SIN_ESTADO_DE_VIGENCIA')));
+                $item['integridad']=$entry['conflicto']||$entry['ambiguaFecha']?
+                    'REQUIERE_CONCILIACION':($entry['sinFecha']||$entry['sinReferencia']||
+                    $entry['sinImporte']?'INCOMPLETO':'ESTRUCTURALMENTE_VALIDO');
+                // No afirmar "vigente" a partir de ausencia de texto de cancelación.
+                $item['ventaVigenteConfirmada']=false;
+                if($entry['conflicto'])$item['importeContrato']=null;
+                $rows[]=$item;
+            }
+        }
+        ksort($perMonth);
+        $audit=[
             'origen'=>'HOJAS_ORIGINALES_CONTRATOS',
-            'origenes'=>$needed,'registrosCandidatos'=>$total,
-            'clavesUnicas'=>count($keys),'clavesDuplicadas'=>$duplicates,
-            'sinFecha'=>$missingDate,'fechasAmbiguas'=>$ambiguousDates,
-            'importesNoNumericos'=>$unknownAmount,
-            'porHoja'=>$sources,'porMes'=>$months,
-            'advertencia'=>'Candidatos contractuales; no son ventas certificadas ni se suman a Comercial.',
+            'origenes'=>$names,'registrosCandidatos'=>$candidates,
+            'clavesUnicas'=>count($groups),
+            'repeticionesDetectadas'=>$duplicates,
+            'repeticionesIdenticas'=>$exactDuplicates,
+            'gruposConDatosConflictivos'=>$conflictGroups,
+            'sinFecha'=>$noDate,'sinReferencia'=>$noReference,
+            'importesNoNumericos'=>$noPrice,
+            'cancelacionesExplicitas'=>$rawCancelled,
+            'gruposConIncidencias'=>$uncertain,
+            'porHoja'=>$counts,'porMes'=>$perMonth,
+            'criterio'=>'Contrato/referencia identifica un expediente; ningún contrato se suma al monto vendido por asesor.',
             'listoParaActivar'=>false
         ];
+        return ['auditoria'=>$audit,'registros'=>$rows];
     }finally{$zip->close();}
+}
+function veAuditContratos(string $filename):array {
+    return veProcesarContratosOriginales($filename,null,false)['auditoria'];
+}
+/** Detalle de un mes para vistas de contratos; nunca sumar al KPI de ventas. */
+function veLeerContratosOriginales(string $filename,string $month):array {
+    return veProcesarContratosOriginales($filename,$month,true)['registros'];
+}
+/**
+ * Comparación diagnóstica de fuentes NO aditivas. No se exige igualdad:
+ * Comercial registra ventas mensuales por asesor; Cobranza expedientes.
+ */
+function veConciliarFuentesOriginales(?array $comercial,?array $contracts):array {
+    if(!is_array($comercial)||!is_array($contracts)||
+       !isset($comercial['meses'])||!isset($contracts['porMes']))
+        return ['estado'=>'SIN_COMPARACION','sumarAmbasFuentes'=>false,'meses'=>[]];
+    $months=array_unique(array_merge(array_keys($comercial['meses']),
+                                      array_keys($contracts['porMes'])));
+    sort($months,SORT_STRING);$items=[];
+    foreach($months as $month){
+        $sales=$comercial['meses'][$month]??null;
+        $contract=$contracts['porMes'][$month]??null;
+        if($sales===null&&$contract===null)continue;
+        $items[$month]=[
+            'mes'=>$month,
+            'ventasComercialCentavos'=>$sales['ventasCentavos']??null,
+            'contratosCandidatos'=>$contract['candidatos']??0,
+            'contratosPorOrigen'=>$contract['porHoja']??[],
+            'importeNominalContratosCentavos'=>$contract['importeNominalCandidatosCentavos']??null,
+            'diferenciaSoloDiagnosticaCentavos'=>$sales!==null&&$contract!==null?
+                ($sales['ventasCentavos']-$contract['importeNominalCandidatosCentavos']):null,
+            'sumarAmbasFuentes'=>false
+        ];
+    }
+    return ['estado'=>'ORIGENES_COMPLEMENTARIOS','sumarAmbasFuentes'=>false,
+        'prohibidoSumaComercialMasContratos'=>true,'meses'=>$items,
+        'nota'=>'No son dos listados de ventas a sumar: uno es mensual Comercial y otro detalle de expedientes, con fechas y condiciones distintas.'];
 }
 /** Descarga solo los dos IDs permitidos. No muestra datos personales ni contenido del libro. */
 function veInspeccion():array {
@@ -346,6 +502,10 @@ function veInspeccion():array {
         }
         $result['archivos'][$name]=$info;
     }
+    $result['comparacionFuentes']=veConciliarFuentesOriginales(
+        $result['archivos']['comercial']['auditoria']??null,
+        $result['archivos']['contratos']['auditoria']??null
+    );
     $result['listoParaPublicar']=false;
     $result['siguientePaso']='Corregir discrepancias y verificar hoja original de Contratos antes de publicar.';
     return $result;

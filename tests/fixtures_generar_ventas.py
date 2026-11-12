@@ -34,7 +34,7 @@ def sales_file(path, dup=False, weekdiff=False, no_meta=False):
     ws["F2"]=999999999
     wb.save(path)
 
-def contracts_file(path,duplicate=False,poison=False):
+def contracts_file(path,duplicate=False,poison=False,conflict=False,cancel=False):
     wb=Workbook();wb.active.title="LOTES"
     for name in ["CHURUBUSCO","AGUA FRIA"]:wb.create_sheet(name)
     for sheet,code,ref in [("LOTES","TT-001","1"),("CHURUBUSCO","TT-002","2"),
@@ -43,8 +43,13 @@ def contracts_file(path,duplicate=False,poison=False):
         vals=[None]*35;vals[1]=code;vals[2]=ref;vals[25]=100
         offset=28 if sheet=="CHURUBUSCO" else 26
         vals[offset:offset+3]=[2,"Noviembre",2026]
+        if cancel and sheet=="LOTES":vals[1]=code+" CANCELADO"
         ws.append(vals)
         if duplicate and sheet=="LOTES":ws.append(vals)
+        if conflict and sheet=="LOTES":
+            divergent=vals[:]
+            divergent[25]=120
+            ws.append(divergent)
     ws=wb.create_sheet("DASHBOARD")
     ws.append(["Tipo_Registro","Monto_Venta"])
     ws.append(["Transaccion",999999999 if poison else 0])
@@ -57,4 +62,6 @@ sales_file(root/"ventas-meta-no-disponible.xlsx",no_meta=True)
 contracts_file(root/"contratos-ok.xlsx")
 contracts_file(root/"contratos-duplicado.xlsx",duplicate=True)
 contracts_file(root/"contratos-dashboard-contaminado.xlsx",poison=True)
-print("Created seven synthetic XLSX fixtures")
+contracts_file(root/"contratos-conflicto.xlsx",conflict=True)
+contracts_file(root/"contratos-cancelado.xlsx",cancel=True)
+print("Created nine synthetic XLSX fixtures")
