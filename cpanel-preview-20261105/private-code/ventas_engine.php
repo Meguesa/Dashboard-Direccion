@@ -157,6 +157,70 @@ function veAuditVentas(string $filename):array {
         ];
     }finally{$zip->close();}
 }
+/**
+ * Extractor privado de registros comerciales para FUTURA caché QA. Ninguna
+ * invocación de este extractor expone datos al navegador o modifica BI_Ventas.
+ * Contratos no se fusionan aquí y Semanal/Mensual mantienen sus granularidades.
+ */
+function veLeerRegistrosComercial(string $filename):array {
+    $zip=new ZipArchive();
+    if($zip->open($filename,ZipArchive::CHECKCONS)!==true)
+        throw new RuntimeException('Libro Comercial inválido.');
+    try{
+        $ss=readStrings($zip);$header=null;$out=[];
+        $need=['Fecha','Mes','Asesor','Monto_Venta','Tipo_Registro','Fuente','Clave_Registro',
+               'Servicios_AF','Servicios_CH','TS_TSC','Propiedades','Nichos',
+               'Total_Unidades','Meta_Mensual','Hoja_Origen','Fila_Origen'];
+        $seen=[];
+        foreach(hsRows($zip,'DASHBOARD',$ss) as [$rn,$v,$f]){
+            if($header===null){
+                if($rn>10)throw new RuntimeException('Encabezado comercial no reconocido.');
+                if(veNorm($v[0]??'')==='FECHA'){
+                    $header=veHeaders($v);
+                    if(array_diff($need,array_keys($header)))
+                        throw new RuntimeException('El libro Comercial cambió de columnas.');
+                }continue;
+            }
+            $type=veNorm(vePick($v,$header,'Tipo_Registro'));
+            if($type==='')continue;
+            if(!in_array($type,['SEMANAL','MENSUAL'],true))
+                throw new RuntimeException('Tipo de registro Comercial inesperado.');
+            $key=trim((string)vePick($v,$header,'Clave_Registro'));
+            if($key===''||isset($seen[$key]))throw new RuntimeException('Clave Comercial ausente o duplicada.');
+            $seen[$key]=true;
+            $month=veMes(vePick($v,$header,'Mes'));
+            if($month===null)throw new RuntimeException('Mes inválido en Comercial.');
+            $measure=[];
+            foreach(['Monto_Venta'=>'montoVenta','Meta_Mensual'=>'metaMensual'] as $source=>$name)
+                $measure[$name]=hsCents(vePick($v,$header,$source)??'0')/100;
+            foreach(['Servicios_AF'=>'serviciosAf','Servicios_CH'=>'serviciosCh',
+                     'TS_TSC'=>'tsTsc','Propiedades'=>'propiedades','Nichos'=>'nichos',
+                     'Total_Unidades'=>'totalUnidades'] as $source=>$name){
+                $n=vePick($v,$header,$source);
+                if($n===null||trim((string)$n)==='')$n=0;
+                if(!is_numeric($n)||(float)$n<0)throw new RuntimeException('Cantidad de unidades inválida.');
+                $measure[$name]=(float)$n;
+            }
+            $out[]=[
+                'id'=>'VENTAS_EXCEL|'.hash('sha256',$key),
+                'mes'=>$month,
+                'fecha'=>trim((string)vePick($v,$header,'Fecha')),
+                'asesor'=>trim((string)vePick($v,$header,'Asesor')),
+                'semana'=>trim((string)vePick($v,$header,'Semana')),
+                'sucursal'=>trim((string)vePick($v,$header,'Sucursal')),
+                'tipoRegistro'=>$type==='MENSUAL'?'Mensual':'Semanal',
+                'fuente'=>'Ventas 2026',
+                'fuenteOrigen'=>'excel_original_ventas',
+                'claveRegistro'=>$key,
+                'hojaOrigen'=>trim((string)vePick($v,$header,'Hoja_Origen')),
+                'filaOrigen'=>(int)vePick($v,$header,'Fila_Origen'),
+                ...$measure
+            ];
+        }
+        if($header===null)throw new RuntimeException('Encabezado Comercial ausente.');
+        return $out;
+    }finally{$zip->close();}
+}
 function veAuditContratos(string $filename):array {
     $zip=new ZipArchive();
     if($zip->open($filename,ZipArchive::CHECKCONS)!==true)throw new RuntimeException('Excel CONTRATOS no es ZIP íntegro.');
