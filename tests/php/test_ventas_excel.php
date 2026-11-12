@@ -31,6 +31,7 @@ $b=veAuditContratos($base.'/contratos-ok.xlsx');
 qaAssert($b['registrosAuxiliares']===2&&$b['clavesDuplicadas']===0,'Contract summary scanned');
 qaAssert(count($b['origenesPresentes'])===3,'Three source sheets checked');
 qaAssert(!$b['listoParaActivar'],'Cannot cut over from auxiliary contract table');
+echo "DIRECT_DATE_AUDIT=".json_encode(veFechaContratoOriginal([28=>2,29=>'Noviembre',30=>2026]))."\\n";
 $b=veAuditContratos($base.'/contratos-duplicado.xlsx');
 qaAssert($b['clavesDuplicadas']===1,'Contract duplicate detected');
 qaAssert($b['conciliacionOriginalVsAuxiliar']['correspondenciaAmbigua']===2,'Duplicated source keys cause ambiguity, not double counting');
