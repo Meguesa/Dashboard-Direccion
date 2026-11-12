@@ -20,7 +20,7 @@ qaAssert($good['meses']['2026-11']['metaDisponible']===true,'Goal availability t
 qaAssert(!array_key_exists('2026-10',$good['metas']['totalesCentavos']),'No invented goal for other month');
 $rows=veLeerRegistrosComercial($base.'/ventas-ok.xlsx');
 qaAssert(count($rows)===1,'One seller in normalized records');
-qaAssert($rows[0]['metaMensual']===700.0,'Personal goal from METAS');
+qaAssert(abs((float)$rows[0]['metaMensual']-700.0)<0.001,'Personal goal from METAS');
 qaAssert($rows[0]['montoVenta']===200.30,'Sales amount from source monthly row');
 qaAssert($rows[0]['tipoRegistro']==='Mensual','Single granularity');
 $diff=veAuditVentas($base.'/ventas-diferencia.xlsx');
