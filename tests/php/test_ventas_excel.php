@@ -36,6 +36,7 @@ qaAssert($b['clavesDuplicadas']===1,'Contract duplicate detected');
 qaAssert($b['conciliacionOriginalVsAuxiliar']['correspondenciaAmbigua']===2,'Duplicated source keys cause ambiguity, not double counting');
 qaAssert($b['conciliacionOriginalVsAuxiliar']['coincidenciasUnicas']===1,'Unique contracts reconcile even if another source record is repeated');
 qaAssert($b['conciliacionOriginalVsAuxiliar']['importesConciliados']===1,'Amount is verified only for unique keys');
+echo "CONTRACT_DATE_AUDIT=".json_encode($b['conciliacionOriginalVsAuxiliar'])."\n";
 qaAssert($b['conciliacionOriginalVsAuxiliar']['fechasConciliadas']===1,'Date is verified only for unique keys');
 qaAssert(veFechaContratoOriginal([26=>2,27=>'Noviembre',28=>2026])['fecha']==='2026-11-02','Date from AA:AC');
 qaAssert(veFechaContratoOriginal([28=>2,29=>'Noviembre',30=>2026])['fecha']==='2026-11-02','Date from AC:AE');
