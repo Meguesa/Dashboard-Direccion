@@ -12,7 +12,7 @@ if(PHP_SAPI!=='cli'&&
  * Dependencias privadas existentes: ingresos_engine.php (Graph/XLSX).
  */
 require_once __DIR__ . '/ingresos_engine.php';
-const VE_BUILD = '20261112-contratos-2';
+const VE_BUILD = '20261112-graph-sombra-3';
 const VE_DRIVE_COMERCIAL = 'b!tzGM-V4TiUKbUyHUBBu214AiW7yUyvxPnueBG9lB85Wh0Tv-5FAnQqSNjE7rlEJv';
 const VE_ITEM_COMERCIAL = '01ZBUZ3OT6NWPAZOQW5BDZ77XXJW7IQXPD';
 const VE_DRIVE_COBRANZA = 'b!EAWNGReAT02APufy0uQPFnDnY1ILcuZGv2EfFdV9rplPAV4rL4C_QoZl8LbKac5c';
@@ -280,7 +280,7 @@ function veEstadoTextoContrato($number):string {
  * servicio no se resuelven arbitrariamente.
  */
 function veProcesarContratosOriginales(string $filename,?string $month=null,bool $details=false):array {
-    if($month!==null&&!preg_match('/^20\d\d-(0[1-9]|1[0-2])$/D',$month))
+    if($month!==null&&!preg_match('/^20\d\d(?:-(0[1-9]|1[0-2]))?$/D',$month))
         throw new InvalidArgumentException('Mes de contratos inválido.');
     $zip=new ZipArchive();
     if($zip->open($filename,ZipArchive::CHECKCONS)!==true)
@@ -332,7 +332,8 @@ function veProcesarContratosOriginales(string $filename,?string $month=null,bool
                 $key=veClaveContrato($sheet,$raw,$reference);
                 $fingerprint=hash('sha256',($date['fecha']??'SIN_FECHA').'|'.
                     ($amount===null?'SIN_IMPORTE':(string)$amount).'|'.$service.'|'.$product);
-                $want=$details&&($month===null||$part===$month);
+                $want=$details&&($month===null||$part===$month||
+                    (strlen($month)===4&&str_starts_with((string)$part,$month.'-')));
                 $record=null;
                 if($want){
                     $customer=trim(implode(' ',array_filter(array_map(
@@ -363,7 +364,8 @@ function veProcesarContratosOriginales(string $filename,?string $month=null,bool
                         'nota'=>$status==='NOTA_DE_MODIFICACION',
                         'sinFecha'=>$date['fecha']===null,'sinReferencia'=>$reference==='',
                         'sinImporte'=>$amount===null,'ambiguaFecha'=>$date['ambigua'],
-                        'registros'=>$record];
+                        'registros'=>$record,'mesOriginal'=>$part,
+                        'importeOriginal'=>$amount];
                 }else{
                     $g=&$groups[$key];
                     $g['cantidad']++;
@@ -382,10 +384,11 @@ function veProcesarContratosOriginales(string $filename,?string $month=null,bool
             ksort($metrics['años']);$counts[$sheet]=$metrics;
         }
         $duplicates=0;$exactDuplicates=0;$conflictGroups=0;$uncertain=0;
-        $rows=[];
+        $rows=[];$ignoredKeys=0;$ignoredRows=0;
         foreach($groups as $entry){
             $repeated=$entry['cantidad']>1;
             if($repeated){
+                $ignoredKeys++;$ignoredRows+=$entry['cantidad'];
                 $duplicates+=$entry['cantidad']-1;
                 if($entry['conflicto'])$conflictGroups++;
                 else $exactDuplicates+=$entry['cantidad']-1;
@@ -393,6 +396,21 @@ function veProcesarContratosOriginales(string $filename,?string $month=null,bool
             if($entry['cancelacion']||$entry['pendiente']||$entry['nota']||
                $entry['conflicto']||$entry['sinFecha']||$entry['sinReferencia']||
                $entry['sinImporte']||$entry['ambiguaFecha'])$uncertain++;
+            if($entry['mesOriginal']!==null){
+                $m=&$perMonth[$entry['mesOriginal']];
+                if($repeated){
+                    $m['filasRepetidasIgnoradas']=($m['filasRepetidasIgnoradas']??0)+$entry['cantidad'];
+                }else{
+                    $m['contratosUnicosNoRepetidos']=($m['contratosUnicosNoRepetidos']??0)+1;
+                    if($entry['importeOriginal']!==null)
+                        $m['importeNominalSinRepetidosCentavos']=
+                            ($m['importeNominalSinRepetidosCentavos']??0)+$entry['importeOriginal'];
+                }
+                unset($m);
+            }
+            // Todos los registros con clave repetida se ignoran temporalmente.
+            // No elegir arbitrariamente el primero ni el ultimo.
+            if($repeated)continue;
             if($details&&$entry['registros']!==null){
                 $item=$entry['registros'];
                 $item['repeticionesOrigen']=$entry['cantidad'];
@@ -417,6 +435,9 @@ function veProcesarContratosOriginales(string $filename,?string $month=null,bool
             'clavesUnicas'=>count($groups),
             'repeticionesDetectadas'=>$duplicates,
             'repeticionesIdenticas'=>$exactDuplicates,
+            'gruposRepetidosIgnorados'=>$ignoredKeys,
+            'filasRepetidasIgnoradas'=>$ignoredRows,
+            'clavesUnicasNoRepetidas'=>count($groups)-$ignoredKeys,
             'gruposConDatosConflictivos'=>$conflictGroups,
             'sinFecha'=>$noDate,'sinReferencia'=>$noReference,
             'importesNoNumericos'=>$noPrice,
@@ -428,6 +449,11 @@ function veProcesarContratosOriginales(string $filename,?string $month=null,bool
         ];
         return ['auditoria'=>$audit,'registros'=>$rows];
     }finally{$zip->close();}
+}
+/** Cache privada para 2026, excluyendo todos los contratos de clave repetida. */
+function veLeerContratosAnio(string $filename,int $year=VE_YEAR):array {
+    if($year!==VE_YEAR)throw new InvalidArgumentException('Anio fuera de alcance QA.');
+    return veProcesarContratosOriginales($filename,(string)$year,true)['registros'];
 }
 function veAuditContratos(string $filename):array {
     return veProcesarContratosOriginales($filename,null,false)['auditoria'];
@@ -455,8 +481,11 @@ function veConciliarFuentesOriginales(?array $comercial,?array $contracts):array
             'mes'=>$month,
             'ventasComercialCentavos'=>$sales['ventasCentavos']??null,
             'contratosCandidatos'=>$contract['candidatos']??0,
+            'contratosUnicosNoRepetidos'=>$contract['contratosUnicosNoRepetidos']??0,
+            'filasRepetidasIgnoradas'=>$contract['filasRepetidasIgnoradas']??0,
             'contratosPorOrigen'=>$contract['porHoja']??[],
             'importeNominalContratosCentavos'=>$contract['importeNominalCandidatosCentavos']??null,
+            'importeNominalSinRepetidosCentavos'=>$contract['importeNominalSinRepetidosCentavos']??null,
             'diferenciaSoloDiagnosticaCentavos'=>$sales!==null&&$contract!==null?
                 ($sales['ventasCentavos']-$contract['importeNominalCandidatosCentavos']):null,
             'sumarAmbasFuentes'=>false
@@ -467,7 +496,7 @@ function veConciliarFuentesOriginales(?array $comercial,?array $contracts):array
         'nota'=>'No son dos listados de ventas a sumar: uno es mensual Comercial y otro detalle de expedientes, con fechas y condiciones distintas.'];
 }
 /** Descarga solo los dos IDs permitidos. No muestra datos personales ni contenido del libro. */
-function veInspeccion():array {
+function veInspeccion(bool $includePrivateRows=false):array {
     $result=['build'=>VE_BUILD,'horaUTC'=>hsNow(),'modo'=>'SOLO_AUDITORIA',
        'produccionModificada'=>false,'biVentasReemplazada'=>false,'archivos'=>[]];
     $token=hsToken();
@@ -488,6 +517,11 @@ function veInspeccion():array {
                 $check=hsRemoteJson($source['drive'],'/items/'.rawurlencode($source['id']).'?%24select=id,eTag',$token);
                 if(($check['eTag']??'')!==$etag)
                     throw new RuntimeException('Excel modificado durante lectura. Reintentar mas tarde.');
+                if($includePrivateRows){
+                    $result['_privateRows'][$name]=$name==='comercial'
+                        ?veLeerRegistrosComercial($download['temporal'])
+                        :veLeerContratosAnio($download['temporal']);
+                }
                 $info['sha256']=$download['sha256'];
                 $info['bytes']=$download['tamanoBytes'];
                 $info['auditoria']=$audit;
@@ -540,7 +574,9 @@ function veRun(bool $force=false):array {
                 $changed=true;
             }
         }
-        if(!$changed&&!isset($run['errores'])){
+        if(!$changed&&!isset($run['errores'])&&
+           is_file(HS_DIR.'/ventas_datos_2026.json')&&
+           !empty($old['versionDatos'])&&empty($old['antigua'])){
             $run['estado']='sin_cambios';
             $run['versionValidadaUTC']=$old['versionValidadaUTC']??null;
             $old['verificadoUTC']=hsNow();$old['ultimaEjecucion']=$run;
@@ -548,7 +584,7 @@ function veRun(bool $force=false):array {
             return $run;
         }
         if(isset($run['errores']))throw new RuntimeException('Metadatos actuales no disponibles.');
-        $fresh=veInspeccion();
+        $fresh=veInspeccion(true);
         if(count($fresh['archivos']??[])!==2)throw new RuntimeException('Auditoria incompleta.');
         $valid=true;
         foreach($observed as $name=>$metadata){
@@ -559,12 +595,44 @@ function veRun(bool $force=false):array {
             }
         }
         if(!$valid)throw new RuntimeException('Una o mas fuentes no superaron verificacion.');
-        $fresh['verificadoUTC']=hsNow();
+        $private=$fresh['_privateRows']??[];
+        unset($fresh['_privateRows']);
+        if(!isset($private['comercial'],$private['contratos'])||
+           !is_array($private['comercial'])||!is_array($private['contratos']))
+            throw new RuntimeException('El contenido de una fuente no fue verificado.');
+        $stamp=hsNow();
+        $hashParts=[VE_BUILD];
+        foreach(['comercial','contratos'] as $name) {
+            $hashParts[]=(string)$fresh['archivos'][$name]['etag'];
+            $hashParts[]=(string)$fresh['archivos'][$name]['sha256'];
+        }
+        $version=hash('sha256',implode('|',$hashParts));
+        $data=[
+            'build'=>VE_BUILD,'version'=>$version,'validadoUTC'=>$stamp,
+            'fuentes'=>array_map(static fn(array $v)=>[
+                'etag'=>$v['etag'],'sha256'=>$v['sha256'],
+                'modificadoUTC'=>$v['modificadoUTC']??null
+            ],$fresh['archivos']),
+            'ventas'=>$private['comercial'],
+            'contratos'=>$private['contratos'],
+            'metas'=>$fresh['archivos']['comercial']['auditoria']['metas']['totalesCentavos']??[],
+            'resumenVentas'=>$fresh['archivos']['comercial']['auditoria']['meses']??[],
+            'resumenContratos'=>$fresh['archivos']['contratos']['auditoria']['porMes']??[],
+            'contratosRepetidosIgnorados'=>
+                $fresh['archivos']['contratos']['auditoria']['filasRepetidasIgnoradas']??0,
+            'fuenteVentasProductiva'=>false
+        ];
+        // Commit en dos fases: el manifiesto solo apunta a datos ya publicados.
+        hsWrite('ventas_datos_2026.json',$data);
+        $fresh['verificadoUTC']=$stamp;
         $fresh['ultimaEjecucion']=$run;
-        $fresh['versionValidadaUTC']=hsNow();
-        // Informe privado, no reemplaza los datos de los cuadros del Dashboard.
+        $fresh['versionValidadaUTC']=$stamp;
+        $fresh['versionDatos']=$version;
+        $fresh['antigua']=false;
+        $fresh['modo']='PARALELO_NO_PRODUCTIVO';
         hsWrite('ventas_estado.json',$fresh);
         $run['estado']='auditado';
+        $run['versionDatos']=$version;
         $run['listoParaPublicar']=false;
         $run['archivos']=array_map(static fn(array $v)=>[
             'identidadValidada'=>$v['identidadValidada']??false,

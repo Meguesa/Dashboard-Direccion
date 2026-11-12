@@ -53,6 +53,8 @@ qaAssert(count(array_filter($monthly,fn($r)=>$r['aportaTotalComercial']!==false)
 qaAssert(count(array_filter($monthly,fn($r)=>$r['ventaVigenteConfirmada']!==false))===0,
     'Absence of cancellation is not proof of active contract');
 qaAssert(abs((float)$monthly[0]['importeContrato']-100.0)<0.001,'Contract face value retained separately');
+qaAssert(count(veLeerContratosAnio($base.'/contratos-ok.xlsx'))===3,
+    'Annual private snapshot reads all three nonduplicate source records');
 qaAssert($monthly[0]['montoVenta']===null && $monthly[0]['total']===null,
     'No contract amount leaked to sales aggregation fields');
 $cross=veConciliarFuentesOriginales($good,$contracts);
@@ -64,17 +66,25 @@ qaAssert($cross['meses']['2026-11']['importeNominalContratosCentavos']===30000,
     'Contract face value is a separate diagnostic amount');
 qaAssert($cross['meses']['2026-11']['contratosCandidatos']===3,
     'Contract detail counts not mixed with sales rows');
+qaAssert($cross['meses']['2026-11']['contratosUnicosNoRepetidos']===3,
+    'Nonduplicate count is separate from raw candidates');
+qaAssert($cross['meses']['2026-11']['importeNominalSinRepetidosCentavos']===30000,
+    'Unique face amount is diagnostic, not part of Commercial sales');
 qaAssert($duplicateContracts['repeticionesIdenticas']===1,
     'Identical repeated contract detected without double counting');
-qaAssert(count(veLeerContratosOriginales($base.'/contratos-duplicado.xlsx','2026-11'))===3,
-    'Duplicate original contract collapses to one detail record');
+qaAssert(count(veLeerContratosOriginales($base.'/contratos-duplicado.xlsx','2026-11'))===2,
+    'Repeated contract key excluded completely, not retained once');
+qaAssert($duplicateContracts['gruposRepetidosIgnorados']===1,
+    'One duplicate contract group ignored');
+qaAssert($duplicateContracts['filasRepetidasIgnoradas']===2,
+    'Both rows of duplicate contract ignored');
 $conf=veAuditContratos($base.'/contratos-conflicto.xlsx');
 qaAssert($conf['gruposConDatosConflictivos']===1,
     'Same contract key with divergent face value requires review');
 $confRows=veLeerContratosOriginales($base.'/contratos-conflicto.xlsx','2026-11');
-qaAssert(count($confRows)===3,'Conflicting contract does not generate extra row');
-qaAssert(count(array_filter($confRows,fn($r)=>$r['integridad']==='REQUIERE_CONCILIACION'
-    && $r['importeContrato']===null))===1,'Conflicting amount never chosen arbitrarily');
+qaAssert(count($confRows)===2,'Conflicting repeated contract group excluded');
+qaAssert(count(array_filter($confRows,fn($r)=>$r['hojaOrigen']==='LOTES'))===0,
+    'No value chosen arbitrarily for conflicting key');
 $cancel=veAuditContratos($base.'/contratos-cancelado.xlsx');
 qaAssert($cancel['cancelacionesExplicitas']===1,'Explicit cancellation found');
 $cancelRows=veLeerContratosOriginales($base.'/contratos-cancelado.xlsx','2026-11');

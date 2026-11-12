@@ -850,6 +850,7 @@ async function actualizarDatosDashboard(opciones = {}) {
 
     // renderDashboard() ya actualiza los servicios del día una sola vez.
     renderDashboard();
+    void cargarComparacionVentasExcelQA();
 
     const detalleFinal = mesesRecargados.length > 0
       ? `Actualización incremental completada: ${mesesRecargados.join(", ")}.`
@@ -866,6 +867,80 @@ async function actualizarDatosDashboard(opciones = {}) {
     actualizacionEnCurso = false;
 
     ocultarPanelEstadoConRetraso(10000);
+  }
+}
+
+
+// QA opt-in: muestra un contraste paralelo en Ventas sin sustituir BI_Ventas.
+async function cargarComparacionVentasExcelQA() {
+  if (new URLSearchParams(window.location.search).get("ventas_excel_qa") !== "1" ||
+      String(window.PORTAL_USER_EMAIL || "").trim().toLowerCase() !==
+        "gabriel.guerra@juanpablo.com.mx") return;
+  const card = document.querySelector("#pageVentas > article.card");
+  if (!card) return;
+  let holder = document.getElementById("ventasExcelQAComparacion");
+  if (!holder) {
+    holder = document.createElement("section");
+    holder.id = "ventasExcelQAComparacion";
+    holder.style.cssText =
+      "margin:16px 0;padding:16px;border:1px solid #ceb46c;background:#fff9e8;border-radius:10px;";
+    const header = document.createElement("strong");
+    header.textContent = "Comparación Excel (QA, no afecta los indicadores actuales)";
+    holder.appendChild(header);
+    const body = document.createElement("p");
+    body.id = "ventasExcelQAEstado";
+    body.style.whiteSpace = "pre-line";
+    body.style.marginBottom = "0";
+    holder.appendChild(body);
+    const link = document.createElement("a");
+    link.href = "ventas-excel-preview.php";
+    link.textContent = "Verificar Microsoft Graph / generar snapshot";
+    holder.appendChild(link);
+    card.insertBefore(holder, card.querySelector(".detail-kpi-grid"));
+  }
+  const status = document.getElementById("ventasExcelQAEstado");
+  if (!status) return;
+  const months = typeof obtenerMesesRangoSeleccionado === "function"
+    ? obtenerMesesRangoSeleccionado() : [];
+  const mes = [...months].filter(v => /^2026-(0[1-9]|1[0-2])$/.test(v)).pop();
+  if (!mes) { status.textContent = "Seleccione un mes de 2026."; return; }
+  status.textContent = "Validando lectura de ambos Excel y su versión...";
+  try {
+    const response = await fetch(
+      "ventas-excel-preview.php?modo=datos&mes=" + encodeURIComponent(mes), {
+        method:"GET", credentials:"same-origin", cache:"no-store",
+        headers: {Accept:"application/json"}
+      });
+    const data = await response.json();
+    if (!response.ok || !data.validado || !data.fuenteProductivaSinCambios)
+      throw new Error(data.error || "No se dispone de un snapshot Graph validado.");
+    const centavos = rows => rows.reduce((sum, row) =>
+      sum + Math.round(Number(row.montoVenta || 0) * 100), 0);
+    const excelCentavos = centavos(data.ventas || []);
+    const rowsBi = (state.datos.ventas || []).filter(row =>
+      String(row.tipoRegistro || "").toUpperCase() === "MENSUAL" &&
+      registroPerteneceAMeses(row, [mes]));
+    const biCentavos = centavos(rowsBi);
+    const money = cents => (Number(cents)/100).toLocaleString("es-MX", {
+      style: "currency", currency: "MXN"
+    });
+    const meta = data.metaTotalCentavos === null
+      ? "No disponible en METAS" : money(data.metaTotalCentavos);
+    status.textContent =
+      "Mes " + mes + " · Graph de aplicación: snapshot validado " +
+      new Date(data.validadoUTC).toLocaleString("es-MX") +
+      "\nVentas Comercial (Excel): " + money(excelCentavos) +
+      " · BI_Ventas mensual: " + money(biCentavos) +
+      " · Diferencia: " + money(excelCentavos - biCentavos) +
+      "\nMeta METAS: " + meta +
+      " · Contratos originales sin claves repetidas: " + (data.contratos || []).length +
+      "\nClaves contractuales repetidas ignoradas (histórico): " +
+      Number(data.contratosRepetidosIgnorados || 0) +
+      "\nLas cifras oficiales permanecen en BI_Ventas durante esta auditoría.";
+  } catch (error) {
+    status.textContent = "Vista Excel no disponible: " +
+      String(error.message || error) +
+      ". Los indicadores actuales de Ventas permanecen sin cambios.";
   }
 }
 
