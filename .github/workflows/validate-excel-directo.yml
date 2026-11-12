@@ -115,6 +115,7 @@ jobs:
           php -l tests/php/test_ventas_excel.php
           php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel-preview.php
           node --check cpanel-preview-20261105/dashboard-egresos-preview/app.js
+          node tests/js/test_ventas_conciliacion_qa.cjs
           python -m py_compile tests/fixtures_generar_ventas.py
           python tests/fixtures_generar_ventas.py "$RUNNER_TEMP/ventas-qa"
           php tests/php/test_ventas_excel.php "$RUNNER_TEMP/ventas-qa"
