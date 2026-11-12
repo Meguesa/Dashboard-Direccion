@@ -5,16 +5,24 @@ from openpyxl import Workbook
 import sys
 base=Path(sys.argv[1]) if len(sys.argv)>1 else Path("ventas-qa-fixtures")
 base.mkdir(parents=True,exist_ok=True)
-headers=["Fecha","Mes","Asesor","Semana","Sucursal","Monto_Venta","Servicios_AF","Servicios_CH","TS_TSC","Propiedades","Nichos","Total_Unidades","Meta_Mensual","Comentarios","Tipo_Registro","Fuente","Clave_Registro","Hoja_Origen","Fila_Origen","Fecha_Carga","Fecha_Act"]
+headers=["Fecha","Mes","Asesor","Semana","Sucursal","Monto_Venta","Servicios_AF","Servicios_CH","TS_TSC","Propiedades","Nichos","Total_Unidades","Meta_Mensual","Comentarios","Tipo_Registro","Fuente","Clave_Registro","Hoja_Origen","Fila_Origen","Fecha_Carga","Fecha_Act","Numero_Contrato","Referencia","Fecha_Contrato"]
 def workbook(rows,path,contracts=False):
  w=Workbook(); sheet=w.active;sheet.title="DASHBOARD";sheet.append(headers)
  for row in rows:
   sheet.append([row.get(x) for x in headers])
  if contracts:
-  for name in ["LOTES","CHURUBUSCO","AGUA FRÍA"]:
+  for name in ["LOTES","CHURUBUSCO","AGUA FRIA"]:
    s=w.create_sheet(name)
-   s.append(["REFERENCIA","CONTRATO","FECHA","ASESOR","TOTAL"])
-   s.append([f"QA-{name[:2]}",f"TEST-{name[:2]}","01/11/2026","ASESOR FICTICIO",100])
+   s.append([None]*35)
+   for row in rows:
+    if row.get("Hoja_Origen")!=name: continue
+    vals=[None]*35
+    vals[1]={"LOTES":"TEST-LOT-100","CHURUBUSCO":"TEST-CH-101","AGUA FRIA":"TEST-AF-102"}[name]
+    vals[2]={"LOTES":"100","CHURUBUSCO":"101","AGUA FRIA":"102"}[name]
+    vals[25]=row.get("Monto_Venta") or 100
+    offset=28 if name=="CHURUBUSCO" else 26
+    vals[offset:offset+3]=[2,"Noviembre",2026]
+    s.append(vals)
  else:
   for name in ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"]:
    w.create_sheet(name)
@@ -28,8 +36,8 @@ sales=[
  {"Fecha":"2026-11-11","Mes":"NOVIEMBRE","Asesor":"ASESOR 1","Semana":"TOTAL","Monto_Venta":200.30,"Meta_Mensual":700,"Tipo_Registro":"Mensual","Fuente":"Ventas 2026","Clave_Registro":"A-M","Hoja_Origen":"NOVIEMBRE","Fila_Origen":6}
 ]
 contracts=[
- {"Fecha":"2026-11-02","Mes":"NOVIEMBRE","Asesor":"ASESOR 1","Monto_Venta":90.00,"Tipo_Registro":"Transaccion","Fuente":"CONTRATOS","Clave_Registro":"L-100","Hoja_Origen":"LOTES","Fila_Origen":5},
- {"Fecha":"2026-11-03","Mes":"NOVIEMBRE","Asesor":"ASESOR 2","Monto_Venta":200.00,"Tipo_Registro":"Transaccion","Fuente":"CONTRATOS","Clave_Registro":"CH-101","Hoja_Origen":"CHURUBUSCO","Fila_Origen":8}
+ {"Fecha":"2026-11-02","Mes":"NOVIEMBRE","Asesor":"ASESOR 1","Monto_Venta":90.00,"Tipo_Registro":"Transaccion","Fuente":"CONTRATOS","Clave_Registro":"L-100","Hoja_Origen":"LOTES","Fila_Origen":2,"Numero_Contrato":"TEST-LOT-100","Referencia":"100","Fecha_Contrato":"2026-11-02"},
+ {"Fecha":"2026-11-03","Mes":"NOVIEMBRE","Asesor":"ASESOR 2","Monto_Venta":200.00,"Tipo_Registro":"Transaccion","Fuente":"CONTRATOS","Clave_Registro":"CH-101","Hoja_Origen":"CHURUBUSCO","Fila_Origen":2,"Numero_Contrato":"TEST-CH-101","Referencia":"101","Fecha_Contrato":"2026-11-02"}
 ]
 workbook(sales,base/"ventas-ok.xlsx")
 workbook(sales,base/"ventas-meta-diferencia.xlsx")
