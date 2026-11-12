@@ -12,7 +12,7 @@ if(PHP_SAPI!=='cli'&&
  * Dependencias privadas existentes: ingresos_engine.php (Graph/XLSX).
  */
 require_once __DIR__ . '/ingresos_engine.php';
-const VE_BUILD = '20261112-ventas-preflight-2';
+const VE_BUILD = '20261112-originales-1';
 const VE_DRIVE_COMERCIAL = 'b!tzGM-V4TiUKbUyHUBBu214AiW7yUyvxPnueBG9lB85Wh0Tv-5FAnQqSNjE7rlEJv';
 const VE_ITEM_COMERCIAL = '01ZBUZ3OT6NWPAZOQW5BDZ77XXJW7IQXPD';
 const VE_DRIVE_COBRANZA = 'b!EAWNGReAT02APufy0uQPFnDnY1ILcuZGv2EfFdV9rplPAV4rL4C_QoZl8LbKac5c';
@@ -78,234 +78,143 @@ function vePick(array $row,array $header,string $name) {
  * Tabla independiente de metas por asesor, detectada por encabezado y no por
  * nombre de hoja. Se publica solo el agregado por mes, nunca nombres/PII.
  */
-function veMetasSeparadas(ZipArchive $zip,array $sheets,array $strings):array {
-    $found=null;$totals=[];$counts=[];$byAdvisor=[];$duplicateRows=[];
-    $needed=['Fecha_Mes','Mes','Asesor','Nivel','Meta_Mensual'];
-    foreach($sheets as $sheet){
-        $header=null;$headerRow=0;
-        foreach(hsRows($zip,$sheet,$strings) as [$rn,$v,$f]){
-            if($header===null){
-                if($rn>12)break;
-                if(veNorm($v[0]??'')==='FECHA_MES'){
-                    $try=veHeaders($v);
-                    if(!array_diff($needed,array_keys($try))){
-                        $header=$try;$headerRow=$rn;
-                        if($found!==null)throw new RuntimeException('Varias tablas de metas detectadas: no se puede elegir arbitrariamente.');
-                        $found=$sheet;
-                    }
-                }
-                continue;
-            }
-            $month=veMes(vePick($v,$header,'Mes'));
-            if($month===null)continue;
-            try{$amount=hsCents(vePick($v,$header,'Meta_Mensual')??'0');}
-            catch(Throwable $e){throw new RuntimeException('Meta inválida en tabla mensual: '.$sheet.'!'.$rn);}
-            $advisor=veClaveAsesor(vePick($v,$header,'Asesor'));
-            if($advisor==='')throw new RuntimeException('Meta sin asesor en fila '.$rn);
-            if(isset($byAdvisor[$month][$advisor]))
-                $duplicateRows[]=['mes'=>$month,'fila'=>$rn];
-            $byAdvisor[$month][$advisor]=['centavos'=>$amount,'fila'=>$rn];
-            $totals[$month]=($totals[$month]??0)+$amount;
-            $counts[$month]=($counts[$month]??0)+1;
+/**
+ * META OFICIAL: hoja METAS de Comercial (columna C). Los bloques anteriores
+ * a la primera fecha con año 2026 explícito no se atribuyen a 2026.
+ * Jamás consulta hojas auxiliares creadas por flujos automáticos.
+ */
+function veMetasOriginales(ZipArchive $zip,array $ss):array {
+    $month=null;$year=null;$totals=[];$advisorGoals=[];$counts=[];$issues=[];
+    $months=VE_MESES;
+    $groups=['MASTER','ELITE','SENIOR','JUNIOR','PRINCIPIANTE','ASESOR','TOTAL'];
+    foreach(hsRows($zip,'METAS',$ss) as [$rn,$row,$formula]){
+        $a=veNorm($row[0]??'');
+        $date=hsDate($row[0]??null);
+        if($date!==null && substr($date,8,2)==='01'){
+            $year=(int)substr($date,0,4);
+            $month=substr($date,0,7);
+            continue;
         }
+        if(isset($months[$a])){
+            if($year===null){$month=null;continue;}
+            $month=sprintf('%04d-%02d',$year,$months[$a]);continue;
+        }
+        if($year!==VE_YEAR||$month===null||$a===''||in_array($a,$groups,true))
+            continue;
+        $val=$row[2]??null;
+        if($val===null||trim((string)$val)==='')continue;
+        try{$cents=hsCents($val);}
+        catch(Throwable $e){$issues[]=['codigo'=>'META_INVALIDA','fila'=>$rn];continue;}
+        $advisor=veClaveAsesor($a);
+        if($cents<0||$advisor===''){$issues[]=['codigo'=>'META_INVALIDA','fila'=>$rn];continue;}
+        if(isset($advisorGoals[$month][$advisor])){
+            $issues[]=['codigo'=>'ASESOR_META_DUPLICADA','mes'=>$month,'fila'=>$rn];continue;
+        }
+        $advisorGoals[$month][$advisor]=$cents;
+        $totals[$month]=($totals[$month]??0)+$cents;
+        $counts[$month]=($counts[$month]??0)+1;
     }
     ksort($totals);
-    return ['hoja'=>$found,'metasCentavos'=>$totals,'registros'=>$counts,
-        'filasMetaDuplicadas'=>$duplicateRows,'_asesores'=>$byAdvisor];
+    return ['fuente'=>'METAS','totalesCentavos'=>$totals,
+        'registrosPorMes'=>$counts,'incidencias'=>$issues,'_asesores'=>$advisorGoals];
 }
-function veAuditVentas(string $filename):array {
-    $zip=new ZipArchive();
-    if($zip->open($filename,ZipArchive::CHECKCONS)!==true)throw new RuntimeException('Excel Ventas no es ZIP íntegro.');
-    try {
-        $sheets=veSheetNames($zip);
-        if(!in_array('DASHBOARD',$sheets,true))throw new RuntimeException('No existe tabla normalizada DASHBOARD de Comercial.');
-        $strings=readStrings($zip);
-        $header=null;$totals=[];$seen=[];$duplicates=[];$exceptions=[];$rowCount=0;
-        $kinds=['SEMANAL'=>0,'MENSUAL'=>0];$porAsesor=[];
-        $required=['Fecha','Mes','Asesor','Semana','Monto_Venta','Servicios_AF','Servicios_CH','TS_TSC','Propiedades','Nichos','Total_Unidades','Meta_Mensual','Tipo_Registro','Fuente','Clave_Registro','Hoja_Origen','Fila_Origen'];
-        foreach(hsRows($zip,'DASHBOARD',$strings) as [$rn,$values,$formulas]) {
-            if($header===null) {
-                if($rn>10)throw new RuntimeException('Falta encabezado de DASHBOARD en las primeras 10 filas.');
-                if(veNorm($values[0]??'')==='FECHA') {
-                    $header=veHeaders($values);$missing=array_values(array_diff($required,array_keys($header)));
-                    if($missing)throw new RuntimeException('Columnas ausentes de Comercial: '.implode(', ',$missing));
-                }continue;
-            }
-            $kind=veNorm(vePick($values,$header,'Tipo_Registro'));
-            if($kind==='')continue;
-            if(!isset($kinds[$kind])){$exceptions[]=['codigo'=>'TIPO_REGISTRO_DESCONOCIDO','hoja'=>'DASHBOARD','fila'=>$rn];continue;}
-            $source=trim((string)vePick($values,$header,'Fuente'));
-            if($source!=='Ventas 2026')$exceptions[]=['codigo'=>'FUENTE_INESPERADA','hoja'=>'DASHBOARD','fila'=>$rn];
-            $key=trim((string)vePick($values,$header,'Clave_Registro'));
-            if($key===''){$exceptions[]=['codigo'=>'CLAVE_VACIA','hoja'=>'DASHBOARD','fila'=>$rn];continue;}
-            if(isset($seen[$key])){$duplicates[]=['tipo'=>$kind,'mes'=>veMes(vePick($values,$header,'Mes')),'hoja'=>'DASHBOARD','fila'=>$rn];continue;}
-            $seen[$key]=true;
-            $month=veMes(vePick($values,$header,'Mes'));
-            if($month===null){$exceptions[]=['codigo'=>'MES_INVALIDO','hoja'=>'DASHBOARD','fila'=>$rn];continue;}
-            try{$amount=hsCents(vePick($values,$header,'Monto_Venta')??'0');$goal=hsCents(vePick($values,$header,'Meta_Mensual')??'0');}
-            catch(Throwable $e){$exceptions[]=['codigo'=>'IMPORTE_INVALIDO','hoja'=>'DASHBOARD','fila'=>$rn];continue;}
-            $advisor=veClaveAsesor(vePick($values,$header,'Asesor'));
-            if($advisor===''){$exceptions[]=['codigo'=>'ASESOR_VACIO','hoja'=>'DASHBOARD','fila'=>$rn];continue;}
-            if(!isset($porAsesor[$month][$advisor]))
-                $porAsesor[$month][$advisor]=['semanalCentavos'=>0,'mensualCentavos'=>0,
-                    'conteoSemanal'=>0,'conteoMensual'=>0,'metaMensualCentavos'=>0,'filaMensual'=>null];
-            $a=&$porAsesor[$month][$advisor];
-            if($kind==='SEMANAL'){$a['semanalCentavos']+=$amount;$a['conteoSemanal']++;}
-            else {$a['mensualCentavos']+=$amount;$a['conteoMensual']++;
-                  $a['metaMensualCentavos']+=$goal;$a['filaMensual']=$rn;}
-            unset($a);
-            $rowCount++;$kinds[$kind]++;
-            if(!isset($totals[$month]))$totals[$month]=['semanalCentavos'=>0,'mensualCentavos'=>0,'registrosSemanal'=>0,'registrosMensual'=>0,'metasMensualesCentavos'=>0];
-            $bucket=strtolower($kind).'Centavos';$counter='registros'.ucfirst(strtolower($kind));
-            $totals[$month][$bucket]+=$amount;$totals[$month][$counter]++;
-            // Cada fila mensual contiene la meta por asesor. Nunca sumar metas semanales.
-            if($kind==='MENSUAL')$totals[$month]['metasMensualesCentavos']+=$goal;
-        }
-        if($header===null)throw new RuntimeException('Encabezado Comercial no encontrado.');
-        ksort($totals);
-        $mismatches=[];
-        foreach($totals as $month=>$v) {
-            if($v['registrosMensual']===0||$v['registrosSemanal']===0)continue;
-            $diff=$v['mensualCentavos']-$v['semanalCentavos'];
-            if($diff!==0)$mismatches[]=['mes'=>$month,'diferenciaCentavos'=>$diff,'mensualCentavos'=>$v['mensualCentavos'],'semanalCentavos'=>$v['semanalCentavos']];
-        }
-        $metasSeparadas=veMetasSeparadas($zip,$sheets,$strings);
-        $metasAsesor=$metasSeparadas['_asesores'];
-        unset($metasSeparadas['_asesores']); // No publicar datos de asesores individuales.
-        $descuadresPorAsesor=[];
-        $mensualesMultiples=[];
-        foreach($porAsesor as $month=>$advisors){
-            foreach($advisors as $advisor=>$amounts){
-                if($amounts['conteoMensual']>1)$mensualesMultiples[]=[
-                    'mes'=>$month,'fila'=>$amounts['filaMensual']];
-                if($amounts['conteoSemanal']===0||$amounts['conteoMensual']===0)continue;
-                $diff=$amounts['mensualCentavos']-$amounts['semanalCentavos'];
-                if($diff===0)continue;
-                if(!isset($descuadresPorAsesor[$month]))
-                    $descuadresPorAsesor[$month]=['mes'=>$month,'asesoresConDiferencia'=>0,
-                        'diferenciaNetaCentavos'=>0,'diferenciaAbsolutaCentavos'=>0];
-                $descuadresPorAsesor[$month]['asesoresConDiferencia']++;
-                $descuadresPorAsesor[$month]['diferenciaNetaCentavos']+=$diff;
-                $descuadresPorAsesor[$month]['diferenciaAbsolutaCentavos']+=abs($diff);
-            }
-        }
-        ksort($descuadresPorAsesor);
-        $diferenciasMetaPorAsesor=[];
-        $sinMetaBi=[];
-        $metasSinFilaMensual=[];
-        foreach($metasAsesor as $month=>$entries){
-            foreach($entries as $advisor=>$entry){
-                $filaMensual=$porAsesor[$month][$advisor]??null;
-                if($filaMensual===null||$filaMensual['conteoMensual']===0){
-                    $metasSinFilaMensual[$month]=($metasSinFilaMensual[$month]??0)+1;
-                    continue; // También existen metas de meses futuros sin venta todavía.
-                }
-                $diff=$entry['centavos']-$filaMensual['metaMensualCentavos'];
-                if($diff===0)continue;
-                if(!isset($diferenciasMetaPorAsesor[$month]))
-                    $diferenciasMetaPorAsesor[$month]=['mes'=>$month,
-                      'asesoresConDiferencia'=>0,'diferenciaNetaCentavos'=>0,
-                      'diferenciaAbsolutaCentavos'=>0];
-                $diferenciasMetaPorAsesor[$month]['asesoresConDiferencia']++;
-                $diferenciasMetaPorAsesor[$month]['diferenciaNetaCentavos']+=$diff;
-                $diferenciasMetaPorAsesor[$month]['diferenciaAbsolutaCentavos']+=abs($diff);
-            }
-        }
-        foreach($porAsesor as $month=>$entries){
-            if(!isset($metasAsesor[$month]))continue;
-            foreach($entries as $advisor=>$entry){
-                if($entry['conteoMensual']>0 && $entry['metaMensualCentavos']>0
-                   && !isset($metasAsesor[$month][$advisor]))
-                    $sinMetaBi[$month]=($sinMetaBi[$month]??0)+1;
-            }
-        }
-        $diferenciasMetas=[];
-        foreach($metasSeparadas['metasCentavos'] as $month=>$goal){
-            $mensual=$totals[$month]['metasMensualesCentavos']??null;
-            if($mensual!==null&&$goal!==$mensual)
-                $diferenciasMetas[]=['mes'=>$month,'metasTablaCentavos'=>$goal,
-                    'metasRegistrosMensualesCentavos'=>$mensual,'diferenciaCentavos'=>$goal-$mensual];
-        }
-        return [
-            'tabla'=>'DASHBOARD','hojas'=>$sheets,'registrosValidos'=>$rowCount,
-            'metasTablaIndependiente'=>$metasSeparadas,'diferenciasMetas'=>$diferenciasMetas,
-            'descuadresPorAsesor'=>array_values($descuadresPorAsesor),
-            'diferenciasMetaPorAsesor'=>array_values($diferenciasMetaPorAsesor),
-            'filasMensualesMultiples'=>$mensualesMultiples,
-            'asesoresConMetaSinCorrespondencia'=> $sinMetaBi,
-            'metasSinFilaMensual'=>$metasSinFilaMensual,
-            'tipos'=>$kinds,'meses'=>$totals,'clavesDuplicadas'=>count($duplicates),
-            'duplicados'=>$duplicates,'incidencias'=>$exceptions,
-            'descuadresSemanalMensual'=>$mismatches,
-            'listoParaActivar'=>!$exceptions&&!$duplicates&&!$mismatches&&!$diferenciasMetas
-                &&!$descuadresPorAsesor&&!$diferenciasMetaPorAsesor&&!$mensualesMultiples
-                &&!$sinMetaBi&&!$metasSeparadas['filasMetaDuplicadas']&&$metasSeparadas['hoja']!==null
-        ];
-    }finally{$zip->close();}
+function veNumeroUnidades($raw):float {
+    if($raw===null||trim((string)$raw)==='')return 0.0;
+    if(!is_numeric($raw)||(float)$raw<0)throw new RuntimeException('Unidades no numéricas.');
+    return (float)$raw;
 }
 /**
- * Extractor privado de registros comerciales para FUTURA caché QA. Ninguna
- * invocación de este extractor expone datos al navegador o modifica BI_Ventas.
- * Contratos no se fusionan aquí y Semanal/Mensual mantienen sus granularidades.
+ * Origen de ventas: ENERO ... DICIEMBRE, columna G por asesor.
+ * Semanas B:F son controles de conciliación, nunca movimientos adicionales.
  */
-function veLeerRegistrosComercial(string $filename):array {
+function veParseComercialOriginal(string $filename):array {
     $zip=new ZipArchive();
     if($zip->open($filename,ZipArchive::CHECKCONS)!==true)
-        throw new RuntimeException('Libro Comercial inválido.');
+        throw new RuntimeException('Ventas 2026.xlsx incompleto.');
     try{
-        $ss=readStrings($zip);$header=null;$out=[];
-        $need=['Fecha','Mes','Asesor','Monto_Venta','Tipo_Registro','Fuente','Clave_Registro',
-               'Servicios_AF','Servicios_CH','TS_TSC','Propiedades','Nichos',
-               'Total_Unidades','Meta_Mensual','Hoja_Origen','Fila_Origen'];
-        $seen=[];
-        foreach(hsRows($zip,'DASHBOARD',$ss) as [$rn,$v,$f]){
-            if($header===null){
-                if($rn>10)throw new RuntimeException('Encabezado comercial no reconocido.');
-                if(veNorm($v[0]??'')==='FECHA'){
-                    $header=veHeaders($v);
-                    if(array_diff($need,array_keys($header)))
-                        throw new RuntimeException('El libro Comercial cambió de columnas.');
-                }continue;
+        $sheets=veSheetNames($zip);$ss=readStrings($zip);
+        if(!in_array('METAS',$sheets,true))throw new RuntimeException('Hoja METAS ausente.');
+        $metas=veMetasOriginales($zip,$ss);$rows=[];$stats=[];$issues=[];
+        foreach(VE_MESES as $sheet=>$number){
+            if(!in_array($sheet,$sheets,true))continue;
+            $month=sprintf('%04d-%02d',VE_YEAR,$number);
+            $header=false;$summary=false;$total=0;$weekly=0;$count=0;$duplicates=[];
+            $diffAdvisors=0;
+            foreach(hsRows($zip,$sheet,$ss) as [$rn,$v,$formula]){
+                if($rn===2){
+                    if(veNorm($v[0]??'')!=='ASESOR'||
+                       !str_contains(veNorm($v[6]??''),'MONTO TOTAL'))
+                        throw new RuntimeException('Cabecera mensual inesperada: '.$sheet);
+                    $header=true;
+                    continue;
+                }
+                if($rn<4)continue;
+                $label=trim((string)($v[0]??''));$upper=veNorm($label);
+                $g=veImporteContrato($v[6]??null);
+                if($upper==='TOTAL'||($upper===''&&$g!==null&&$count>0&&abs($g-$total)<=1)){
+                    $summary=true;
+                    if($g===null||abs($g-$total)>1)$issues[]=['codigo'=>'TOTAL_INCONSISTENTE','mes'=>$month,'fila'=>$rn];
+                    break;
+                }
+                if($upper===''){continue;}
+                if(in_array($upper,['YA CON DEPOSITO','SOLICITUDES FIRMADAS'],true))break;
+                if($g===null){
+                    $issues[]=['codigo'=>'IMPORTE_MENSUAL_INVALIDO','mes'=>$month,'fila'=>$rn];
+                    continue;
+                }
+                $advisor=veClaveAsesor($label);
+                if(isset($duplicates[$advisor])){
+                    $issues[]=['codigo'=>'ASESOR_REPETIDO','mes'=>$month,'fila'=>$rn];continue;
+                }
+                $duplicates[$advisor]=true;$week=0;
+                foreach([1,2,3,4,5] as $col){
+                    if(!isset($v[$col])||trim((string)$v[$col])==='')continue;
+                    $part=veImporteContrato($v[$col]);
+                    if($part===null)throw new RuntimeException('Importe semanal inválido en '.$sheet.'!'.$rn);
+                    $week+=$part;
+                }
+                if($g!==$week)$diffAdvisors++;
+                $weekly+=$week;$total+=$g;$count++;
+                $meta=$metas['_asesores'][$month][$advisor]??null;
+                $rows[]=[
+                    'id'=>'VENTAS_XLSX|'.hash('sha256',$month.'|'.$advisor),
+                    'mes'=>$month,'fecha'=>$month.'-01','fechaExactaDisponible'=>false,
+                    'asesor'=>$label,'tipoRegistro'=>'Mensual','fuente'=>'Ventas 2026',
+                    'montoVenta'=>$g/100,'metaMensual'=>$meta===null?null:$meta/100,
+                    'serviciosAf'=>veNumeroUnidades($v[7]??null),
+                    'serviciosCh'=>veNumeroUnidades($v[8]??null),
+                    'propiedades'=>veNumeroUnidades($v[9]??null),
+                    'nichos'=>veNumeroUnidades($v[15]??null),
+                    'tsTsc'=>veNumeroUnidades($v[21]??null),
+                    'totalUnidades'=>veNumeroUnidades($v[22]??null),
+                    'hojaOrigen'=>$sheet,'filaOrigen'=>$rn
+                ];
             }
-            $type=veNorm(vePick($v,$header,'Tipo_Registro'));
-            if($type==='')continue;
-            if(!in_array($type,['SEMANAL','MENSUAL'],true))
-                throw new RuntimeException('Tipo de registro Comercial inesperado.');
-            $key=trim((string)vePick($v,$header,'Clave_Registro'));
-            if($key===''||isset($seen[$key]))throw new RuntimeException('Clave Comercial ausente o duplicada.');
-            $seen[$key]=true;
-            $month=veMes(vePick($v,$header,'Mes'));
-            if($month===null)throw new RuntimeException('Mes inválido en Comercial.');
-            $measure=[];
-            foreach(['Monto_Venta'=>'montoVenta','Meta_Mensual'=>'metaMensual'] as $source=>$name)
-                $measure[$name]=hsCents(vePick($v,$header,$source)??'0')/100;
-            foreach(['Servicios_AF'=>'serviciosAf','Servicios_CH'=>'serviciosCh',
-                     'TS_TSC'=>'tsTsc','Propiedades'=>'propiedades','Nichos'=>'nichos',
-                     'Total_Unidades'=>'totalUnidades'] as $source=>$name){
-                $n=vePick($v,$header,$source);
-                if($n===null||trim((string)$n)==='')$n=0;
-                if(!is_numeric($n)||(float)$n<0)throw new RuntimeException('Cantidad de unidades inválida.');
-                $measure[$name]=(float)$n;
-            }
-            $out[]=[
-                'id'=>'VENTAS_EXCEL|'.hash('sha256',$key),
-                'mes'=>$month,
-                'fecha'=>trim((string)vePick($v,$header,'Fecha')),
-                'asesor'=>trim((string)vePick($v,$header,'Asesor')),
-                'semana'=>trim((string)vePick($v,$header,'Semana')),
-                'sucursal'=>trim((string)vePick($v,$header,'Sucursal')),
-                'tipoRegistro'=>$type==='MENSUAL'?'Mensual':'Semanal',
-                'fuente'=>'Ventas 2026',
-                'fuenteOrigen'=>'excel_original_ventas',
-                'claveRegistro'=>$key,
-                'hojaOrigen'=>trim((string)vePick($v,$header,'Hoja_Origen')),
-                'filaOrigen'=>(int)vePick($v,$header,'Fila_Origen'),
-                ...$measure
+            if(!$header||!$summary)$issues[]=['codigo'=>'MES_SIN_TOTAL_VALIDO','mes'=>$month];
+            $stats[$month]=[
+                'registros'=>$count,'ventasCentavos'=>$total,'semanasCentavos'=>$weekly,
+                'diferenciaCentavos'=>$total-$weekly,
+                'asesoresConDiferenciaSemanal'=>$diffAdvisors,
+                'metaDisponible'=>isset($metas['totalesCentavos'][$month]),
+                'metaCentavos'=>$metas['totalesCentavos'][$month]??null,
+                'asesoresSinMeta'=>count(array_filter(array_keys($duplicates),
+                    static fn($a)=>!isset($metas['_asesores'][$month][$a])))
             ];
         }
-        if($header===null)throw new RuntimeException('Encabezado Comercial ausente.');
-        return $out;
+        if(!$rows)throw new RuntimeException('Sin registros originales de ventas.');
+        $publicGoals=$metas;unset($publicGoals['_asesores']);
+        return ['registros'=>$rows,'auditoria'=>[
+            'fuentes'=>['meses_originales','METAS'],'registros'=>count($rows),
+            'meses'=>$stats,'metas'=>$publicGoals,'incidencias'=>$issues,
+            'listoParaActivar'=>false // Falta conciliación contractual y metas incompletas.
+        ]];
     }finally{$zip->close();}
+}
+function veAuditVentas(string $filename):array {
+    return veParseComercialOriginal($filename)['auditoria'];
+}
+function veLeerRegistrosComercial(string $filename):array {
+    return veParseComercialOriginal($filename)['registros'];
 }
 /**
  * Fecha original: no hay una columna fija en las tres sucursales. La hoja
