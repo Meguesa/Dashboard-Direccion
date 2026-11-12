@@ -241,7 +241,7 @@ function veFechaContratoOriginal(array $v):array {
         $year=$v[$dayColumn+2]??null;
         if(!is_numeric($d)||!is_numeric($year)||!isset(VE_MESES[$monthName]))continue;
         $day=(int)$d;$y=(int)$year;$m=VE_MESES[$monthName];
-        if((float)$d!==$day||(float)$year!==$y||$y<2000||$y>2100||!checkdate($m,$day,$y))continue;
+        if((float)$d!==(float)$day||(float)$year!==(float)$y||$y<2000||$y>2100||!checkdate($m,$day,$y))continue;
         $dt=sprintf('%04d-%02d-%02d',$y,$m,$day);
         $dates[$dt]=indexToLetter($dayColumn);
     }
@@ -354,7 +354,7 @@ function veAuditContratos(string $filename):array {
                     $report['filaOrigenDesplazada']++;
                 $date=substr((string)(vePick($row,$header,'Fecha_Contrato')??''),0,10);
                 if($date===$found['fecha'])$report['fechasConciliadas']++;
-                else { $report['diferenciasFecha']++; $report['fechaMuestraQA'][]=['fuente'=>$found['fecha'],'consolidado'=>$date]; }
+                else $report['diferenciasFecha']++;
                 $amount=veImporteContrato(vePick($row,$header,'Monto_Venta'));
                 if($amount===null)$report['importeNoNumericoEnConsolidado']++;
                 elseif($amount===$found['montoCentavos'])$report['importesConciliados']++;
