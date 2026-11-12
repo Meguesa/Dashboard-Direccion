@@ -354,7 +354,7 @@ function veAuditContratos(string $filename):array {
                     $report['filaOrigenDesplazada']++;
                 $date=substr((string)(vePick($row,$header,'Fecha_Contrato')??''),0,10);
                 if($date===$found['fecha'])$report['fechasConciliadas']++;
-                else $report['diferenciasFecha']++;
+                else { $report['diferenciasFecha']++; $report['fechaMuestraQA'][]=['fuente'=>$found['fecha'],'consolidado'=>$date]; }
                 $amount=veImporteContrato(vePick($row,$header,'Monto_Venta'));
                 if($amount===null)$report['importeNoNumericoEnConsolidado']++;
                 elseif($amount===$found['montoCentavos'])$report['importesConciliados']++;
