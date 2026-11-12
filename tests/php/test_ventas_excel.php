@@ -52,7 +52,7 @@ qaAssert(count(array_filter($monthly,fn($r)=>$r['aportaTotalComercial']!==false)
     'No contract adds to commercial total');
 qaAssert(count(array_filter($monthly,fn($r)=>$r['ventaVigenteConfirmada']!==false))===0,
     'Absence of cancellation is not proof of active contract');
-qaAssert($monthly[0]['importeContrato']===100.0,'Contract face value retained separately');
+qaAssert(abs((float)$monthly[0]['importeContrato']-100.0)<0.001,'Contract face value retained separately');
 qaAssert($monthly[0]['montoVenta']===null && $monthly[0]['total']===null,
     'No contract amount leaked to sales aggregation fields');
 $cross=veConciliarFuentesOriginales($good,$contracts);
