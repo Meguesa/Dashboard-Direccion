@@ -72,7 +72,7 @@ function veMetasSeparadas(ZipArchive $zip,array $sheets,array $strings):array {
         foreach(hsRows($zip,$sheet,$strings) as [$rn,$v,$f]){
             if($header===null){
                 if($rn>12)break;
-                if(veNorm($v[1]??'')==='FECHA_MES'){
+                if(veNorm($v[0]??'')==='FECHA_MES'){
                     $try=veHeaders($v);
                     if(!array_diff($needed,array_keys($try))){
                         $header=$try;$headerRow=$rn;
