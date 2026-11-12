@@ -7,14 +7,27 @@ on:
       - '.github/workflows/publicar-dashboard-excel-produccion.yml'
       - 'tests/test_excel_directo_build.py'
       - 'cpanel-preview-20261105/**'
+      # Las iteraciones del motor Ventas se prueban bajo demanda, sin generar
+      # paquetes completos del Dashboard por cada cambio del PR.
+      - '!cpanel-preview-20261105/private-code/ventas_engine.php'
       - '.github/workflows/validate-excel-directo.yml'
   workflow_dispatch:
+    inputs:
+      alcance:
+        description: 'Qué validar: Dashboard o Ventas desde Excel (sin publicar)'
+        required: true
+        type: choice
+        options:
+          - dashboard
+          - ventas
+        default: dashboard
 
 permissions:
   contents: read
 
 jobs:
   validar:
+    if: github.event_name != 'workflow_dispatch' || inputs.alcance != 'ventas'
     name: Construir, verificar fechas, PHP y JS sin tocar cPanel
     runs-on: ubuntu-latest
     steps:
@@ -74,3 +87,34 @@ jobs:
           retention-days: 14
       - name: Confirmación
         run: echo 'Paquete probado en runner sin publicación automática.'
+
+  validar_ventas:
+    name: Ventas Excel desde Comercial y Cobranza - pruebas locales sin despliegue
+    if: github.event_name == 'workflow_dispatch' && inputs.alcance == 'ventas'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar PHP para leer XLSX
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: zip, xml, dom, xmlreader, mbstring, curl
+          coverage: none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar librería para crear libros ficticios
+        run: python -m pip install --disable-pip-version-check openpyxl==3.1.5
+      - name: Verificar motor y pruebas (no modifica archivos originales)
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l cpanel-preview-20261105/private-code/ventas_engine.php
+          php -l tests/php/test_ventas_excel.php
+          python -m py_compile tests/fixtures_generar_ventas.py
+          python tests/fixtures_generar_ventas.py "$RUNNER_TEMP/ventas-qa"
+          php tests/php/test_ventas_excel.php "$RUNNER_TEMP/ventas-qa"
+          grep -Fq "'produccionModificada'=>false" cpanel-preview-20261105/private-code/ventas_engine.php
+          grep -Fq "'biVentasReemplazada'=>false" cpanel-preview-20261105/private-code/ventas_engine.php
+          echo "OK: validación solo local de Ventas; sin FTP, Power Automate ni SharePoint."
