@@ -34,12 +34,12 @@ qaAssert($missing['meses']['2026-11']['asesoresSinMeta']===1,'Missing advisor ta
 $contracts=veAuditContratos($base.'/contratos-ok.xlsx');
 qaAssert($contracts['origen']==='HOJAS_ORIGINALES_CONTRATOS','Contract source is original sheets');
 qaAssert($contracts['registrosCandidatos']===3,'Reads original contract rows only');
-qaAssert($contracts['clavesDuplicadas']===0,'No duplicates in normal fixture');
-qaAssert($contracts['porMes']['2026-11']['LOTES']===1,'Lotes date correctly parsed');
-qaAssert($contracts['porMes']['2026-11']['CHURUBUSCO']===1,'Churubusco date correctly parsed');
-qaAssert($contracts['porMes']['2026-11']['AGUA FRIA']===1,'Agua Fria date correctly parsed');
+qaAssert($contracts['repeticionesDetectadas']===0,'No duplicates in normal fixture');
+qaAssert($contracts['porMes']['2026-11']['porHoja']['LOTES']===1,'Lotes date correctly parsed');
+qaAssert($contracts['porMes']['2026-11']['porHoja']['CHURUBUSCO']===1,'Churubusco date correctly parsed');
+qaAssert($contracts['porMes']['2026-11']['porHoja']['AGUA FRIA']===1,'Agua Fria date correctly parsed');
 $duplicateContracts=veAuditContratos($base.'/contratos-duplicado.xlsx');
-qaAssert($duplicateContracts['clavesDuplicadas']===1,'Original contract duplicate detected');
+qaAssert($duplicateContracts['repeticionesDetectadas']===1,'Original contract duplicate detected');
 $poison=veAuditContratos($base.'/contratos-dashboard-contaminado.xlsx');
 qaAssert($poison['registrosCandidatos']===3,'Generated contract worksheet cannot change real totals');
 qaAssert($poison['clavesUnicas']===3,'Generated sheet cannot create an original contract');
