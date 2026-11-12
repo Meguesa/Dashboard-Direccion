@@ -322,3 +322,84 @@ function veInspeccion():array {
     $result['siguientePaso']='Corregir discrepancias y verificar hoja original de Contratos antes de publicar.';
     return $result;
 }
+
+/**
+ * Revisar eTags en cada ciclo de 15 minutos; sólo recalcular si cambiaron.
+ * En esta etapa el motor NO cambia BI_Ventas ni almacena contratos personales.
+ * Esta función es compatible con el gestor de motores privados existente.
+ */
+function veRun(bool $force=false):array {
+    $lock=fopen(HS_DIR.'/ventas_auditoria.lock','c');
+    if(!$lock||!flock($lock,LOCK_EX|LOCK_NB))return ['estado'=>'ocupado','build'=>VE_BUILD];
+    $start=microtime(true);
+    $old=hsRead('ventas_estado.json');
+    $run=['build'=>VE_BUILD,'inicioUTC'=>hsNow(),'estado'=>'pendiente','modificoProduccion'=>false];
+    try{
+        $token=hsToken();$changed=$force||!isset($old['archivos'])||
+            (($old['build']??null)!==VE_BUILD);
+        $observed=[];
+        foreach(veFuentes() as $label=>$src){
+            try{
+                $meta=hsRemoteJson($src['drive'],'/items/'.rawurlencode($src['id']).
+                    '?%24select=id,name,eTag,size,lastModifiedDateTime',$token);
+                if(($meta['id']??'')!==$src['id']||($meta['name']??'')!==$src['name']||
+                   empty($meta['eTag']))throw new RuntimeException('Archivo origen inesperado.');
+                $etag=(string)$meta['eTag'];
+                $observed[$label]=['etag'=>$etag,'modificadoUTC'=>$meta['lastModifiedDateTime']??null];
+                if(($old['archivos'][$label]['etag']??null)!==$etag)$changed=true;
+            }catch(Throwable $e){
+                $run['errores'][$label]='No se pudo verificar origen actual.';
+                $changed=true;
+            }
+        }
+        if(!$changed&&!isset($run['errores'])){
+            $run['estado']='sin_cambios';
+            $run['versionValidadaUTC']=$old['versionValidadaUTC']??null;
+            $old['verificadoUTC']=hsNow();$old['ultimaEjecucion']=$run;
+            hsWrite('ventas_estado.json',$old);
+            return $run;
+        }
+        if(isset($run['errores']))throw new RuntimeException('Metadatos actuales no disponibles.');
+        $fresh=veInspeccion();
+        if(count($fresh['archivos']??[])!==2)throw new RuntimeException('Auditoria incompleta.');
+        $valid=true;
+        foreach($observed as $name=>$metadata){
+            $entry=$fresh['archivos'][$name]??[];
+            if(empty($entry['identidadValidada'])||!is_array($entry['auditoria']??null)
+               ||($entry['etag']??null)!==$metadata['etag']){
+                $valid=false;$run['errores'][$name]='Auditoria no validada para la version observada.';
+            }
+        }
+        if(!$valid)throw new RuntimeException('Una o mas fuentes no superaron verificacion.');
+        $fresh['verificadoUTC']=hsNow();
+        $fresh['ultimaEjecucion']=$run;
+        $fresh['versionValidadaUTC']=hsNow();
+        // Informe privado, no reemplaza los datos de los cuadros del Dashboard.
+        hsWrite('ventas_estado.json',$fresh);
+        $run['estado']='auditado';
+        $run['listoParaPublicar']=false;
+        $run['archivos']=array_map(static fn(array $v)=>[
+            'identidadValidada'=>$v['identidadValidada']??false,
+            'auditoriaRealizada'=>isset($v['auditoria']),
+            'listoParaActivar'=>$v['listoParaActivar']??false
+        ],$fresh['archivos']);
+        return $run;
+    }catch(Throwable $e){
+        $run['estado']='incidencia';
+        $run['error']='No se pudo acreditar la version actual de ambas fuentes.';
+        $old['antigua']=true;
+        $old['ultimoIntentoUTC']=hsNow();
+        $old['error']=$run['error'];
+        $old['ultimaEjecucion']=$run;
+        hsWrite('ventas_estado.json',$old);
+        error_log('Motor Ventas QA: '.$e->getMessage());
+        return $run;
+    }finally{
+        $run['finUTC']=hsNow();
+        $run['segundos']=round(microtime(true)-$start,2);
+        $log=HS_DIR.'/ventas_ciclos.jsonl';
+        file_put_contents($log,json_encode($run,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)."\n",FILE_APPEND|LOCK_EX);
+        chmod($log,0600);
+        flock($lock,LOCK_UN);fclose($lock);
+    }
+}
