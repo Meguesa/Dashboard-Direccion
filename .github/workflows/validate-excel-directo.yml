@@ -221,7 +221,7 @@ jobs:
             fi
           done
 
-      - name: Confirmacion: no se activo motor ni se modificaron KPI
+      - name: 'Confirmacion: no se activo motor ni se modificaron KPI'
         run: |
           echo "### Ventas QA publicacion limitada y verificada" >> "$GITHUB_STEP_SUMMARY"
           echo "Solo staging ventas_engine.php y diagnostico protegido ventas-excel-preview.php." >> "$GITHUB_STEP_SUMMARY"
