@@ -1,5 +1,11 @@
 <?php
 declare(strict_types=1);
+// Defensa adicional: el archivo publico de staging no debe servir peticiones HTTP.
+if(PHP_SAPI!=='cli'&&
+   realpath((string)($_SERVER['SCRIPT_FILENAME']??''))===__FILE__){
+    http_response_code(404);
+    exit;
+}
 /**
  * Ventas: preflight de EXCEL ORIGINAL de Comercial y Cobranza.
  * NO reemplaza BI_Ventas, NO publica datos del cliente, NO modifica Excel.
