@@ -60,6 +60,39 @@ function veHeaders(array $row):array {
 function vePick(array $row,array $header,string $name) {
     return isset($header[$name])?$row[$header[$name]]??null:null;
 }
+/**
+ * Tabla independiente de metas por asesor, detectada por encabezado y no por
+ * nombre de hoja. Se publica solo el agregado por mes, nunca nombres/PII.
+ */
+function veMetasSeparadas(ZipArchive $zip,array $sheets,array $strings):array {
+    $found=null;$totals=[];$counts=[];
+    $needed=['Fecha_Mes','Mes','Asesor','Nivel','Meta_Mensual'];
+    foreach($sheets as $sheet){
+        $header=null;$headerRow=0;
+        foreach(hsRows($zip,$sheet,$strings) as [$rn,$v,$f]){
+            if($header===null){
+                if($rn>12)break;
+                if(veNorm($v[1]??'')==='FECHA_MES'){
+                    $try=veHeaders($v);
+                    if(!array_diff($needed,array_keys($try))){
+                        $header=$try;$headerRow=$rn;
+                        if($found!==null)throw new RuntimeException('Varias tablas de metas detectadas: no se puede elegir arbitrariamente.');
+                        $found=$sheet;
+                    }
+                }
+                continue;
+            }
+            $month=veMes(vePick($v,$header,'Mes'));
+            if($month===null)continue;
+            try{$amount=hsCents(vePick($v,$header,'Meta_Mensual')??'0');}
+            catch(Throwable $e){throw new RuntimeException('Meta inválida en tabla mensual: '.$sheet.'!'.$rn);}
+            $totals[$month]=($totals[$month]??0)+$amount;
+            $counts[$month]=($counts[$month]??0)+1;
+        }
+    }
+    ksort($totals);
+    return ['hoja'=>$found,'metasCentavos'=>$totals,'registros'=>$counts];
+}
 function veAuditVentas(string $filename):array {
     $zip=new ZipArchive();
     if($zip->open($filename,ZipArchive::CHECKCONS)!==true)throw new RuntimeException('Excel Ventas no es ZIP íntegro.');
@@ -106,12 +139,21 @@ function veAuditVentas(string $filename):array {
             $diff=$v['mensualCentavos']-$v['semanalCentavos'];
             if($diff!==0)$mismatches[]=['mes'=>$month,'diferenciaCentavos'=>$diff,'mensualCentavos'=>$v['mensualCentavos'],'semanalCentavos'=>$v['semanalCentavos']];
         }
+        $metasSeparadas=veMetasSeparadas($zip,$sheets,$strings);
+        $diferenciasMetas=[];
+        foreach($metasSeparadas['metasCentavos'] as $month=>$goal){
+            $mensual=$totals[$month]['metasMensualesCentavos']??null;
+            if($mensual!==null&&$goal!==$mensual)
+                $diferenciasMetas[]=['mes'=>$month,'metasTablaCentavos'=>$goal,
+                    'metasRegistrosMensualesCentavos'=>$mensual,'diferenciaCentavos'=>$goal-$mensual];
+        }
         return [
             'tabla'=>'DASHBOARD','hojas'=>$sheets,'registrosValidos'=>$rowCount,
+            'metasTablaIndependiente'=>$metasSeparadas,'diferenciasMetas'=>$diferenciasMetas,
             'tipos'=>$kinds,'meses'=>$totals,'clavesDuplicadas'=>count($duplicates),
             'duplicados'=>$duplicates,'incidencias'=>$exceptions,
             'descuadresSemanalMensual'=>$mismatches,
-            'listoParaActivar'=>!$exceptions&&!$duplicates&&!$mismatches
+            'listoParaActivar'=>!$exceptions&&!$duplicates&&!$mismatches&&!$diferenciasMetas&&$metasSeparadas['hoja']!==null
         ];
     }finally{$zip->close();}
 }
