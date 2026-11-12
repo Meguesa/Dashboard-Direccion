@@ -18,6 +18,7 @@ def sales_file(path, dup=False, weekdiff=False, no_meta=False):
     # Monthly rows A/G; weekly breakdown B:F. Cash amounts are synthetic.
     ws["A4"]="ASESOR FICTICIO";ws["B4"]=120.10;ws["C4"]=80.20
     ws["G4"]=201.30 if weekdiff else 200.30
+    ws["H4"]="\u00a0"  # Reproduce celda AGOSTO!H22 del libro original
     if dup:
         ws["A5"]="ASESOR FICTICIO";ws["G5"]=0
     ws["A6"]="TOTAL";ws["G6"]=200.30 if not weekdiff else 201.30

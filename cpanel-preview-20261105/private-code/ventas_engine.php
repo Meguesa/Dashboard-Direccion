@@ -12,7 +12,7 @@ if(PHP_SAPI!=='cli'&&
  * Dependencias privadas existentes: ingresos_engine.php (Graph/XLSX).
  */
 require_once __DIR__ . '/ingresos_engine.php';
-const VE_BUILD = '20261112-graph-sombra-3';
+const VE_BUILD = '20261112-unicode-nbsp-4';
 const VE_DRIVE_COMERCIAL = 'b!tzGM-V4TiUKbUyHUBBu214AiW7yUyvxPnueBG9lB85Wh0Tv-5FAnQqSNjE7rlEJv';
 const VE_ITEM_COMERCIAL = '01ZBUZ3OT6NWPAZOQW5BDZ77XXJW7IQXPD';
 const VE_DRIVE_COBRANZA = 'b!EAWNGReAT02APufy0uQPFnDnY1ILcuZGv2EfFdV9rplPAV4rL4C_QoZl8LbKac5c';
@@ -119,9 +119,14 @@ function veMetasOriginales(ZipArchive $zip,array $ss):array {
         'registrosPorMes'=>$counts,'incidencias'=>$issues,'_asesores'=>$advisorGoals];
 }
 function veNumeroUnidades($raw):float {
-    if($raw===null||trim((string)$raw)==='')return 0.0;
-    if(!is_numeric($raw)||(float)$raw<0)throw new RuntimeException('Unidades no numéricas.');
-    return (float)$raw;
+    if($raw===null)return 0.0;
+    // Excel guarda un NBSP U+00A0 en AGOSTO!H22: trim() no lo elimina.
+    $s=preg_replace('/[\x{00A0}\x{202F}\x{2007}\x{FEFF}]/u',' ',(string)$raw);
+    if($s===null)throw new RuntimeException('Unidad con UTF-8 inválido.');
+    $s=trim($s);
+    if($s==='')return 0.0;
+    if(!is_numeric($s)||(float)$s<0)throw new RuntimeException('Unidades no numéricas.');
+    return (float)$s;
 }
 /**
  * Origen de ventas: ENERO ... DICIEMBRE, columna G por asesor.
@@ -501,7 +506,7 @@ function veInspeccion(bool $includePrivateRows=false):array {
        'produccionModificada'=>false,'biVentasReemplazada'=>false,'archivos'=>[]];
     $token=hsToken();
     foreach(veFuentes() as $name=>$source){
-        $info=['archivo'=>$source['name'],'identidadValidada'=>false,'auditoria'=>null,'error'=>null];
+        $info=['archivo'=>$source['name'],'identidadValidada'=>false,'auditoria'=>null,'error'=>null,'fase'=>'METADATOS','codigoError'=>null];
         try {
             $meta=hsRemoteJson($source['drive'],'/items/'.rawurlencode($source['id']),$token);
             if(($meta['id']??'')!==$source['id']||($meta['name']??'')!==$source['name']||
@@ -509,30 +514,62 @@ function veInspeccion(bool $includePrivateRows=false):array {
                 throw new RuntimeException('Identidad del archivo no coincide.');
             $info['identidadValidada']=true;$etag=(string)$meta['eTag'];
             $info['etag']=$etag;$info['modificadoUTC']=$meta['lastModifiedDateTime']??null;
+            $info['fase']='DESCARGA';
             $download=hsSnapshotDownload($source['drive'],$meta,$token);
             try {
-                if($download['metodo']!=='contenido_actual_guardado'||!empty($download['nuevaVersionPendiente']))
-                    throw new RuntimeException('Version actual no estable. No se valida una copia historica.');
-                $audit=$name==='comercial'?veAuditVentas($download['temporal']):veAuditContratos($download['temporal']);
-                $check=hsRemoteJson($source['drive'],'/items/'.rawurlencode($source['id']).'?%24select=id,eTag',$token);
-                if(($check['eTag']??'')!==$etag)
-                    throw new RuntimeException('Excel modificado durante lectura. Reintentar mas tarde.');
+                if($download['metodo']!=='contenido_actual_guardado'||!empty($download['nuevaVersionPendiente'])){
+                    $info['fase']='VERSION_INESTABLE';
+                    throw new RuntimeException('Version no estable durante descarga.');
+                }
+                $info['fase']='LECTURA_EXCEL';
+                // Una unica lectura por archivo; evitar dos recorridos de
+                // los 14 mil contratos en un solo intento.
                 if($includePrivateRows){
-                    $result['_privateRows'][$name]=$name==='comercial'
-                        ?veLeerRegistrosComercial($download['temporal'])
-                        :veLeerContratosAnio($download['temporal']);
+                    $parsed=$name==='comercial'
+                        ?veParseComercialOriginal($download['temporal'])
+                        :veProcesarContratosOriginales($download['temporal'],(string)VE_YEAR,true);
+                    $audit=$parsed['auditoria'];
+                    $result['_privateRows'][$name]=$parsed['registros'];
+                }else{
+                    $audit=$name==='comercial'
+                        ?veAuditVentas($download['temporal'])
+                        :veAuditContratos($download['temporal']);
+                }
+                $info['fase']='VERIFICAR_ETAG';
+                $check=hsRemoteJson($source['drive'],
+                    '/items/'.rawurlencode($source['id']).'?%24select=id,eTag',$token);
+                if(($check['eTag']??'')!==$etag){
+                    $info['fase']='VERSION_CAMBIADA';
+                    throw new RuntimeException('Excel modificado durante lectura.');
                 }
                 $info['sha256']=$download['sha256'];
                 $info['bytes']=$download['tamanoBytes'];
                 $info['auditoria']=$audit;
                 $info['listoParaActivar']=$audit['listoParaActivar']??false;
+                $info['fase']='VALIDADA';
             }finally{@unlink($download['temporal']);}
         }catch(Throwable $e){
-            // Nunca devolver las URLs de descarga, token ni filas con clientes.
-            $message=$e->getMessage();
-            if(preg_match('/\bHTTP\s*(\d{3})\b/i',$message,$m))$message='Microsoft Graph HTTP '.$m[1];
-            elseif(!str_contains($message,'Excel')&&!str_contains($message,'hoja')&&!str_contains($message,'Archivo')&&!str_contains($message,'columna'))$message='No se pudo completar la auditoria de esta fuente.';
-            $info['error']=$message;$info['listoParaActivar']=false;
+            // Solo categorias seguras por HTTP, sin clientes, URLs ni tokens.
+            $fase=(string)($info['fase']??'DESCONOCIDA');
+            $codes=[
+                'METADATOS'=>'GRAPH_METADATOS',
+                'DESCARGA'=>'DESCARGA_XLSX',
+                'VERSION_INESTABLE'=>'VERSION_INESTABLE',
+                'LECTURA_EXCEL'=>'ESTRUCTURA_EXCEL',
+                'VERIFICAR_ETAG'=>'GRAPH_REVALIDACION',
+                'VERSION_CAMBIADA'=>'ETAG_CAMBIADO_DURANTE_LECTURA'
+            ];
+            $info['codigoError']=$codes[$fase]??'ERROR_INDETERMINADO';
+            $info['error']=match($info['codigoError']){
+                'ESTRUCTURA_EXCEL'=>'Error al interpretar una hoja del Excel original.',
+                'VERSION_INESTABLE','ETAG_CAMBIADO_DURANTE_LECTURA'=>
+                    'El archivo cambió de versión durante la lectura.',
+                'GRAPH_METADATOS','GRAPH_REVALIDACION'=>
+                    'No se pudo comprobar la identidad o version en Graph.',
+                default=>'No se pudo completar la descarga del Excel.'
+            };
+            $info['listoParaActivar']=false;
+            error_log('Ventas QA '.$name.'/'.$info['codigoError'].': '.$e->getMessage());
         }
         $result['archivos'][$name]=$info;
     }
@@ -591,7 +628,9 @@ function veRun(bool $force=false):array {
             $entry=$fresh['archivos'][$name]??[];
             if(empty($entry['identidadValidada'])||!is_array($entry['auditoria']??null)
                ||($entry['etag']??null)!==$metadata['etag']){
-                $valid=false;$run['errores'][$name]='Auditoria no validada para la version observada.';
+                $valid=false;
+                $run['errores'][$name]=(string)($entry['codigoError']??'ETAG_NO_COINCIDE');
+                $run['fases'][$name]=(string)($entry['fase']??'DESCONOCIDA');
             }
         }
         if(!$valid)throw new RuntimeException('Una o mas fuentes no superaron verificacion.');

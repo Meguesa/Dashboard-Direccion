@@ -7,6 +7,11 @@ function qaAssert(bool $yes,string $label):void{
     echo "PASS: $label\n";
 }
 qaAssert(veMes('Noviembre')==='2026-11','Monthly period');
+qaAssert(veNumeroUnidades("\u{00A0}")===0.0,'Original NBSP cell is an empty unit');
+qaAssert(veNumeroUnidades("\u{202F}")===0.0,'Narrow NBSP is an empty unit');
+qaAssert(veNumeroUnidades("\u{00A0}2\u{00A0}")===2.0,'Units surrounded by NBSP are numeric');
+try{veNumeroUnidades('DESCONOCIDO');qaAssert(false,'Bad units must fail');}
+catch(RuntimeException $e){qaAssert(true,'Non-empty bad units still cause error');}
 qaAssert(veMes('Noviembre 2025')==='2025-11','Explicit year remains accurate');
 qaAssert(veClaveAsesor('MARÍA-LUISA')===veClaveAsesor('Maria Luisa'),'Advisor normalization');
 $good=veAuditVentas($base.'/ventas-ok.xlsx');
