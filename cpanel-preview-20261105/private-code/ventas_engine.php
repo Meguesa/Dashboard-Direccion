@@ -340,140 +340,63 @@ function veImporteContrato($value):?int {
 function veClaveContrato(string $sheet,$num,$ref):string {
     return hash('sha256',$sheet.'|'.veNorm($num).'|'.veNorm($ref));
 }
+/**
+ * Histórico contractual: lee exclusivamente LOTES, CHURUBUSCO y AGUA FRIA.
+ * El identificador es sucursal+número+referencia (no el número de fila).
+ * No adjudica cancelaciones ni infiere qué contratos son ventas comerciales.
+ */
 function veAuditContratos(string $filename):array {
     $zip=new ZipArchive();
     if($zip->open($filename,ZipArchive::CHECKCONS)!==true)
-        throw new RuntimeException('Excel CONTRATOS no es ZIP íntegro.');
-    try {
+        throw new RuntimeException('Excel de contratos no es ZIP íntegro.');
+    try{
         $sheets=veSheetNames($zip);$ss=readStrings($zip);
-        $required=['LOTES','CHURUBUSCO','AGUA FRIA'];
-        $missing=array_values(array_diff($required,$sheets));
-        if($missing)throw new RuntimeException('Faltan hojas originales: '.implode(', ',$missing));
-        $records=[];$sources=[];$months2026=[];$sum=0;
-        $indexedNumbers=[];$indexedReferences=[];
-        foreach($required as $sheet){
-            $info=['registrosCandidatos'=>0,'fechaNoReconocida'=>0,'fechaAmbigua'=>0,
-                   'montoNoNumerico'=>0,'posiblesCancelaciones'=>0,'clavesRepetidas'=>0,
-                   'coincidenciasRepetidas'=>0,'anios'=>[],'fechasEnColumnas'=>[]];
-            foreach(hsRows($zip,$sheet,$ss) as [$rn,$row,$formula]){
-                $b=trim((string)($row[1]??''));
-                if(!preg_match('/[A-Z]{1,4}-[A-Z0-9\/-]*\d/i',$b)||str_contains($b,'****'))
-                    continue;
-                $c=trim((string)($row[2]??''));
-                $info['registrosCandidatos']++;
-                $date=veFechaContratoOriginal($row);
-                $amount=veImporteContrato($row[25]??null);
-                $cancelled=(bool)preg_match('/CANCELAD|ANULAD|CANCELACI[OÓ]N/ui',$b);
-                if($date['fecha']===null)$info['fechaNoReconocida']++;
-                if($date['ambigua'])$info['fechaAmbigua']++;
-                if($amount===null)$info['montoNoNumerico']++;
-                if($cancelled)$info['posiblesCancelaciones']++;
+        $needed=['LOTES','CHURUBUSCO','AGUA FRIA'];
+        $missing=array_values(array_diff($needed,$sheets));
+        if($missing)throw new RuntimeException('Faltan hojas de contratos: '.implode(', ',$missing));
+        $sources=[];$months=[];$total=0;$keys=[];$firstRows=[];
+        $ambiguousDates=0;$missingDate=0;$unknownAmount=0;$duplicates=0;
+        foreach($needed as $sheet){
+            $counts=['candidatos'=>0,'clavesDuplicadas'=>0,'fechaAmbigua'=>0,
+                     'sinFecha'=>0,'importeNoNumerico'=>0,'posibleCancelacion'=>0,
+                     'fechasPorAnio'=>[]];
+            foreach(hsRows($zip,$sheet,$ss) as [$rn,$v,$formulas]){
+                $number=veNorm($v[1]??'');
+                if(!preg_match('/[A-Z]{1,4}-[A-Z0-9\/-]*\d/i',$number) ||
+                    str_contains($number,'****'))continue;
+                $reference=veNorm($v[2]??'');
+                $counts['candidatos']++;$total++;
+                $identity=veClaveContrato($sheet,$number,$reference);
+                if(isset($keys[$identity])){
+                    $counts['clavesDuplicadas']++;$duplicates++;
+                }else{$keys[$identity]=true;}
+                $date=veFechaContratoOriginal($v);
+                if($date['fecha']===null){$counts['sinFecha']++;$missingDate++;}
+                if($date['ambigua']){$counts['fechaAmbigua']++;$ambiguousDates++;}
+                $amount=veImporteContrato($v[25]??null);
+                if($amount===null){$counts['importeNoNumerico']++;$unknownAmount++;}
+                if(preg_match('/CANCELAD|ANULAD|CANCELACI[OÓ]N/ui',
+                    (string)($v[18]??'').' '.(string)($v[19]??'')))
+                    $counts['posibleCancelacion']++;
                 if($date['fecha']!==null){
-                    $yr=substr($date['fecha'],0,4);
-                    $info['anios'][$yr]=($info['anios'][$yr]??0)+1;
-                    $col=(string)$date['columna'];
-                    $info['fechasEnColumnas'][$col]=($info['fechasEnColumnas'][$col]??0)+1;
-                    if($yr==='2026'){
-                        $month=substr($date['fecha'],0,7);
-                        if(!isset($months2026[$month]))$months2026[$month]=[];
-                        $months2026[$month][$sheet]=($months2026[$month][$sheet]??0)+1;
-                    }
+                    $year=substr($date['fecha'],0,4);
+                    $counts['fechasPorAnio'][$year]=($counts['fechasPorAnio'][$year]??0)+1;
+                    $month=substr($date['fecha'],0,7);
+                    $months[$month][$sheet]=($months[$month][$sheet]??0)+1;
                 }
-                $identity=veClaveContrato($sheet,$b,$c);
-                $indexedNumbers[$sheet][veNorm($b)]=true;
-                if(veNorm($c)!=='')$indexedReferences[$sheet][veNorm($c)]=true;
-                if(!isset($records[$identity]))$records[$identity]=[];
-                $records[$identity][]=[
-                    'fila'=>$rn,'fecha'=>$date['fecha'],'montoCentavos'=>$amount,
-                    'cancelacionDetectada'=>$cancelled
-                ];
-                if(count($records[$identity])===2){$info['clavesRepetidas']++;}
-                if(count($records[$identity])>1)$info['coincidenciasRepetidas']++;
             }
-            ksort($info['anios']);ksort($info['fechasEnColumnas']);$sources[$sheet]=$info;
-            $sum+=$info['registrosCandidatos'];
+            ksort($counts['fechasPorAnio']);
+            $sources[$sheet]=$counts;
         }
-        ksort($months2026);
-        $report=['registrosAuxiliares'=>0,'clavesDuplicadas'=>0,'clavesUnicas'=>0,
-            'registrosPorOrigen'=>[],'coincidenciasUnicas'=>0,'sinCorrespondencia'=>0,
-            'correspondenciaAmbigua'=>0,'filaOrigenDesplazada'=>0,
-            'fechasConciliadas'=>0,'importesConciliados'=>0,
-            'diferenciasFecha'=>0,'diferenciasImporte'=>0,
-            'importeNoNumericoEnConsolidado'=>0];
-        $errors=[];$seen=[];$header=null;
-        if(in_array('DASHBOARD',$sheets,true)){
-            foreach(hsRows($zip,'DASHBOARD',$ss) as [$rn,$row,$formula]){
-                if($header===null){
-                    if($rn>15)throw new RuntimeException('Falta encabezado de tabla auxiliar.');
-                    if(veNorm($row[0]??'')==='FECHA'){
-                        $header=veHeaders($row);
-                        $needed=['Tipo_Registro','Hoja_Origen','Clave_Registro',
-                                 'Numero_Contrato','Referencia','Fecha_Contrato',
-                                 'Fila_Origen','Monto_Venta'];
-                        if($absent=array_diff($needed,array_keys($header)))
-                            throw new RuntimeException('Columnas auxiliares ausentes: '.implode(', ',$absent));
-                    }
-                    continue;
-                }
-                $kind=veNorm(vePick($row,$header,'Tipo_Registro'));
-                if($kind==='')continue;
-                if($kind!=='TRANSACCION'){$errors[]=['codigo'=>'TIPO_AUXILIAR_INVALIDO','fila'=>$rn];continue;}
-                $report['registrosAuxiliares']++;
-                $sheet=trim((string)vePick($row,$header,'Hoja_Origen'));
-                $report['registrosPorOrigen'][$sheet]=($report['registrosPorOrigen'][$sheet]??0)+1;
-                $key=trim((string)vePick($row,$header,'Clave_Registro'));
-                if($key===''){$errors[]=['codigo'=>'CLAVE_AUXILIAR_VACIA','fila'=>$rn];continue;}
-                if(isset($seen[$key]))$report['clavesDuplicadas']++;
-                $seen[$key]=true;
-                $identity=veClaveContrato($sheet,
-                    vePick($row,$header,'Numero_Contrato'),
-                    vePick($row,$header,'Referencia'));
-                $matches=$records[$identity]??[];
-                if(count($matches)===0){
-                    $report['sinCorrespondencia']++;
-                    $byNumber=isset($indexedNumbers[$sheet][veNorm(vePick($row,$header,'Numero_Contrato'))]);
-                    $byRef=isset($indexedReferences[$sheet][veNorm(vePick($row,$header,'Referencia'))]);
-                    $cause=$byNumber&&$byRef?'NUMERO_Y_REFERENCIA_DISTINTOS':
-                        ($byNumber?'REFERENCIA_DISTINTA':($byRef?'NUMERO_DISTINTO':'SIN_RASTRO'));
-                    $report['sinCorrespondenciaPorCausa'][$cause]=
-                        ($report['sinCorrespondenciaPorCausa'][$cause]??0)+1;
-                    $report['sinCorrespondenciaPorOrigen'][$sheet][$cause]=
-                        ($report['sinCorrespondenciaPorOrigen'][$sheet][$cause]??0)+1;
-                    continue;
-                }
-                if(count($matches)>1){$report['correspondenciaAmbigua']++;continue;}
-                $report['coincidenciasUnicas']++;
-                $found=$matches[0];
-                if((int)vePick($row,$header,'Fila_Origen')!==$found['fila'])
-                    $report['filaOrigenDesplazada']++;
-                $date=substr((string)(vePick($row,$header,'Fecha_Contrato')??''),0,10);
-                if($date===$found['fecha'])$report['fechasConciliadas']++;
-                else $report['diferenciasFecha']++;
-                $amount=veImporteContrato(vePick($row,$header,'Monto_Venta'));
-                if($amount===null)$report['importeNoNumericoEnConsolidado']++;
-                elseif($amount===$found['montoCentavos'])$report['importesConciliados']++;
-                else $report['diferenciasImporte']++;
-            }
-            if($header===null)throw new RuntimeException('Falta encabezado de DASHBOARD auxiliar.');
-        }
-        $report['clavesUnicas']=count($seen);
-        $quality=!$errors&&$report['sinCorrespondencia']===0&&
-            $report['correspondenciaAmbigua']===0&&$report['diferenciasImporte']===0&&
-            $report['diferenciasFecha']===0&&$report['clavesDuplicadas']===0;
+        ksort($months);
         return [
-            'hojas'=>$sheets,'origenesPresentes'=>$required,'hojasFaltantes'=>[],
-            'contratosOriginalesCandidatos'=>$sum,'auditoriaPorOrigen'=>$sources,
-            'distribucionMeses2026'=>$months2026,
-            'tablaAuxiliar'=>in_array('DASHBOARD',$sheets,true)?'DASHBOARD':'NO EXISTE',
-            'registrosAuxiliares'=>$report['registrosAuxiliares'],
-            'clavesDuplicadas'=>$report['clavesDuplicadas'],
-            'clavesUnicas'=>$report['clavesUnicas'],
-            'registrosPorOrigen'=>$report['registrosPorOrigen'],
-            'conciliacionOriginalVsAuxiliar'=>$report,
-            'incidencias'=>$errors,
-            // Existen fechas ausentes, cancelaciones y duplicados de originales;
-            // no transformar automaticamente 'candidato' en 'venta confirmada'.
-            'conciliacionAuxiliarSinDiferencias'=>$quality,
+            'origen'=>'HOJAS_ORIGINALES_CONTRATOS',
+            'origenes'=>$needed,'registrosCandidatos'=>$total,
+            'clavesUnicas'=>count($keys),'clavesDuplicadas'=>$duplicates,
+            'sinFecha'=>$missingDate,'fechasAmbiguas'=>$ambiguousDates,
+            'importesNoNumericos'=>$unknownAmount,
+            'porHoja'=>$sources,'porMes'=>$months,
+            'advertencia'=>'Candidatos contractuales; no son ventas certificadas ni se suman a Comercial.',
             'listoParaActivar'=>false
         ];
     }finally{$zip->close();}
