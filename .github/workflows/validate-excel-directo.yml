@@ -1,6 +1,7 @@
 name: Validar migración Excel directa sin desplegar
 on:
   pull_request:
+    types: [opened, reopened, synchronize, edited]
     paths:
       - 'tools/build_excel_directo_dashboard.py'
       - 'tools/dashboard-htaccess.txt'
@@ -90,7 +91,7 @@ jobs:
 
   validar_ventas:
     name: Ventas Excel desde Comercial y Cobranza - pruebas locales sin despliegue
-    if: (github.event_name == 'workflow_dispatch' && inputs.alcance == 'ventas') || (github.event_name == 'pull_request' && github.head_ref == 'feature/ventas-excel-directo-20261112')
+    if: (github.event_name == 'workflow_dispatch' && inputs.alcance == 'ventas') || (github.event_name == 'pull_request' && github.event.action != 'edited' && github.head_ref == 'feature/ventas-excel-directo-20261112')
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -120,3 +121,109 @@ jobs:
           grep -Fq "'produccionModificada'=>false" cpanel-preview-20261105/private-code/ventas_engine.php
           grep -Fq "'biVentasReemplazada'=>false" cpanel-preview-20261105/private-code/ventas_engine.php
           echo "OK: validación solo local de Ventas; sin FTP, Power Automate ni SharePoint."
+
+  publicar_qa_ventas:
+    name: QA Ventas - desplegar SOLO motor privado preparado y diagnostico
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'edited' &&
+      github.event.pull_request.number == 30 &&
+      github.head_ref == 'feature/ventas-excel-directo-20261112' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.title == 'Ventas Excel directo [PUBLICAR_QA_VENTAS]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: deploy-dashboard-direccion
+      cancel-in-progress: false
+    steps:
+      - name: Verificar identidad inmutable del PR y descargar contenido QA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Preparar parser PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: zip, xml, dom, xmlreader, mbstring, curl
+          coverage: none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Certificar parser, permisos de endpoint y libros sinteticos
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l cpanel-preview-20261105/private-code/ventas_engine.php
+          php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel-preview.php
+          php -l tests/php/test_ventas_excel.php
+          grep -Fq "'produccionModificada'=>false" cpanel-preview-20261105/private-code/ventas_engine.php
+          grep -Fq "'biVentasReemplazada'=>false" cpanel-preview-20261105/private-code/ventas_engine.php
+          grep -Fq "portal_require_authentication()" cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel-preview.php
+          python -m pip install --disable-pip-version-check openpyxl==3.1.5
+          python tests/fixtures_generar_ventas.py "$RUNNER_TEMP/ventas-qa"
+          php tests/php/test_ventas_excel.php "$RUNNER_TEMP/ventas-qa"
+          echo "Las dos fuentes originales y las reglas de exclusion superaron las pruebas."
+
+      - name: Preparar FTPS TLS
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+
+      - name: Publicar DOS PHP QA con comprobacion remota de SHA-256
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "${FTP_SERVER:-}" && test -n "${FTP_USERNAME:-}" && test -n "${FTP_PASSWORD:-}"
+          for file in ventas_engine.php ventas-excel-preview.php; do
+            case "$file" in
+              ventas_engine.php) source="cpanel-preview-20261105/private-code/ventas_engine.php";;
+              ventas-excel-preview.php) source="cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel-preview.php";;
+              *) exit 1;;
+            esac
+            remote_copy="$RUNNER_TEMP/$file"
+            rm -f "$remote_copy"
+            timeout --kill-after=5s 115s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 18;
+              set net:max-retries 2;
+              put $source -o .$file.qa-upload;
+              mv .$file.qa-upload $file;
+              get $file -o $remote_copy;
+              bye;
+            "
+            if ! cmp -s "$source" "$remote_copy"; then
+              echo "::error::El archivo $file no coincide con el origen"; exit 1
+            fi
+            echo "Verificado: $file $(sha256sum "$source" | cut -d' ' -f1)"
+          done
+
+      - name: Comprobar estado HTTP sin sesion
+        shell: bash
+        run: |
+          set -euo pipefail
+          for uri in ventas-excel-preview.php; do
+            code="$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' "https://portal.juanpablo.com.mx/dashboard/$uri")"
+            echo "$uri: HTTP $code (sin autenticacion)"
+            if [ "$code" = 000 ] || [ "$code" = 404 ] || [ "$code" = 500 ]; then
+              echo "::error::No se pudo comprobar diagnostico QA ($code)"; exit 1
+            fi
+          done
+
+      - name: Confirmacion: no se activo motor ni se modificaron KPI
+        run: |
+          echo "### Ventas QA publicacion limitada y verificada" >> "$GITHUB_STEP_SUMMARY"
+          echo "Solo staging ventas_engine.php y diagnostico protegido ventas-excel-preview.php." >> "$GITHUB_STEP_SUMMARY"
+          echo "El motor privado necesita una instalacion separada por el administrador." >> "$GITHUB_STEP_SUMMARY"
+          echo "No se modifico main, index.php, app.js, BI_Ventas, cron, Ingresos, Egresos ni Power Automate." >> "$GITHUB_STEP_SUMMARY"

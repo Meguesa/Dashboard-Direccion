@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       confirmacion:
-        description: 'REPARAR_MOTORES (main) o PUBLICAR_QA_VENTAS (rama de pruebas)'
+        description: 'Escribe REPARAR_MOTORES para autorizar solo estos dos PHP'
         required: true
         type: string
 
@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   reparar:
-    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.confirmacion == 'REPARAR_MOTORES' && github.ref == 'refs/heads/main') || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.confirmacion == 'REPARAR_MOTORES') || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -119,88 +119,3 @@ jobs:
           echo 'Solo se publicaron los PHP de diagnóstico de Ventas y gestor de motores.' >> "$GITHUB_STEP_SUMMARY"
           echo 'Ambos fueron descargados desde el servidor para verificar integridad.' >> "$GITHUB_STEP_SUMMARY"
           echo 'No se cambio index.php, Graph, Excel, Power Automate, cron ni motores privados.' >> "$GITHUB_STEP_SUMMARY"
-
-  publicar_ventas_qa:
-    name: Publicar SOLO motor y diagnostico Ventas en modo paralelo
-    # La publicacion nunca se ejecuta en push ni en main: requiere autorizacion
-    # explicita y seleccion de la rama QA existente.
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feature/ventas-excel-directo-20261112' && inputs.confirmacion == 'PUBLICAR_QA_VENTAS'
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - name: Obtener commit QA seleccionado (no main)
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-
-      - name: Preparar interpretes para la auditoria
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.2'
-          extensions: zip, xml, dom, xmlreader, mbstring, curl
-          coverage: none
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Validar motor, vista y libros ficticios antes de transferencia
-        shell: bash
-        run: |
-          set -euo pipefail
-          php -l cpanel-preview-20261105/private-code/ventas_engine.php
-          php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel-preview.php
-          php -l tests/php/test_ventas_excel.php
-          python -m pip install --disable-pip-version-check openpyxl==3.1.5
-          python tests/fixtures_generar_ventas.py "$RUNNER_TEMP/ventas-qa"
-          php tests/php/test_ventas_excel.php "$RUNNER_TEMP/ventas-qa"
-          grep -Fq "'biVentasReemplazada'=>false" cpanel-preview-20261105/private-code/ventas_engine.php
-          grep -Fq "portal_require_authentication()" cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel-preview.php
-
-      - name: Preparar FTPS con verificacion TLS
-        run: sudo apt-get update -qq && sudo apt-get install -y lftp
-
-      - name: Enviar solamente los dos PHP de Ventas a staging y verificar hashes
-        shell: bash
-        env:
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-        run: |
-          set -euo pipefail
-          test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
-          for file in ventas_engine.php ventas-excel-preview.php; do
-            if [ "$file" = ventas_engine.php ]; then
-              src=cpanel-preview-20261105/private-code/ventas_engine.php
-            else
-              src=cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel-preview.php
-            fi
-            local_copy="$RUNNER_TEMP/$file"
-            rm -f "$local_copy"
-            timeout --kill-after=5s 100s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
-              set cmd:fail-exit yes;
-              set ftp:passive-mode true;
-              set ftp:ssl-force true;
-              set ftp:ssl-protect-data true;
-              set ftp:ssl-auth TLS;
-              set ssl:verify-certificate yes;
-              set ssl:check-hostname yes;
-              set net:timeout 18;
-              set net:max-retries 2;
-              put $src -o .$file.qa-upload;
-              mv .$file.qa-upload $file;
-              get $file -o $local_copy;
-              bye;
-            "
-            cmp -s "$src" "$local_copy" || {
-              echo "::error::FTPS no verifico $file. Se cancela."; exit 1;
-            }
-            echo "Validado: $file, SHA256 $(sha256sum "$src" | cut -d' ' -f1)"
-          done
-
-      - name: Confirmar limites de publicacion
-        run: |
-          echo '### QA de Ventas: transferencia puntual verificada' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Publicados exclusivamente ventas_engine.php (staging) y ventas-excel-preview.php (diagnostico administrador).' >> "$GITHUB_STEP_SUMMARY"
-          echo 'No se instalo el motor privado, no se leyo Excel con el token de produccion y no se cambiaron KPI, index.php, app.js, graph.js, cron, Power Automate, Ingresos ni Egresos.' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Instalar solo el motor Ventas desde actualizar-motores.php y ejecutar luego el diagnostico protegido.' >> "$GITHUB_STEP_SUMMARY"
