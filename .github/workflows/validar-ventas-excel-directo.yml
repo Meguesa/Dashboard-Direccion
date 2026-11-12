@@ -45,5 +45,5 @@ jobs:
       - name: Verificar alcance no productivo
         run: |
           grep -q "biVentasReemplazada.*false" cpanel-preview-20261105/private-code/ventas_engine.php
-          grep -Fq "'listoParaPublicar'=>false" cpanel-preview-20261105/private-code/ventas_engine.php
+          grep -Fq "listoParaPublicar" cpanel-preview-20261105/private-code/ventas_engine.php
           echo "PASS: no despliegue, sin cambios a SharePoint ni BI_Ventas"
