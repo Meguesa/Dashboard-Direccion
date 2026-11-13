@@ -13,7 +13,7 @@ ROOT=Path(__file__).resolve().parents[1]
 SOURCE=ROOT/"cpanel-preview-20261105"/"dashboard-egresos-preview"
 CURRENT=ROOT/"deploy-excel-directo"
 TARGET=ROOT/"deploy-ventas-excel-candidato"
-VERSION="20261113-ventas-directo-candidato-1"
+VERSION="20261113-ventas-directo-candidato-2"
 FILES=("index.php","app.js","graph.js","ventas-excel.js","ventas-excel.php")
 
 
@@ -97,6 +97,51 @@ def build():
   if (window.ventasExcelEstado?.fuente==="EXCEL_ORIGINAL_VENTAS") return NaN;
   const metasVentas = obtenerMetasVentasMes(mes);''',
       "Do not reuse obsolete BI targets for immediate use")
+    app=replace_exact(app,
+      '''  const totalVentas = ventasPrevision + ventasUi;''',
+      '''  // El total de la columna G ya contiene las ventas comerciales.
+  // Uso Inmediato de BI_Servicios no se suma otra vez.
+  const totalVentas = ventasPrevision;''',
+      "No double-count in main Dashboard headline")
+    app=replace_exact(app,
+      '''  const metaVentas = metaPrevision + metaUi;''',
+      '''  const metaVentas = metaPrevision;''',
+      "Commercial goal only, never add unrelated UI target")
+    app=replace_exact(app,
+      '''  setText("pageVentasCumplimientoUi",
+    metaUi > 0 ? formatoPorcentaje(porcentajeCumplimientoUi) : "—"
+  );''',
+      '''  setText("pageVentasCumplimientoUi", "No conciliado");''',
+      "Do not show UI compliance as zero")
+    app=replace_exact(app,
+      '''  setText("pageVentasUiTotal", formatoMoneda(ventasUi));''',
+      '''  setText("pageVentasUiTotal", "No conciliado");''',
+      "No unsupported UI amount in sales")
+    app=replace_exact(app,
+      '''  setText("pageVentasMetaUi", formatoMoneda(metaUi));''',
+      '''  setText("pageVentasMetaUi", "No conciliado");''',
+      "No unsupported UI target")
+    app=replace_exact(app,
+      '''  renderEstadoEgresosExcel();''',
+      '''  renderEstadoEgresosExcel();
+  if (typeof renderEstadoVentasExcel==="function") renderEstadoVentasExcel();''',
+      "Show source/reconciliation warning in dashboard")
+    app=replace_exact(app,
+      '''function obtenerVentasMensuales(mes) {
+  return obtenerVentasOperativas(mes)
+    .filter((item) => {
+      const tipoRegistro = normalizarTexto(item.tipoRegistro).toUpperCase();
+      const montoVenta = obtenerMontoVenta(item);
+
+      return montoVenta > 0''',
+      '''function obtenerVentasMensuales(mes) {
+  return obtenerVentasOperativas(mes)
+    .filter((item) => {
+      const tipoRegistro = normalizarTexto(item.tipoRegistro).toUpperCase();
+      const montoVenta = obtenerMontoVenta(item);
+
+      return montoVenta >= 0''',
+      "Keep zero-value advisor records in commercial rows")
     (TARGET/"app.js").write_text(app,encoding="utf-8")
 
     index=(TARGET/"index.php").read_text(encoding="utf-8")
