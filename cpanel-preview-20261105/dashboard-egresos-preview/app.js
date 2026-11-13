@@ -775,11 +775,15 @@ async function actualizarDatosDashboard(opciones = {}) {
 
     state.datos.egresos = (datosSharePoint.egresos || []).filter(row => row.fuenteOrigen === 'excel_original_egresos');
 
-    state.datos.ventas = reemplazarRegistrosPorMes(
-      state.datos.ventas,
-      datosSharePoint.ventas || [],
-      mesesRecargados
-    );
+    // QA explícita: los doce meses del Excel se cargan completos para que
+    // ningún mes cacheado de BI_Ventas contamine los indicadores históricos.
+    state.datos.ventas = datosSharePoint.ventasExcelQA
+      ? (datosSharePoint.ventas || [])
+      : reemplazarRegistrosPorMes(
+          state.datos.ventas,
+          datosSharePoint.ventas || [],
+          mesesRecargados
+        );
 
     state.datos.marketing =
       datosSharePoint.marketing || [];
@@ -804,11 +808,13 @@ async function actualizarDatosDashboard(opciones = {}) {
       (datosSharePoint.metasCobranza || []).map(row => row.mes)
     );
 
-    state.datos.metasVentas = reemplazarRegistrosPorMes(
-      state.datos.metasVentas,
-      datosSharePoint.metasVentas || [],
-      mesesRecargados
-    );
+    state.datos.metasVentas = datosSharePoint.ventasExcelQA
+      ? []
+      : reemplazarRegistrosPorMes(
+          state.datos.metasVentas,
+          datosSharePoint.metasVentas || [],
+          mesesRecargados
+        );
 
     state.datos.alertas = reemplazarRegistrosPorMes(
       state.datos.alertas || [],
@@ -850,7 +856,13 @@ async function actualizarDatosDashboard(opciones = {}) {
 
     // renderDashboard() ya actualiza los servicios del día una sola vez.
     renderDashboard();
-    void cargarComparacionVentasExcelQA();
+    if (datosSharePoint.ventasExcelQA) {
+      const estadoVentas = document.getElementById("ventasExcelEstado");
+      if (estadoVentas) estadoVentas.style.display="block";
+      if (typeof renderEstadoVentasExcel === "function") renderEstadoVentasExcel();
+    } else {
+      void cargarComparacionVentasExcelQA();
+    }
 
     const detalleFinal = mesesRecargados.length > 0
       ? `Actualización incremental completada: ${mesesRecargados.join(", ")}.`
@@ -2892,6 +2904,12 @@ function sumarVentasUiPeriodo(mes) {
 }
 
 function sumarVentas(mes) {
+  if (new URLSearchParams(window.location.search).get("ventas_excel_qa")==="1" &&
+      String(window.PORTAL_USER_EMAIL || "").toLowerCase()==="gabriel.guerra@juanpablo.com.mx") {
+    if(window.ventasExcelEstado?.error) return NaN;
+    const meses=Array.isArray(mes)?mes:[mes];
+    if(meses.some(m=>!window.ventasExcelEstado?.meses?.[m]?.cacheDisponible))return NaN;
+  }
   const ventasMensuales = obtenerVentasMensuales(mes);
 
   if (ventasMensuales.length > 0) {
@@ -2915,6 +2933,13 @@ function sumarMetaVentasMensual(mes) {
 }
 
 function sumarMetaPrevisionMensual(mes) {
+  if (new URLSearchParams(window.location.search).get("ventas_excel_qa")==="1" &&
+      String(window.PORTAL_USER_EMAIL || "").toLowerCase()==="gabriel.guerra@juanpablo.com.mx" &&
+      typeof metasVentasExcelPeriodo==="function") {
+    // La meta oficial incluye también a quienes todavía no registran venta,
+    // como Orlando en noviembre, y no proviene de BI_Metas_Ventas.
+    return metasVentasExcelPeriodo(mes);
+  }
   const metasVentas = obtenerMetasVentasMes(mes);
 
   if (metasVentas.length > 0) {
@@ -7803,7 +7828,8 @@ function renderTablaVentasContratos(mes) {
   }
 
   const contratos = obtenerContratosVentas(mes)
-    .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+    .sort((a, b) => String(b.fechaContrato || b.fecha || "")
+      .localeCompare(String(a.fechaContrato || a.fecha || "")));
 
   if (contratos.length === 0) {
     tbody.innerHTML = `
@@ -7819,14 +7845,16 @@ function renderTablaVentasContratos(mes) {
       const contrato = normalizarTexto(item.numeroContrato || item.referencia) || "Sin contrato";
       const cliente = obtenerNombreClienteVenta(item);
       const tipo = normalizarTexto(item.tipoServicio || item.tipoContrato || item.tipoRegistro) || "Sin tipo";
-      const total = obtenerMontoVenta(item);
+      // El importe nominal contractual nunca forma parte de la venta mensual.
+      const total = item.fuenteOrigen==="excel_original_contratos"
+        ? item.importeContrato : obtenerMontoVenta(item);
 
       return `
         <tr>
           <td>${escaparHtml(contrato)}</td>
           <td>${escaparHtml(cliente)}</td>
           <td>${escaparHtml(tipo)}</td>
-          <td>${formatoMoneda(total)}</td>
+          <td>${Number.isFinite(Number(total)) && total!==null ? formatoMoneda(Number(total)) : "Sin importe"}</td>
         </tr>
       `;
     })
