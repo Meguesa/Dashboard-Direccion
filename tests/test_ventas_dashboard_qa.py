@@ -20,7 +20,8 @@ class TestVentasDashboardQA(unittest.TestCase):
     def test_exact_isolated_file_set(self):
         self.assertEqual(set(p.name for p in OUTPUT.iterdir()),{
             "ventas-dashboard-qa.php","ventas-dashboard-qa-app.js",
-            "ventas-dashboard-qa-graph.js","ventas-dashboard-qa-excel.js"})
+            "ventas-dashboard-qa-graph.js","ventas-dashboard-qa-excel.js",
+            "ventas-dashboard-qa-yoy.js"})
 
     def test_private_access_and_relative_assets(self):
         page=self.read("ventas-dashboard-qa.php")
@@ -32,6 +33,7 @@ class TestVentasDashboardQA(unittest.TestCase):
         self.assertIn('src="ventas-dashboard-qa-app.js?',page)
         self.assertIn('src="ventas-dashboard-qa-graph.js?',page)
         self.assertIn('src="ventas-dashboard-qa-excel.js?',page)
+        self.assertIn('src="ventas-dashboard-qa-yoy.js?',page)
         self.assertNotIn('src="app.js?',page)
         self.assertNotIn('src="graph.js?',page)
 
@@ -45,7 +47,8 @@ class TestVentasDashboardQA(unittest.TestCase):
         self.assertIn("const totalVentas = ventasPrevision;",app)
         self.assertIn('setText("pageVentasUiTotal", "No conciliado")',app)
         self.assertIn("renderEstadoVentasExcel()",app)
-        self.assertNotIn("datosSharePoint.ventas || []","")
+        yoy=self.read("ventas-dashboard-qa-yoy.js")
+        self.assertIn("Comparativo diario no disponible",yoy)
 
     def test_php_and_node_syntax(self):
         for name in ("ventas-dashboard-qa.php",):
@@ -53,7 +56,7 @@ class TestVentasDashboardQA(unittest.TestCase):
                              capture_output=True,text=True)
             self.assertEqual(r.returncode,0,r.stderr)
         for name in ("ventas-dashboard-qa-app.js","ventas-dashboard-qa-graph.js",
-                     "ventas-dashboard-qa-excel.js"):
+                     "ventas-dashboard-qa-excel.js","ventas-dashboard-qa-yoy.js"):
             r=subprocess.run(["node","--check",str(OUTPUT/name)],
                              capture_output=True,text=True)
             self.assertEqual(r.returncode,0,r.stderr)
