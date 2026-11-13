@@ -40,6 +40,14 @@ vm.runInContext(script,ctx,{timeout:1200});
  assert.equal(ctx.metasVentasExcelPeriodo("2026-11"),750000);
  assert.equal(ctx.metasVentasExcelPeriodo(["2026-10","2026-11"]),1500000);
  assert.equal(ctx.window.ventasExcelEstado.error,null);
+ // January can contain a genuine reconciliation gap; November must remain
+ // readable independently, without hiding January's exception.
+ manifest.meses["2026-01"].cacheDisponible=false;
+ const selected=await ctx.cargarVentasExcelOriginal(["2026-11"]);
+ assert.equal(selected.length,2);
+ assert.equal(selected[0].mes,"2026-11");
+ await assert.rejects(ctx.cargarVentasExcelOriginal(),/enero|2026-01|conciliado/i);
+ manifest.meses["2026-01"].cacheDisponible=true;
  const bad=detail("2026-11");
  bad.ventas[0].montoVenta=43;
  assert.throws(()=>ctx.validacionVentasExcelDetalle(bad,manifest,"2026-11"),/conciliado/);
