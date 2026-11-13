@@ -38,7 +38,7 @@ function validacionVentasExcelDetalle(detalle,manifest,mes) {
   return [...detalle.ventas,...detalle.contratos];
 }
 
-async function cargarVentasExcelOriginal(){
+async function cargarVentasExcelOriginal(mesesSolicitados=null){
   window.ventasExcelEstado={...window.ventasExcelEstado,cargando:true};
   try {
     const res=await fetch("ventas-excel.php?modo=manifest",{
@@ -57,8 +57,14 @@ async function cargarVentasExcelOriginal(){
        manifest.soloLectura!==true||
        !/^[a-f0-9]{64}$/.test(manifest.version||"")||!manifest.meses)
       throw new Error("Manifiesto de origen Ventas no autorizado");
-    const entries=Object.entries(manifest.meses).filter(([m])=>/^2026-(0[1-9]|1[0-2])$/.test(m));
-    if(entries.length!==12)throw new Error("No se encontraron los 12 periodos de 2026");
+    const months=mesesSolicitados===null
+      ? Array.from({length:12},(_,i)=>"2026-"+String(i+1).padStart(2,"0"))
+      : [...new Set(mesesSolicitados)];
+    if(!months.length||months.some(m=>!/^2026-(0[1-9]|1[0-2])$/.test(m)))
+      throw new Error("Periodo de Ventas no válido");
+    if(months.some(m=>!Object.hasOwn(manifest.meses,m)))
+      throw new Error("Falta un mes en el manifiesto de Ventas");
+    const entries=months.map(m=>[m,manifest.meses[m]]);
     const nextCache=new Map();
     let cursor=0;const collected=[];
     await Promise.all(Array.from({length:2},async()=>{
@@ -72,7 +78,14 @@ async function cargarVentasExcelOriginal(){
           const r=await fetch("ventas-excel.php?modo=detalle&mes="+encodeURIComponent(mes),{
             credentials:"same-origin",cache:"no-store",headers:{Accept:"application/json"}
           });
-          if(!r.ok)throw new Error("Detalle Excel "+mes+" HTTP "+r.status);
+          if(!r.ok){
+            let issue={};try{issue=await r.json();}catch(_e){}
+            throw new Error("Detalle Excel "+mes+" HTTP "+r.status+
+              (issue.error?": "+issue.error:"")+
+              (issue.diferenciaSemanalCentavos!=null
+                ? " · Diferencia entre G y semanas: "+(issue.diferenciaSemanalCentavos/100).toLocaleString("es-MX",{style:"currency",currency:"MXN"})
+                : ""));
+          }
           detalle=await r.json();
         }
         const filas=validacionVentasExcelDetalle(detalle,manifest,mes);
@@ -80,7 +93,7 @@ async function cargarVentasExcelOriginal(){
         collected.push(...filas);
       }
     }));
-    ventasExcelMemoria.clear();
+    if(mesesSolicitados===null)ventasExcelMemoria.clear();
     for(const [key,value] of nextCache)ventasExcelMemoria.set(key,value);
     window.ventasExcelEstado={...manifest,cargando:false,error:null};
     return collected;
