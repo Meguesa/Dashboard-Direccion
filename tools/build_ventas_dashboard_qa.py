@@ -189,7 +189,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 // QA v4: rotulos de filas mensuales; nunca modifica la fuente ni los importes.
 (function(){
   "use strict";
-  const VERSION="20261113-ventas-qa-visual-4";
+  const VERSION="20261113-ventas-qa-visual-5";
   const text=(element,value)=>{
     if(element&&element.textContent!==value)element.textContent=value;
   };
@@ -229,9 +229,23 @@ document.addEventListener("DOMContentLoaded",()=>{
         }
       }
     }
-    const tipos=document.getElementById("tablaVentasTipoServicioBody")?.closest(".detail-section-card");
+    const tipoBody=document.getElementById("tablaVentasTipoServicioBody");
+    const tipos=tipoBody?.closest(".detail-section-card");
     if(tipos)text(tipos.querySelector(".detail-section-header p"),
       "El Excel Comercial no incluye un desglose acreditado por producto o servicio.");
+    // Las columnas de unidades del resumen mensual no distribuyen el importe G.
+    // No convertirlas en ingresos por tipo: la tabla heredada lo hacía.
+    if(tipoBody && tipoBody.querySelector("[data-ventas-qa-sin-desglose]")===null){
+      const row=document.createElement("tr");
+      row.dataset.ventasQaSinDesglose="1";
+      const cell=document.createElement("td");
+      cell.colSpan=5;
+      cell.textContent="Desglose por tipo no verificable con el Excel Comercial. "+
+        "Los $ del mes solo están acreditados por asesor; consultar contratos "+
+        "originales aparte sin sumarlos a Ventas.";
+      row.appendChild(cell);
+      tipoBody.replaceChildren(row);
+    }
     const toolbar=document.getElementById("ventasDashboardQAAcciones");
     if(toolbar)toolbar.dataset.ajusteVentasQa=VERSION;
   }
@@ -265,7 +279,9 @@ document.addEventListener("DOMContentLoaded",()=>{
     assert 'ventasDashboardQARevalidar' in page
     assert 'VENTAS_QA_CSRF' in page
     assert 'ventas-excel.php?modo=revalidar' in client
-    assert '20261113-ventas-qa-visual-4' in client
+    assert '20261113-ventas-qa-visual-5' in client
+    assert 'data-ventas-qa-sin-desglose' in client
+    assert 'tipoBody.replaceChildren(row)' in client
     assert 'Renglones mensuales' in client
     assert 'MutationObserver(()=>update())' in client
     assert "dashboardVentasExcelQADatos" in app
