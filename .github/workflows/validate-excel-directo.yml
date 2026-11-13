@@ -118,6 +118,7 @@ jobs:
           node tests/js/test_ventas_conciliacion_qa.cjs
           node tests/js/test_ventas_excel_directo_qa.cjs
           python -m unittest discover -s tests -p 'test_ventas_candidato.py' -v
+          python -m unittest discover -s tests -p 'test_ventas_dashboard_qa.py' -v
           php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.php
           php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-qa-panel.php
           grep -Fq "REVALIDAR_GRAPH" cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.php
@@ -317,3 +318,89 @@ jobs:
         run: |
           echo "Solo se publicaron ventas-excel.php ventas-excel.js ventas-qa-panel.php." >> "$GITHUB_STEP_SUMMARY"
           echo "No se modificaron index.php app.js graph.js BI_Ventas cron ni Power Automate." >> "$GITHUB_STEP_SUMMARY"
+
+
+  publicar_dashboard_qa_ventas:
+    name: Publicar Dashboard completo QA Ventas (4 archivos aislados)
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'edited' &&
+      github.event.pull_request.number == 30 &&
+      github.head_ref == 'feature/ventas-excel-directo-20261112' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.title == 'Ventas Excel directo [PUBLICAR_DASHBOARD_QA]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: deploy-dashboard-direccion
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring,zip,dom,xmlreader
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Construir y verificar 4 archivos QA sin Power Automate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tests -p test_ventas_dashboard_qa.py -v
+          node tests/js/test_ventas_excel_directo_qa.cjs
+          test "$(find deploy-ventas-dashboard-qa -maxdepth 1 -type f | wc -l)" -eq 4
+          grep -Fq "portal_require_authentication()" deploy-ventas-dashboard-qa/ventas-dashboard-qa.php
+          grep -Fq "gabriel.guerra@juanpablo.com.mx" deploy-ventas-dashboard-qa/ventas-dashboard-qa.php
+          ! grep -Fq 'obtenerVentasSharePoint(' deploy-ventas-dashboard-qa/ventas-dashboard-qa-graph.js
+      - name: Preparar FTPS
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+      - name: Publicar únicamente archivos QA con integridad de ida y vuelta
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
+          for file in ventas-dashboard-qa.php ventas-dashboard-qa-app.js ventas-dashboard-qa-graph.js ventas-dashboard-qa-excel.js; do
+            src="deploy-ventas-dashboard-qa/$file"
+            dest="$RUNNER_TEMP/$file"
+            test -s "$src"
+            timeout --kill-after=5s 115s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 18;
+              set net:max-retries 2;
+              put $src -o .$file.qa-upload;
+              mv .$file.qa-upload $file;
+              get $file -o $dest;
+              bye;
+            "
+            cmp -s "$src" "$dest"
+            sha256sum "$src" | cut -d' ' -f1
+          done
+      - name: Bloquear acceso anónimo a Dashboard QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl -sS --max-time 25 -o /dev/null -w '%{http_code}' 'https://portal.juanpablo.com.mx/dashboard/ventas-dashboard-qa.php')"
+          echo "Dashboard QA HTTP $code without session"
+          case "$code" in 302|401|403) ;; *) echo "::error::No hay proteccion anonima en QA";exit 1;; esac
+      - name: Registrar el aislamiento respecto a producción
+        run: |
+          echo "Dashboard de Ventas QA publicado: 4 archivos con sufijo qa." >> "$GITHUB_STEP_SUMMARY"
+          echo "Sin cambios en index.php app.js graph.js ventas-excel.php crons BI_Ventas ni Power Automate." >> "$GITHUB_STEP_SUMMARY"
