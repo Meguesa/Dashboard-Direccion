@@ -62,7 +62,7 @@ Las ventas se toman de Comercial, columna G. El importe nominal de contratos es 
 </table></div></section>
 <p id="warning"></p>
 <script>window.VENTAS_QA_CSRF="<?= $csrf ?>";</script>
-<script src="ventas-excel.js?v=20261113-qa-2"></script>
+<script src="ventas-excel.js?v=20261113-qa-3"></script>
 <script>
 "use strict";
 const peso=n=>Number(n).toLocaleString("es-MX",{style:"currency",currency:"MXN"});
@@ -108,8 +108,8 @@ function draw(){
  "Última verificación: "+window.ventasExcelEstado.verificadoUTC;
 }
 async function load(){
- el("status").textContent="Validando 12 meses y dos fuentes…";el("status").className="";
- try{rows=await cargarVentasExcelOriginal();
+ el("status").textContent="Validando "+el("mes").value+" y dos fuentes…";el("status").className="";
+ try{rows=await cargarVentasExcelOriginal([el("mes").value]);
  el("status").textContent="Datos validados del Excel · sin cambios de producción";
  el("status").className="good";draw();
  }catch(e){rows=[];el("status").textContent="No disponible: "+(e?.message||e);
@@ -135,5 +135,5 @@ async function revalidar(){
   el("status").className="bad";
  }finally{btn.disabled=false;}
 }
-el("mes").onchange=draw;el("reload").onclick=load;el("revalidate").onclick=revalidar;load();
+el("mes").onchange=load;el("reload").onclick=load;el("revalidate").onclick=revalidar;load();
 </script></body></html>
