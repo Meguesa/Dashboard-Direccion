@@ -9,8 +9,10 @@ TARGET=ROOT/"deploy-ventas-excel-candidato"
 class VentasCutoverCandidate(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        subprocess.run(["python3",str(ROOT/"tools/build_ventas_excel_candidato.py")],
-                       cwd=ROOT,check=True,capture_output=True,text=True)
+        result=subprocess.run(["python3",str(ROOT/"tools/build_ventas_excel_candidato.py")],
+                              cwd=ROOT,capture_output=True,text=True)
+        if result.returncode:
+            raise RuntimeError("Sales candidate build failed: "+result.stderr+" / "+result.stdout)
     def text(self,name):
         return (TARGET/name).read_text(encoding="utf-8")
     def test_only_five_overlay_files(self):
