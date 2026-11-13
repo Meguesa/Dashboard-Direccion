@@ -13,7 +13,7 @@ ROOT=Path(__file__).resolve().parents[1]
 SOURCE=ROOT/"cpanel-preview-20261105"/"dashboard-egresos-preview"
 CURRENT=ROOT/"deploy-excel-directo"
 TARGET=ROOT/"deploy-ventas-excel-candidato"
-VERSION="20261113-ventas-directo-candidato-3"
+VERSION="20261113-ventas-directo-candidato-4"
 FILES=("index.php","app.js","graph.js","ventas-excel.js","ventas-excel.php")
 
 
@@ -246,6 +246,40 @@ def build():
       '''        }
 ''',
       "Chart: only commercial monthly amounts and target")
+    # Sales workbook contains one MONTHLY summary row per adviser, not an individual sale.
+    app=replace_exact(app,
+      '''  const filas = agruparVentasPorAsesor(mes);
+
+  if (filas.length === 0) {''',
+      '''  const filas = agruparVentasPorAsesor(mes);
+  const resumenMensualExcel=window.ventasExcelEstado?.fuente==="EXCEL_ORIGINAL_VENTAS";
+
+  if (filas.length === 0) {''',
+      "Mark monthly advisor rows as non-transactional")
+    app=replace_exact(app,
+      '''          <td>${formatoNumero(fila.registros)}</td>
+          <td>${formatoNumero(fila.unidades)}</td>
+          <td>${formatoMoneda(fila.total)}</td>''',
+      '''          <td>${formatoNumero(fila.registros)}</td>
+          <td>${resumenMensualExcel ? "—" : formatoNumero(fila.unidades)}</td>
+          <td>${formatoMoneda(fila.total)}</td>''',
+      "Do not invent units sold for one-row-per-advisor summaries")
+    app=replace_exact(app,
+      '''        <td colspan="5">Sin información para el mes seleccionado.</td>''',
+      '''        <td colspan="5">${window.ventasExcelEstado?.fuente==="EXCEL_ORIGINAL_VENTAS"
+          ? "Sin desglose comercial acreditado por tipo de producto o servicio."
+          : "Sin información para el mes seleccionado."}</td>''',
+      "Explain missing sales-by-service breakdown")
+    app=replace_exact(app,
+      '''          <td>${formatoMoneda(fila.montoUiCapillas)}</td>
+          <td>${formatoNumero(fila.ventasUiParque)}</td>
+          <td>${formatoMoneda(fila.montoUiParque)}</td>''',
+      '''          <td>${window.ventasExcelEstado?.fuente==="EXCEL_ORIGINAL_VENTAS"
+            ? "No conciliado" : formatoMoneda(fila.montoUiCapillas)}</td>
+          <td>${formatoNumero(fila.ventasUiParque)}</td>
+          <td>${window.ventasExcelEstado?.fuente==="EXCEL_ORIGINAL_VENTAS"
+            ? "No conciliado" : formatoMoneda(fila.montoUiParque)}</td>''',
+      "Keep operational UI counts separate from unverified monetary totals")
     (TARGET/"app.js").write_text(app,encoding="utf-8")
 
     index=(TARGET/"index.php").read_text(encoding="utf-8")
@@ -269,6 +303,44 @@ def build():
       'app.js?v=20261110-cobranza-caratula-huella-1',
       'app.js?v='+VERSION,
       "Dashboard client cache bust")
+    index=replace_exact(index,
+      '''<th>Asesor</th>
+                      <th>Registros</th>
+                      <th>Unidades</th>
+                      <th>Total venta</th>''',
+      '''<th>Asesor</th>
+                      <th>Renglones mensuales</th>
+                      <th>Unidades verificadas</th>
+                      <th>Total venta</th>''',
+      "Do not interpret advisor spreadsheet rows as individual sales")
+    index=replace_exact(index,
+      '''<span class="detail-kpi-label">Contratos</span>''',
+      '''<span class="detail-kpi-label">Expedientes contractuales únicos</span>''',
+      "Source-aware contract KPI label")
+    index=replace_exact(index,
+      '''<h3>Contratos del periodo</h3>
+                  <p>Todos los contratos registrados dentro del periodo seleccionado.</p>''',
+      '''<h3>Expedientes de contratos originales</h3>
+                  <p>Registros únicos del Excel de contratos. Conteo informativo; no acredita vigencia ni se suma a las ventas comerciales.</p>''',
+      "Original contracts are not verified commercial sales")
+    index=replace_exact(index,
+      '''<th>Tipo</th>
+                      <th>Total</th>''',
+      '''<th>Tipo</th>
+                      <th>Importe nominal</th>''',
+      "Nominal contract price is informational")
+    index=replace_exact(index,
+      '''<h3>Ventas Uso Inmediato por responsable</h3>
+                  <p>Resumen de ventas de Uso Inmediato separadas entre Capillas y Parque.</p>''',
+      '''<h3>Servicios Uso Inmediato por responsable</h3>
+                  <p>Conteo operativo desde BI_Servicios. Importes no conciliados con Comercial: no se agregan a ventas.</p>''',
+      "BI_Servicios operational counts are not an additive sales stream")
+    index=replace_exact(index,
+      '''<h3>Ventas por tipo de servicio</h3>
+                  <p>Resumen de unidades vendidas por tipo de servicio o producto.</p>''',
+      '''<h3>Ventas por tipo de servicio</h3>
+                  <p>El archivo de Comercial solo acredita montos mensuales por asesor; desglose por producto pendiente de validar.</p>''',
+      "Missing product-level granularity explanation")
     (TARGET/"index.php").write_text(index,encoding="utf-8")
 
     assert "obtenerVentasSharePoint(" not in graph
