@@ -18,15 +18,18 @@ header('Cache-Control: private, no-store, max-age=0');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: no-referrer');
 header('X-Robots-Tag: noindex, nofollow');
-if(($_SERVER['REQUEST_METHOD']??'GET')!=='GET'){
+$httpMethod=(string)($_SERVER['REQUEST_METHOD']??'GET');
+$mode=(string)($_GET['modo']??'');
+if(!in_array($httpMethod,['GET','POST'],true)){
     http_response_code(405);echo '{"error":"METODO_NO_PERMITIDO"}';exit;
 }
-$mode=(string)($_GET['modo']??'');
-if(!in_array($mode,['manifest','detalle'],true)){
+if(($httpMethod==='GET'&&!in_array($mode,['manifest','detalle'],true)) ||
+   ($httpMethod==='POST'&&$mode!=='revalidar')){
     http_response_code(400);echo '{"error":"MODO_INVALIDO"}';exit;
 }
 $month=(string)($_GET['mes']??'');
-if($mode==='detalle'&&!preg_match('/^2026-(0[1-9]|1[0-2])$/D',$month)){
+if($httpMethod==='GET'&&$mode==='detalle'&&
+   !preg_match('/^2026-(0[1-9]|1[0-2])$/D',$month)){
     http_response_code(400);echo '{"error":"MES_INVALIDO"}';exit;
 }
 $engine='/home/juanpab1/bi-ingresos-privado/ventas_engine.php';
@@ -34,6 +37,38 @@ if(!is_file($engine)){
     http_response_code(503);echo '{"error":"MOTOR_VENTAS_NO_INSTALADO"}';exit;
 }
 require_once $engine;
+if($httpMethod==='POST'){
+    // Revalidación voluntaria, solo administrador y solo desde sesión QA.
+    $expected=(string)($_SESSION['ventas_excel_qa_csrf']??'');
+    $received=(string)($_POST['csrf']??'');
+    if($expected===''||!hash_equals($expected,$received)){
+        http_response_code(403);echo '{"error":"CSRF_INVALIDO"}';exit;
+    }
+    if((int)($_SESSION['ventas_excel_qa_ultima']??0)>time()-60){
+        http_response_code(429);echo '{"error":"REINTENTO_DEMASIADO_RAPIDO"}';exit;
+    }
+    $_SESSION['ventas_excel_qa_ultima']=time();
+    session_write_close();
+    try{
+        if(function_exists('set_time_limit'))@set_time_limit(160);
+        // False reusa eTag/SHA si no cambió el origen y fuerza lectura
+        // únicamente al detectar otra versión del motor u otro Excel.
+        $result=veRun(false);
+        $status=(string)($result['estado']??'incidencia');
+        if(!in_array($status,['auditado','sin_cambios'],true)){
+            http_response_code($status==='ocupado'?423:409);
+        }
+        echo json_encode([
+            'estado'=>$status,'build'=>VE_BUILD,
+            'fuenteProductivaSinCambios'=>true
+        ],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    }catch(Throwable $error){
+        error_log('Revalidacion Ventas QA: '.get_class($error));
+        http_response_code(503);
+        echo '{"error":"REVALIDACION_VENTAS_NO_COMPLETADA"}';
+    }
+    exit;
+}
 $state=hsRead('ventas_estado.json');
 $data=hsRead('ventas_datos_2026.json');
 $stamp=strtotime((string)($state['verificadoUTC']??''));
@@ -52,8 +87,20 @@ foreach(['comercial','contratos'] as $label){
        $valid=false;
 }
 if(!$valid){
+    // Categorías diagnósticas sin datos personales, tokens ni rutas privadas.
+    $reason='SNAPSHOT_VENTAS_NO_VALIDADO';
+    if(($data['build']??null)!==VE_BUILD||($state['build']??null)!==VE_BUILD)
+        $reason='SNAPSHOT_DE_OTRA_VERSION_DEL_MOTOR';
+    elseif($stamp===false||$stamp>time()||time()-$stamp>1800)
+        $reason='VERIFICACION_VENTAS_CADUCADA';
+    elseif(!empty($state['antigua']))
+        $reason='SNAPSHOT_VENTAS_CON_INCIDENCIA';
     http_response_code(409);
-    echo '{"error":"SNAPSHOT_VENTAS_NO_VALIDADO_O_DESACTUALIZADO","fuente":"EXCEL_ORIGINAL_VENTAS"}';
+    echo json_encode([
+        'error'=>'SNAPSHOT_VENTAS_NO_VALIDADO_O_DESACTUALIZADO',
+        'motivo'=>$reason,'accion'=>'REVALIDAR_GRAPH',
+        'fuente'=>'EXCEL_ORIGINAL_VENTAS'
+    ],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
     exit;
 }
 $monthStats=$data['resumenVentas']??[];
