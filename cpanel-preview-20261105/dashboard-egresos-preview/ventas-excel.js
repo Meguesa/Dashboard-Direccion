@@ -41,7 +41,9 @@ function validacionVentasExcelDetalle(detalle,manifest,mes) {
   return [...detalle.ventas,...detalle.contratos];
 }
 
-async function cargarVentasExcelOriginal(mesesSolicitados=null){
+async function cargarVentasExcelOriginal(mesesSolicitados=null,opciones={}){
+  const permitirParciales=opciones.permitirMesesIncompletos===true;
+  const incidencias={};
   window.ventasExcelEstado={...window.ventasExcelEstado,cargando:true};
   try {
     const res=await fetch("ventas-excel.php?modo=manifest",{
@@ -73,31 +75,39 @@ async function cargarVentasExcelOriginal(mesesSolicitados=null){
     await Promise.all(Array.from({length:2},async()=>{
       while(cursor<entries.length){
         const [mes,state]=entries[cursor++];
-        if(!state.cacheDisponible||!state.auditoria?.validado)
-          throw new Error("La columna G del mes "+mes+" no está verificada en Excel");
-        let detalle=ventasExcelMemoria.get(mes);
-        if(!detalle||detalle.version!==manifest.version){
-          const r=await fetch("ventas-excel.php?modo=detalle&mes="+encodeURIComponent(mes),{
-            credentials:"same-origin",cache:"no-store",headers:{Accept:"application/json"}
-          });
-          if(!r.ok){
-            let issue={};try{issue=await r.json();}catch(_e){}
-            throw new Error("Detalle Excel "+mes+" HTTP "+r.status+
-              (issue.error?": "+issue.error:"")+
-              (issue.diferenciaSemanalCentavos!=null
-                ? " · Diferencia entre G y semanas: "+(issue.diferenciaSemanalCentavos/100).toLocaleString("es-MX",{style:"currency",currency:"MXN"})
-                : ""));
+        try{
+          if(!state.cacheDisponible||!state.auditoria?.validado)
+            throw new Error("La columna G del mes "+mes+" no está verificada en Excel");
+          let detalle=ventasExcelMemoria.get(mes);
+          if(!detalle||detalle.version!==manifest.version){
+            const r=await fetch("ventas-excel.php?modo=detalle&mes="+encodeURIComponent(mes),{
+              credentials:"same-origin",cache:"no-store",headers:{Accept:"application/json"}
+            });
+            if(!r.ok){
+              let issue={};try{issue=await r.json();}catch(_e){}
+              throw new Error("Detalle Excel "+mes+" HTTP "+r.status+
+                (issue.error?": "+issue.error:"")+
+                (issue.diferenciaSemanalCentavos!=null
+                  ? " · Diferencia entre G y semanas: "+(issue.diferenciaSemanalCentavos/100).toLocaleString("es-MX",{style:"currency",currency:"MXN"})
+                  : ""));
+            }
+            detalle=await r.json();
           }
-          detalle=await r.json();
+          const filas=validacionVentasExcelDetalle(detalle,manifest,mes);
+          nextCache.set(mes,detalle);
+          collected.push(...filas);
+        }catch(error){
+          if(!permitirParciales)throw error;
+          incidencias[mes]=String(error?.message||error);
         }
-        const filas=validacionVentasExcelDetalle(detalle,manifest,mes);
-        nextCache.set(mes,detalle);
-        collected.push(...filas);
       }
     }));
     if(mesesSolicitados===null)ventasExcelMemoria.clear();
     for(const [key,value] of nextCache)ventasExcelMemoria.set(key,value);
-    window.ventasExcelEstado={...manifest,cargando:false,error:null};
+    const estados=Object.fromEntries(Object.entries(manifest.meses).map(([m,state])=>
+      [m,incidencias[m]?{...state,cacheDisponible:false,error:incidencias[m]}:state]));
+    window.ventasExcelEstado={...manifest,meses:estados,
+      incidencias,cargando:false,error:null};
     return collected;
   }catch(error){
     // Nunca mezclar un snapshot antiguo o una lista BI con un Excel fallido.
@@ -133,6 +143,7 @@ function renderEstadoVentasExcel(){
     state.meses?.[m]?.auditoria?.diferenciaCentavos!==0 &&
     Number.isSafeInteger(state.meses?.[m]?.auditoria?.diferenciaCentavos));
   const faltantes=meses.reduce((total,m)=>total+Number(state.meses?.[m]?.asesoresSinMeta||0),0);
+  const incidencias=meses.filter(m=>state.incidencias?.[m]);
   el.replaceChildren();
   const status=document.createElement("strong");
   status.textContent=state.error?"Ventas Excel: "+state.error:
@@ -146,6 +157,7 @@ function renderEstadoVentasExcel(){
   detail.textContent="Verificado: "+cuando+" · Asesores sin meta: "+faltantes+
     " · Contratos informativos, sin sumar al total de ventas."+
     (diferenciasSemanas.length?" Atención: semanas con diferencias históricas: "+
-      diferenciasSemanas.join(", ")+". Se conserva columna G como fuente oficial.":"");
+      diferenciasSemanas.join(", ")+". Se conserva columna G como fuente oficial.":"")+
+    (incidencias.length?" Meses no disponibles: "+incidencias.join(", ")+".":"");
   el.appendChild(detail);
 }
