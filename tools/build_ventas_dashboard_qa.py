@@ -59,9 +59,16 @@ def build():
         if source=="index.php":continue
         pattern=r'(?<=src=")'+re.escape(source)+r'\?v=[^"]+'
         found=re.findall(pattern,page)
-        if len(found)!=1:
-            raise RuntimeError(f"Script {source}: expected one ref, got {found}")
-        page=re.sub(pattern,target+"?v="+VERSION,page,count=1)
+        if source=="dashboard-yoy-comparison.js" and not found:
+            # El comparativo YoY se inyectaba por el portal y no figura en el
+            # snapshot base. Instalar aquí la variante QA explícitamente.
+            page=one(page,"</body>",
+              '<script src="'+target+'?v='+VERSION+'"></script>\\n</body>',
+              "Install verified YoY QA script")
+        else:
+            if len(found)!=1:
+                raise RuntimeError(f"Script {source}: expected one ref, got {found}")
+            page=re.sub(pattern,target+"?v="+VERSION,page,count=1)
     page=one(page,'</head>','''<style>
 #ventasExcelEstado{display:block!important;margin:12px 24px!important;
 padding:14px!important;border:1px solid #ccac55!important;background:#fff9e8!important;
