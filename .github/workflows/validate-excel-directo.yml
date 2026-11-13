@@ -117,6 +117,7 @@ jobs:
           node --check cpanel-preview-20261105/dashboard-egresos-preview/app.js
           node tests/js/test_ventas_conciliacion_qa.cjs
           node tests/js/test_ventas_excel_directo_qa.cjs
+          python -m unittest discover -s tests -p 'test_ventas_candidato.py' -v
           php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.php
           php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-qa-panel.php
           python -m py_compile tests/fixtures_generar_ventas.py
