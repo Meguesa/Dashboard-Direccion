@@ -14,6 +14,8 @@ try{veNumeroUnidades('DESCONOCIDO');qaAssert(false,'Bad units must fail');}
 catch(RuntimeException $e){qaAssert(true,'Non-empty bad units still cause error');}
 qaAssert(veMes('Noviembre 2025')==='2025-11','Explicit year remains accurate');
 qaAssert(veClaveAsesor('MARÍA-LUISA')===veClaveAsesor('Maria Luisa'),'Advisor normalization');
+qaAssert(veClaveMetaAsesor('Griscelda')===veClaveMetaAsesor('Griselda'),
+    'Verified spelling variant of November advisor resolves to same goal');
 $good=veAuditVentas($base.'/ventas-ok.xlsx');
 qaAssert($good['fuentes']===['meses_originales','METAS'],'Only manual worksheets are official');
 qaAssert($good['registros']===1,'One monthly row; no weekly double count');
