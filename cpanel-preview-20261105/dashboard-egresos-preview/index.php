@@ -856,6 +856,8 @@ document.addEventListener('DOMContentLoaded',()=>{
           </button>
         </div>
 
+        <div id="ventasExcelEstado" role="status" aria-live="polite" style="margin:12px 0;padding:12px;border:1px solid #b5cac7;border-radius:8px;display:none"></div>
+
         <div class="detail-kpi-grid detail-kpi-grid-9">
           <div class="detail-kpi-card">
             <span class="detail-kpi-label">Ventas Previsión del periodo</span>
@@ -1769,7 +1771,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   <script src="config.js?v=20261105-egresos-1"></script>
   <script src="auth.js?v=20260804-3"></script>
   <script src="egresos-excel.js?v=20261105-egresos-1"></script>
-<script src="ingresos-historico.js?v=20261105-5"></script>\n<script src="graph.js?v=20261105-egresos-1"></script>
+<script src="ingresos-historico.js?v=20261105-5"></script>\n<script src="ventas-excel.js?v=20261113-qa-1"></script>
+<script src="graph.js?v=20261105-egresos-1"></script>
 
   <script
     id="dashboardAppScript"

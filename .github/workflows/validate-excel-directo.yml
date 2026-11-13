@@ -1,20 +1,34 @@
 name: Validar migración Excel directa sin desplegar
 on:
   pull_request:
+    types: [opened, reopened, synchronize, edited]
     paths:
       - 'tools/build_excel_directo_dashboard.py'
       - 'tools/dashboard-htaccess.txt'
       - '.github/workflows/publicar-dashboard-excel-produccion.yml'
       - 'tests/test_excel_directo_build.py'
       - 'cpanel-preview-20261105/**'
+      # Las iteraciones del motor Ventas se prueban bajo demanda, sin generar
+      # paquetes completos del Dashboard por cada cambio del PR.
+      - '!cpanel-preview-20261105/private-code/ventas_engine.php'
       - '.github/workflows/validate-excel-directo.yml'
   workflow_dispatch:
+    inputs:
+      alcance:
+        description: 'Qué validar: Dashboard o Ventas desde Excel (sin publicar)'
+        required: true
+        type: choice
+        options:
+          - dashboard
+          - ventas
+        default: dashboard
 
 permissions:
   contents: read
 
 jobs:
   validar:
+    if: (github.event_name == 'workflow_dispatch' && inputs.alcance != 'ventas') || (github.event_name == 'pull_request' && github.head_ref != 'feature/ventas-excel-directo-20261112')
     name: Construir, verificar fechas, PHP y JS sin tocar cPanel
     runs-on: ubuntu-latest
     steps:
@@ -74,3 +88,407 @@ jobs:
           retention-days: 14
       - name: Confirmación
         run: echo 'Paquete probado en runner sin publicación automática.'
+
+  validar_ventas:
+    name: Ventas Excel desde Comercial y Cobranza - pruebas locales sin despliegue
+    if: (github.event_name == 'workflow_dispatch' && inputs.alcance == 'ventas') || (github.event_name == 'pull_request' && github.event.action != 'edited' && github.head_ref == 'feature/ventas-excel-directo-20261112')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar PHP para leer XLSX
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: zip, xml, dom, xmlreader, mbstring, curl
+          coverage: none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar librería para crear libros ficticios
+        run: python -m pip install --disable-pip-version-check openpyxl==3.1.5
+      - name: Verificar motor y pruebas (no modifica archivos originales)
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l cpanel-preview-20261105/private-code/ventas_engine.php
+          php -l tests/php/test_ventas_excel.php
+          php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel-preview.php
+          node --check cpanel-preview-20261105/dashboard-egresos-preview/app.js
+          node tests/js/test_ventas_conciliacion_qa.cjs
+          node tests/js/test_ventas_excel_directo_qa.cjs
+          python -m unittest discover -s tests -p 'test_ventas_candidato.py' -v
+          python -m unittest discover -s tests -p 'test_ventas_dashboard_qa.py' -v
+          php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.php
+          php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-qa-panel.php
+          grep -Fq "REVALIDAR_GRAPH" cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.php
+          python -m py_compile tests/fixtures_generar_ventas.py
+          python tests/fixtures_generar_ventas.py "$RUNNER_TEMP/ventas-qa"
+          php tests/php/test_ventas_excel.php "$RUNNER_TEMP/ventas-qa"
+          grep -Fq "'produccionModificada'=>false" cpanel-preview-20261105/private-code/ventas_engine.php
+          grep -Fq "'biVentasReemplazada'=>false" cpanel-preview-20261105/private-code/ventas_engine.php
+          echo "OK: validación solo local de Ventas; sin FTP, Power Automate ni SharePoint."
+
+  publicar_qa_ventas:
+    name: QA Ventas - desplegar SOLO motor privado preparado y diagnostico
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'edited' &&
+      github.event.pull_request.number == 30 &&
+      github.head_ref == 'feature/ventas-excel-directo-20261112' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.title == 'Ventas Excel directo [PUBLICAR_QA_VENTAS]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: deploy-dashboard-direccion
+      cancel-in-progress: false
+    steps:
+      - name: Verificar identidad inmutable del PR y descargar contenido QA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Preparar parser PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: zip, xml, dom, xmlreader, mbstring, curl
+          coverage: none
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Certificar parser, permisos de endpoint y libros sinteticos
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l cpanel-preview-20261105/private-code/ventas_engine.php
+          php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel-preview.php
+          php -l tests/php/test_ventas_excel.php
+          grep -Fq "'produccionModificada'=>false" cpanel-preview-20261105/private-code/ventas_engine.php
+          grep -Fq "'biVentasReemplazada'=>false" cpanel-preview-20261105/private-code/ventas_engine.php
+          grep -Fq "portal_require_authentication()" cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel-preview.php
+          python -m pip install --disable-pip-version-check openpyxl==3.1.5
+          python tests/fixtures_generar_ventas.py "$RUNNER_TEMP/ventas-qa"
+          php tests/php/test_ventas_excel.php "$RUNNER_TEMP/ventas-qa"
+          echo "Las dos fuentes originales y las reglas de exclusion superaron las pruebas."
+
+      - name: Preparar FTPS TLS
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+
+      - name: Publicar DOS PHP QA con comprobacion remota de SHA-256
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "${FTP_SERVER:-}" && test -n "${FTP_USERNAME:-}" && test -n "${FTP_PASSWORD:-}"
+          for file in ventas_engine.php ventas-excel-preview.php; do
+            case "$file" in
+              ventas_engine.php) source="cpanel-preview-20261105/private-code/ventas_engine.php";;
+              ventas-excel-preview.php) source="cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel-preview.php";;
+              *) exit 1;;
+            esac
+            remote_copy="$RUNNER_TEMP/$file"
+            rm -f "$remote_copy"
+            timeout --kill-after=5s 115s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 18;
+              set net:max-retries 2;
+              put $source -o .$file.qa-upload;
+              mv .$file.qa-upload $file;
+              get $file -o $remote_copy;
+              bye;
+            "
+            if ! cmp -s "$source" "$remote_copy"; then
+              echo "::error::El archivo $file no coincide con el origen"; exit 1
+            fi
+            echo "Verificado: $file $(sha256sum "$source" | cut -d' ' -f1)"
+          done
+
+      - name: Comprobar estado HTTP sin sesion
+        shell: bash
+        run: |
+          set -euo pipefail
+          for uri in ventas-excel-preview.php; do
+            code="$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' "https://portal.juanpablo.com.mx/dashboard/$uri")"
+            echo "$uri: HTTP $code (sin autenticacion)"
+            if [ "$code" = 000 ] || [ "$code" = 404 ] || [ "$code" = 500 ]; then
+              echo "::error::No se pudo comprobar diagnostico QA ($code)"; exit 1
+            fi
+          done
+
+      - name: 'Confirmacion: no se activo motor ni se modificaron KPI'
+        run: |
+          echo "### Ventas QA publicacion limitada y verificada" >> "$GITHUB_STEP_SUMMARY"
+          echo "Solo staging ventas_engine.php y diagnostico protegido ventas-excel-preview.php." >> "$GITHUB_STEP_SUMMARY"
+          echo "El motor privado necesita una instalacion separada por el administrador." >> "$GITHUB_STEP_SUMMARY"
+          echo "No se modifico main, index.php, app.js, BI_Ventas, cron, Ingresos, Egresos ni Power Automate." >> "$GITHUB_STEP_SUMMARY"
+
+
+  publicar_panel_qa_ventas:
+    name: QA Ventas - publicar SOLO panel y lector de Excel sin cambiar Dashboard
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'edited' &&
+      github.event.pull_request.number == 30 &&
+      github.head_ref == 'feature/ventas-excel-directo-20261112' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.title == 'Ventas Excel directo [PUBLICAR_QA_PANEL]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: deploy-dashboard-direccion
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, zip, dom, xmlreader
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validar endpoint, panel y contrato de datos
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.php
+          php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-qa-panel.php
+          node --check cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.js
+          node tests/js/test_ventas_excel_directo_qa.cjs
+          grep -Fq "portal_require_authentication();" cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.php
+          grep -Fq "portal_require_authentication();" cpanel-preview-20261105/dashboard-egresos-preview/ventas-qa-panel.php
+      - name: Instalar cliente FTPS TLS
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+      - name: Publicar tres archivos QA con comprobacion SHA
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
+          for file in ventas-excel.php ventas-excel.js ventas-qa-panel.php; do
+            source="cpanel-preview-20261105/dashboard-egresos-preview/$file"
+            dest="$RUNNER_TEMP/$file"
+            timeout --kill-after=5s 115s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 18;
+              set net:max-retries 2;
+              put $source -o .$file.qa-upload;
+              mv .$file.qa-upload $file;
+              get $file -o $dest;
+              bye;
+            "
+            cmp -s "$source" "$dest"
+            echo "QA SHA-256 $file $(sha256sum "$source" | cut -d' ' -f1)"
+          done
+      - name: Verificar acceso restringido sin sesion
+        shell: bash
+        run: |
+          set -euo pipefail
+          for uri in ventas-excel.php?modo=manifest ventas-qa-panel.php; do
+            code="$(curl -sS --max-time 25 -o /dev/null -w '%{http_code}' "https://portal.juanpablo.com.mx/dashboard/$uri")"
+            echo "$uri: HTTP $code"
+            case "$code" in 302|401|403) ;; *) echo "::error::QA $uri no protegido ($code)";exit 1;; esac
+          done
+      - name: Confirmar aislamiento
+        run: |
+          echo "Solo se publicaron ventas-excel.php ventas-excel.js ventas-qa-panel.php." >> "$GITHUB_STEP_SUMMARY"
+          echo "No se modificaron index.php app.js graph.js BI_Ventas cron ni Power Automate." >> "$GITHUB_STEP_SUMMARY"
+
+
+  publicar_dashboard_qa_ventas:
+    name: Publicar ajuste visual QA Ventas (un JS pequeno)
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'edited' &&
+      github.event.pull_request.number == 30 &&
+      github.head_ref == 'feature/ventas-excel-directo-20261112' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.title == 'Ventas Excel directo [PUBLICAR_DASHBOARD_QA]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: deploy-dashboard-direccion
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring,zip,dom,xmlreader
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Construir y verificar 5 archivos QA sin Power Automate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s tests -p test_ventas_dashboard_qa.py -v
+          node tests/js/test_ventas_excel_directo_qa.cjs
+          test "$(find deploy-ventas-dashboard-qa -maxdepth 1 -type f | wc -l)" -eq 5
+          grep -Fq "portal_require_authentication()" deploy-ventas-dashboard-qa/ventas-dashboard-qa.php
+          grep -Fq "gabriel.guerra@juanpablo.com.mx" deploy-ventas-dashboard-qa/ventas-dashboard-qa.php
+          ! grep -Fq 'obtenerVentasSharePoint(' deploy-ventas-dashboard-qa/ventas-dashboard-qa-graph.js
+      - name: Preparar FTPS
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+      - name: Verificar shell QA y subir solo lector Excel de bajo peso
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
+          # La vista PHP QA v3 ya estaba validada por SHA256. Nunca intentar
+          # reemplazarla: FTPS del servidor rechaza su escritura.
+          # Antes de cualquier JS, verificar que la pagina protegida no cambió.
+          php_remoto="$RUNNER_TEMP/ventas-dashboard-qa-existing.php"
+          timeout --kill-after=5s 45s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            set net:timeout 15;
+            set net:max-retries 2;
+            get ventas-dashboard-qa.php -o $php_remoto;
+            bye;
+          "
+          expected_php_sha="f356e6c5b886396bd2ef2e0bd2812d041f004a33ab2d51e3708b26d4a3d14381"
+          actual_php_sha="$(sha256sum "$php_remoto" | cut -d' ' -f1)"
+          if [ "$actual_php_sha" != "$expected_php_sha" ]; then
+            echo "::error::Vista PHP QA cambió; no se publicará JS sobre otra versión"
+            exit 1
+          fi
+          echo "Vista PHP QA ya validada, sin reescritura"
+          # Comprobar el app.js QA existente con la huella publicada en el
+          # workflow 43500757963. No editar el archivo grande: FTPS falla
+          # durante su subida, aunque su copia remota ya fue validada.
+          app_remoto="$RUNNER_TEMP/ventas-dashboard-qa-app-existing.js"
+          timeout --kill-after=5s 45s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            set net:timeout 15;
+            set net:max-retries 2;
+            get ventas-dashboard-qa-app.js -o $app_remoto;
+            bye;
+          "
+          actual_app_sha="$(sha256sum "$app_remoto" | cut -d' ' -f1)"
+          expected_app_sha="c3e9c686db8d0cf7404cd379c4e708fdd3f9df8bca45a08ba7c9c42c8dca08b5"
+          candidate_app_sha="$(sha256sum deploy-ventas-dashboard-qa/ventas-dashboard-qa-app.js | cut -d' ' -f1)"
+          echo "Diagnostico app remoto SHA256: $actual_app_sha"
+          echo "Diagnostico candidato QA SHA256: $candidate_app_sha"
+          echo "Tamanos remoto y candidato:"
+          wc -c "$app_remoto" deploy-ventas-dashboard-qa/ventas-dashboard-qa-app.js
+          # Aceptar solo el app anterior acreditado o el candidato actual, y
+          # verificar sintaxis. Cualquier tercer hash implica revision previa.
+          if [ "$actual_app_sha" != "$expected_app_sha" ] && [ "$actual_app_sha" != "$candidate_app_sha" ]; then
+            echo "::error::app.js QA no coincide con ninguna version conocida; aborto seguro"
+            exit 1
+          fi
+          node --check "$app_remoto"
+          grep -Fq 'dashboardVentasExcelQADatos' "$app_remoto"
+          echo "app.js QA conocido, sintaxis y aislamiento verificados"
+          # Desplegar unicamente el lector JS pequeno con el complemento visual.
+          # Los demas archivos estan previamente publicados y no se modifican.
+          for file in ventas-dashboard-qa-excel.js; do
+            src="deploy-ventas-dashboard-qa/$file"
+            dest="$RUNNER_TEMP/$file"
+            test -s "$src"
+            # Si una publicacion anterior ya verifico el archivo, no volver a
+            # reemplazarlo. Especialmente importante para PHP de la vista QA.
+            if timeout --kill-after=5s 35s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 12;
+              set net:max-retries 1;
+              get $file -o $dest;
+              bye;
+            " && cmp -s "$src" "$dest"; then
+              echo "QA ya verificado: $file $(sha256sum "$src" | cut -d' ' -f1)"
+              continue
+            fi
+            completo=false
+            for intento in 1 2 3; do
+              rm -f "$dest"
+              if timeout --kill-after=5s 70s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+                set cmd:fail-exit yes;
+                set ftp:passive-mode true;
+                set ftp:ssl-force true;
+                set ftp:ssl-protect-data true;
+                set ftp:ssl-auth TLS;
+                set ssl:verify-certificate yes;
+                set ssl:check-hostname yes;
+                set net:timeout 13;
+                set net:max-retries 1;
+                put $src -o .$file.qa-upload;
+                mv .$file.qa-upload $file;
+                get $file -o $dest;
+                bye;
+              " && cmp -s "$src" "$dest"; then
+                completo=true
+                break
+              fi
+              echo "::warning::FTPS QA $file intento $intento fallido"
+            done
+            if [ "$completo" != true ]; then
+              echo "::error::FTPS QA $file no verificado tras 3 intentos"
+              exit 1
+            fi
+            echo "QA verificado: $file $(sha256sum "$src" | cut -d' ' -f1)"
+          done
+      - name: Bloquear acceso anónimo a Dashboard QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl -sS --max-time 25 -o /dev/null -w '%{http_code}' 'https://portal.juanpablo.com.mx/dashboard/ventas-dashboard-qa.php')"
+          echo "Dashboard QA HTTP $code without session"
+          case "$code" in 302|401|403) ;; *) echo "::error::No hay proteccion anonima en QA";exit 1;; esac
+      - name: Registrar el aislamiento respecto a producción
+        run: |
+          echo "Dashboard de Ventas QA: PHP y app.js existentes verificados por SHA; solo lector Excel JS actualizado y releido." >> "$GITHUB_STEP_SUMMARY"
+          echo "Sin cambios en index.php app.js graph.js ventas-excel.php crons BI_Ventas ni Power Automate." >> "$GITHUB_STEP_SUMMARY"

@@ -4,6 +4,8 @@ on:
     paths:
       - '.github/workflows/verificar-ruta-motor-financiero.yml'
       - 'cpanel-preview-20261105/private-code/**'
+      # No conectar por FTPS en cada revisión de un motor Ventas todavía aislado.
+      - '!cpanel-preview-20261105/private-code/ventas_engine.php'
 permissions:
   contents: read
 jobs:

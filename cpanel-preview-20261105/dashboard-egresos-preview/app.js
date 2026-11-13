@@ -775,11 +775,15 @@ async function actualizarDatosDashboard(opciones = {}) {
 
     state.datos.egresos = (datosSharePoint.egresos || []).filter(row => row.fuenteOrigen === 'excel_original_egresos');
 
-    state.datos.ventas = reemplazarRegistrosPorMes(
-      state.datos.ventas,
-      datosSharePoint.ventas || [],
-      mesesRecargados
-    );
+    // QA explícita: los doce meses del Excel se cargan completos para que
+    // ningún mes cacheado de BI_Ventas contamine los indicadores históricos.
+    state.datos.ventas = datosSharePoint.ventasExcelQA
+      ? (datosSharePoint.ventas || [])
+      : reemplazarRegistrosPorMes(
+          state.datos.ventas,
+          datosSharePoint.ventas || [],
+          mesesRecargados
+        );
 
     state.datos.marketing =
       datosSharePoint.marketing || [];
@@ -804,11 +808,13 @@ async function actualizarDatosDashboard(opciones = {}) {
       (datosSharePoint.metasCobranza || []).map(row => row.mes)
     );
 
-    state.datos.metasVentas = reemplazarRegistrosPorMes(
-      state.datos.metasVentas,
-      datosSharePoint.metasVentas || [],
-      mesesRecargados
-    );
+    state.datos.metasVentas = datosSharePoint.ventasExcelQA
+      ? []
+      : reemplazarRegistrosPorMes(
+          state.datos.metasVentas,
+          datosSharePoint.metasVentas || [],
+          mesesRecargados
+        );
 
     state.datos.alertas = reemplazarRegistrosPorMes(
       state.datos.alertas || [],
@@ -850,6 +856,13 @@ async function actualizarDatosDashboard(opciones = {}) {
 
     // renderDashboard() ya actualiza los servicios del día una sola vez.
     renderDashboard();
+    if (datosSharePoint.ventasExcelQA) {
+      const estadoVentas = document.getElementById("ventasExcelEstado");
+      if (estadoVentas) estadoVentas.style.display="block";
+      if (typeof renderEstadoVentasExcel === "function") renderEstadoVentasExcel();
+    } else {
+      void cargarComparacionVentasExcelQA();
+    }
 
     const detalleFinal = mesesRecargados.length > 0
       ? `Actualización incremental completada: ${mesesRecargados.join(", ")}.`
@@ -866,6 +879,197 @@ async function actualizarDatosDashboard(opciones = {}) {
     actualizacionEnCurso = false;
 
     ocultarPanelEstadoConRetraso(10000);
+  }
+}
+
+
+// QA opt-in: conciliación por asesor, sin alterar datos ni totales productivos.
+function normalizarAsesorVentasQA(valor) {
+  return String(valor || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
+}
+
+function conciliarVentasPorAsesorQA(excel, bi) {
+  const agrupar = (rows, origen) => {
+    const mapa = new Map();
+    const incidencias = [];
+    for (const row of rows) {
+      const asesor = normalizarAsesorVentasQA(row.asesor);
+      const importe = Number(row.montoVenta);
+      if (!asesor || !Number.isFinite(importe)) {
+        incidencias.push(origen + ": asesor o importe inválido");
+        continue;
+      }
+      const cents = Math.round(importe * 100);
+      const previa = mapa.get(asesor);
+      if (previa) {
+        incidencias.push(origen + ": asesor repetido: " + asesor);
+        previa.importeCentavos += cents;
+      } else {
+        mapa.set(asesor, { nombre: String(row.asesor), importeCentavos: cents,
+          metaCentavos: null, metaDisponible: false });
+      }
+      if (origen === "Excel" && row.metaMensual !== null &&
+          row.metaMensual !== undefined && row.metaMensual !== "") {
+        const meta = Number(row.metaMensual);
+        if (Number.isFinite(meta) && meta >= 0) {
+          const entry = mapa.get(asesor);
+          entry.metaCentavos = Math.round(meta * 100);
+          entry.metaDisponible = true;
+        } else {
+          incidencias.push("Excel: meta inválida: " + asesor);
+        }
+      }
+    }
+    return { mapa, incidencias };
+  };
+  const x = agrupar(excel, "Excel");
+  const b = agrupar(bi, "BI_Ventas");
+  const claves = [...new Set([...x.mapa.keys(), ...b.mapa.keys()])].sort();
+  const diferencias = claves.map(clave => {
+    const xa = x.mapa.get(clave);
+    const ba = b.mapa.get(clave);
+    return {
+      asesor: xa?.nombre || ba?.nombre || clave,
+      excelCentavos: xa?.importeCentavos ?? null,
+      biCentavos: ba?.importeCentavos ?? null,
+      diferenciaCentavos: xa && ba ? xa.importeCentavos - ba.importeCentavos : null,
+      metaCentavos: xa?.metaCentavos ?? null,
+      metaDisponible: xa?.metaDisponible ?? false,
+      estado: !xa ? "SOLO_BI" : !ba ? "SOLO_EXCEL" :
+        xa.importeCentavos !== ba.importeCentavos ? "DIFERENCIA" : "IGUAL"
+    };
+  });
+  return {
+    filas: diferencias,
+    distintas: diferencias.filter(r => r.estado !== "IGUAL"),
+    metasAusentes: diferencias.filter(r => r.excelCentavos !== null && !r.metaDisponible),
+    incidencias: [...x.incidencias, ...b.incidencias]
+  };
+}
+
+async function cargarComparacionVentasExcelQA() {
+  if (new URLSearchParams(window.location.search).get("ventas_excel_qa") !== "1" ||
+      String(window.PORTAL_USER_EMAIL || "").trim().toLowerCase() !==
+        "gabriel.guerra@juanpablo.com.mx") return;
+  const card = document.querySelector("#pageVentas > article.card");
+  if (!card) return;
+  let holder = document.getElementById("ventasExcelQAComparacion");
+  if (!holder) {
+    holder = document.createElement("section");
+    holder.id = "ventasExcelQAComparacion";
+    holder.style.cssText =
+      "margin:16px 0;padding:16px;border:1px solid #ceb46c;background:#fff9e8;border-radius:10px;";
+    const header = document.createElement("strong");
+    header.textContent = "Conciliación Excel / BI_Ventas (QA, sin impacto productivo)";
+    holder.appendChild(header);
+    const body = document.createElement("p");
+    body.id = "ventasExcelQAEstado";
+    body.style.whiteSpace = "pre-line";
+    holder.appendChild(body);
+    const detail = document.createElement("div");
+    detail.id = "ventasExcelQADetalle";
+    holder.appendChild(detail);
+    const link = document.createElement("a");
+    link.href = "ventas-excel-preview.php";
+    link.textContent = "Verificar Microsoft Graph / generar snapshot";
+    holder.appendChild(link);
+    card.insertBefore(holder, card.querySelector(".detail-kpi-grid"));
+  }
+  const status = document.getElementById("ventasExcelQAEstado");
+  const detail = document.getElementById("ventasExcelQADetalle");
+  if (!status || !detail) return;
+  detail.replaceChildren();
+  const months = typeof obtenerMesesRangoSeleccionado === "function"
+    ? obtenerMesesRangoSeleccionado() : [];
+  const mes = [...months].filter(v => /^2026-(0[1-9]|1[0-2])$/.test(v)).pop();
+  if (!mes) { status.textContent = "Seleccione un mes de 2026."; return; }
+  status.textContent = "Validando snapshot de ambos Excel...";
+  try {
+    const response = await fetch(
+      "ventas-excel-preview.php?modo=datos&mes=" + encodeURIComponent(mes), {
+        method: "GET", credentials: "same-origin", cache: "no-store",
+        headers: {Accept: "application/json"}
+      });
+    const data = await response.json();
+    if (!response.ok || !data.validado || !data.fuenteProductivaSinCambios ||
+        data.modo !== "PARALELO_NO_PRODUCTIVO" || data.mes !== mes ||
+        !Array.isArray(data.ventas))
+      throw new Error(data.error || "Snapshot no válido para el mes seleccionado.");
+    const rowsBi = (state.datos.ventas || []).filter(row =>
+      esFuenteVentas(row.fuente) &&
+      normalizarTexto(row.tipoRegistro).toUpperCase().includes("MENSUAL") &&
+      registroPerteneceAMeses(row, [mes]));
+    const resultado = conciliarVentasPorAsesorQA(data.ventas, rowsBi);
+    const centavos = rows => rows.reduce((sum, row) =>
+      sum + Math.round(Number(row.montoVenta || 0) * 100), 0);
+    const excelCentavos = centavos(data.ventas);
+    const biCentavos = centavos(rowsBi);
+    const money = cents => (Number(cents) / 100).toLocaleString("es-MX", {
+      style: "currency", currency: "MXN"
+    });
+    const meta = Number.isSafeInteger(data.metaTotalCentavos)
+      ? money(data.metaTotalCentavos) : "No disponible en METAS";
+    const snapshot = Date.parse(data.validadoUTC);
+    status.textContent = "Mes " + mes + " · Snapshot Graph: " +
+      (Number.isFinite(snapshot) ? new Date(snapshot).toLocaleString("es-MX") : "sin fecha verificable") +
+      "\nExcel Comercial: " + money(excelCentavos) +
+      " · BI_Ventas mensual: " + money(biCentavos) +
+      " · Diferencia: " + money(excelCentavos - biCentavos) +
+      "\nMeta METAS: " + meta +
+      " · Asesores con importes distintos o sin correspondencia: " + resultado.distintas.length +
+      " · Asesores sin meta validada: " + resultado.metasAusentes.length +
+      "\nContratos originales del mes (no sumables): " +
+      (Array.isArray(data.contratos) ? data.contratos.length : "no disponibles") +
+      " · Filas contractuales repetidas excluidas (histórico): " +
+      Number(data.contratosRepetidosIgnorados || 0) +
+      "\nLas cifras oficiales permanecen en BI_Ventas. La equivalencia de los contratos se audita por separado.";
+    const table = document.createElement("table");
+    table.style.cssText = "width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;";
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    ["Asesor", "Excel", "BI_Ventas", "Diferencia", "Meta Excel", "Estado"].forEach(label => {
+      const th = document.createElement("th");
+      th.textContent = label;
+      th.style.cssText = "text-align:left;border-bottom:1px solid #aaa;padding:5px;";
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    const tbody = document.createElement("tbody");
+    for (const row of resultado.filas) {
+      const tr = document.createElement("tr");
+      const values = [
+        row.asesor,
+        row.excelCentavos === null ? "—" : money(row.excelCentavos),
+        row.biCentavos === null ? "—" : money(row.biCentavos),
+        row.diferenciaCentavos === null ? "No comparable" : money(row.diferenciaCentavos),
+        row.metaDisponible ? money(row.metaCentavos) : "SIN META",
+        row.estado
+      ];
+      values.forEach(value => {
+        const td = document.createElement("td");
+        td.textContent = value;
+        td.style.cssText = "padding:5px;border-bottom:1px solid #ddd;";
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    const scroll = document.createElement("div");
+    scroll.style.overflowX = "auto";
+    scroll.appendChild(table);
+    detail.appendChild(scroll);
+    if (resultado.incidencias.length) {
+      const warning = document.createElement("p");
+      warning.textContent = "Incidencias de granularidad: " + resultado.incidencias.join("; ");
+      detail.appendChild(warning);
+    }
+  } catch (error) {
+    detail.replaceChildren();
+    status.textContent = "Comparación no disponible: " +
+      String(error.message || error) +
+      ". No se reemplazaron los indicadores de Ventas.";
   }
 }
 
@@ -2700,6 +2904,12 @@ function sumarVentasUiPeriodo(mes) {
 }
 
 function sumarVentas(mes) {
+  if (new URLSearchParams(window.location.search).get("ventas_excel_qa")==="1" &&
+      String(window.PORTAL_USER_EMAIL || "").toLowerCase()==="gabriel.guerra@juanpablo.com.mx") {
+    if(window.ventasExcelEstado?.error) return NaN;
+    const meses=Array.isArray(mes)?mes:[mes];
+    if(meses.some(m=>!window.ventasExcelEstado?.meses?.[m]?.cacheDisponible))return NaN;
+  }
   const ventasMensuales = obtenerVentasMensuales(mes);
 
   if (ventasMensuales.length > 0) {
@@ -2723,6 +2933,13 @@ function sumarMetaVentasMensual(mes) {
 }
 
 function sumarMetaPrevisionMensual(mes) {
+  if (new URLSearchParams(window.location.search).get("ventas_excel_qa")==="1" &&
+      String(window.PORTAL_USER_EMAIL || "").toLowerCase()==="gabriel.guerra@juanpablo.com.mx" &&
+      typeof metasVentasExcelPeriodo==="function") {
+    // La meta oficial incluye también a quienes todavía no registran venta,
+    // como Orlando en noviembre, y no proviene de BI_Metas_Ventas.
+    return metasVentasExcelPeriodo(mes);
+  }
   const metasVentas = obtenerMetasVentasMes(mes);
 
   if (metasVentas.length > 0) {
@@ -7611,7 +7828,8 @@ function renderTablaVentasContratos(mes) {
   }
 
   const contratos = obtenerContratosVentas(mes)
-    .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+    .sort((a, b) => String(b.fechaContrato || b.fecha || "")
+      .localeCompare(String(a.fechaContrato || a.fecha || "")));
 
   if (contratos.length === 0) {
     tbody.innerHTML = `
@@ -7627,14 +7845,16 @@ function renderTablaVentasContratos(mes) {
       const contrato = normalizarTexto(item.numeroContrato || item.referencia) || "Sin contrato";
       const cliente = obtenerNombreClienteVenta(item);
       const tipo = normalizarTexto(item.tipoServicio || item.tipoContrato || item.tipoRegistro) || "Sin tipo";
-      const total = obtenerMontoVenta(item);
+      // El importe nominal contractual nunca forma parte de la venta mensual.
+      const total = item.fuenteOrigen==="excel_original_contratos"
+        ? item.importeContrato : obtenerMontoVenta(item);
 
       return `
         <tr>
           <td>${escaparHtml(contrato)}</td>
           <td>${escaparHtml(cliente)}</td>
           <td>${escaparHtml(tipo)}</td>
-          <td>${formatoMoneda(total)}</td>
+          <td>${Number.isFinite(Number(total)) && total!==null ? formatoMoneda(Number(total)) : "Sin importe"}</td>
         </tr>
       `;
     })
