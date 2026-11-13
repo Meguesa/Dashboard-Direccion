@@ -371,9 +371,33 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
-          # Cargar scripts primero y la página QA al final. Un fallo FTPS
-          # parcial nunca implica publicación correcta del conjunto.
-          for file in ventas-dashboard-qa-graph.js ventas-dashboard-qa-excel.js ventas-dashboard-qa-yoy.js ventas-dashboard-qa-app.js ventas-dashboard-qa.php; do
+          # La vista PHP QA v3 ya estaba validada por SHA256. Nunca intentar
+          # reemplazarla: FTPS del servidor rechaza su escritura.
+          # Antes de cualquier JS, verificar que la pagina protegida no cambió.
+          php_remoto="$RUNNER_TEMP/ventas-dashboard-qa-existing.php"
+          timeout --kill-after=5s 45s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            set net:timeout 15;
+            set net:max-retries 2;
+            get ventas-dashboard-qa.php -o $php_remoto;
+            bye;
+          "
+          expected_php_sha="f356e6c5b886396bd2ef2e0bd2812d041f004a33ab2d51e3708b26d4a3d14381"
+          actual_php_sha="$(sha256sum "$php_remoto" | cut -d' ' -f1)"
+          if [ "$actual_php_sha" != "$expected_php_sha" ]; then
+            echo "::error::Vista PHP QA cambió; no se publicará JS sobre otra versión"
+            exit 1
+          fi
+          echo "Vista PHP QA ya validada, sin reescritura"
+          # Publicar solo los cuatro JS. El shell QA v3 carga los mismos nombres;
+          # Ctrl+F5 invalida cache del navegador.
+          for file in ventas-dashboard-qa-graph.js ventas-dashboard-qa-excel.js ventas-dashboard-qa-yoy.js ventas-dashboard-qa-app.js; do
             src="deploy-ventas-dashboard-qa/$file"
             dest="$RUNNER_TEMP/$file"
             test -s "$src"
@@ -433,5 +457,5 @@ jobs:
           case "$code" in 302|401|403) ;; *) echo "::error::No hay proteccion anonima en QA";exit 1;; esac
       - name: Registrar el aislamiento respecto a producción
         run: |
-          echo "Dashboard de Ventas QA publicado: 5 archivos con sufijo qa." >> "$GITHUB_STEP_SUMMARY"
+          echo "Dashboard de Ventas QA: 4 archivos JS verificados; shell PHP v3 previamente validado por SHA y sin reescribir." >> "$GITHUB_STEP_SUMMARY"
           echo "Sin cambios en index.php app.js graph.js ventas-excel.php crons BI_Ventas ni Power Automate." >> "$GITHUB_STEP_SUMMARY"
