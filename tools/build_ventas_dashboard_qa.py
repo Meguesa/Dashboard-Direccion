@@ -237,15 +237,15 @@ document.addEventListener("DOMContentLoaded",()=>{
   }
   function install(){
     if(!document.getElementById("ventasDashboardQAAcciones"))return;
-    const original=window.renderDetalleVentas;
-    if(typeof original==="function"&&!original.__ventasQaVisual4){
-      const decorated=function(...args){
-        const result=original.apply(this,args);
-        update();
-        return result;
-      };
-      decorated.__ventasQaVisual4=true;
-      window.renderDetalleVentas=decorated;
+    // Las tablas se vuelven a pintar con innerHTML desde app.js existente.
+    // Escuchar exclusivamente sus cambios, sin parchar funciones globales.
+    const tableIds=["tablaVentasAsesorBody","tablaVentasContratosBody",
+      "tablaVentasUiResponsableBody","tablaVentasTipoServicioBody"];
+    for(const id of tableIds){
+      const target=document.getElementById(id);
+      if(!target)continue;
+      const observer=new MutationObserver(()=>update());
+      observer.observe(target,{childList:true,subtree:true});
     }
     update();
   }
@@ -267,7 +267,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     assert 'ventas-excel.php?modo=revalidar' in client
     assert '20261113-ventas-qa-visual-4' in client
     assert 'Renglones mensuales' in client
-    assert 'window.renderDetalleVentas=decorated' in client
+    assert 'MutationObserver(()=>update())' in client
     assert "dashboardVentasExcelQADatos" in app
     assert 'ventas-dashboard-qa-app.js?v='+VERSION in page
     assert "portal_user_can_tool('dashboard')" in page
