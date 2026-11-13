@@ -110,7 +110,7 @@ def build():
     ):
         index=replace_exact(index,old,new,"Sales label "+old)
     index=replace_exact(index,
-      'ventas-excel.js?v=20261113-qa-1','ventas-excel.js?v='+VERSION,
+      'ventas-excel.js?v=20261110-cobranza-caratula-huella-1','ventas-excel.js?v='+VERSION,
       "Sales client cache bust")
     index=replace_exact(index,
       'graph.js?v=20261110-cobranza-caratula-huella-1',
