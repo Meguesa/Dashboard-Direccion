@@ -377,6 +377,24 @@ jobs:
             src="deploy-ventas-dashboard-qa/$file"
             dest="$RUNNER_TEMP/$file"
             test -s "$src"
+            # Si una publicacion anterior ya verifico el archivo, no volver a
+            # reemplazarlo. Especialmente importante para PHP de la vista QA.
+            if timeout --kill-after=5s 35s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 12;
+              set net:max-retries 1;
+              get $file -o $dest;
+              bye;
+            " && cmp -s "$src" "$dest"; then
+              echo "QA ya verificado: $file $(sha256sum "$src" | cut -d' ' -f1)"
+              continue
+            fi
             completo=false
             for intento in 1 2 3; do
               rm -f "$dest"
