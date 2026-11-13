@@ -25,6 +25,7 @@ class VentasCutoverCandidate(unittest.TestCase):
         self.assertIn("const metasVentas = usarVentasExcelQA ? []",graph)
     def test_targets_are_from_original_manual_excel(self):
         app=self.text("app.js")
+        html=self.text("index.php")
         self.assertIn('if (typeof metasVentasExcelPeriodo==="function")',app)
         self.assertIn("return metasVentasExcelPeriodo(mes);",app)
         self.assertIn("return sumarMetaPrevisionMensual(mes);",app)
@@ -40,7 +41,7 @@ class VentasCutoverCandidate(unittest.TestCase):
         self.assertIn("Expedientes contractuales únicos",html)
         self.assertIn("Renglones mensuales",html)
         self.assertIn("Importe nominal",html)
-        self.assertIn("Montos no conciliados",html.replace("Importes no conciliados", "Montos no conciliados"))
+        self.assertIn("Importes no conciliados",html)
         self.assertNotIn('label: "Ventas UI"',app)
     def test_role_read_only_endpoint(self):
         php=self.text("ventas-excel.php")
