@@ -13,7 +13,7 @@ ROOT=Path(__file__).resolve().parents[1]
 SOURCE=ROOT/"cpanel-preview-20261105"/"dashboard-egresos-preview"
 CURRENT=ROOT/"deploy-excel-directo"
 TARGET=ROOT/"deploy-ventas-excel-candidato"
-VERSION="20261113-ventas-directo-candidato-2"
+VERSION="20261113-ventas-directo-candidato-3"
 FILES=("index.php","app.js","graph.js","ventas-excel.js","ventas-excel.php")
 
 
@@ -143,6 +143,109 @@ def build():
 
       return montoVenta >= 0''',
       "Keep zero-value advisor records in commercial rows")
+    app=replace_exact(app,
+      '''function contarContratos(mes) {
+  return obtenerContratosVentas(mes).length;
+}''',
+      '''function contarContratos(mes) {
+  // Conteo contractual autenticado, separado de los montos de Comercial.
+  if (window.ventasExcelEstado?.fuente==="EXCEL_ORIGINAL_VENTAS") {
+    const meses = Array.isArray(mes) ? mes : [mes];
+    let total = 0;
+    for (const clave of meses) {
+      const auditoria = window.ventasExcelEstado.meses?.[clave];
+      const esperado = auditoria?.contratosUnicosNoRepetidos;
+      if (!auditoria?.cacheDisponible || !Number.isSafeInteger(esperado)) return NaN;
+      const filas = (state.datos.ventas||[]).filter(item =>
+        item.fuenteOrigen==="excel_original_contratos" && item.mes===clave);
+      const ids = new Set(filas.map(item=>item.id).filter(Boolean));
+      if (filas.length!==ids.size || ids.size!==esperado) {
+        window.ventasExcelEstado.discrepanciasContratos = {
+          ...(window.ventasExcelEstado.discrepanciasContratos||{}),
+          [clave]:"Snapshot: "+esperado+"; Dashboard: "+filas.length
+        };
+        return NaN;
+      }
+      total += esperado;
+    }
+    return total;
+  }
+  return obtenerContratosVentas(mes).length;
+}''',
+      "Count only audited contracts by exact month, never generic records")
+    app=replace_exact(app,
+      '''  setText(
+    "pageVentasTicketPropiedades",
+    formatoMoneda(ticketsPromedioVentas.propiedades.ticketPromedio)
+  );''',
+      '''  setText("pageVentasTicketPropiedades", "No calculable");''',
+      "Do not report zero ticket without contract-level revenue attribution")
+    app=replace_exact(app,
+      '''  setText(
+    "pageVentasTicketServicios",
+    formatoMoneda(ticketsPromedioVentas.servicios.ticketPromedio)
+  );''',
+      '''  setText("pageVentasTicketServicios", "No calculable");''',
+      "Do not report zero ticket without contracted unit attribution")
+    app=replace_exact(app,
+      '''  const valoresVentasPrevision = meses.map((mes) =>
+    sumarVentasPrevision(mes.clave)
+  );''',
+      '''  const valoresVentasPrevision = meses.map((mes) => {
+    const disponible=window.ventasExcelEstado?.meses?.[mes.clave]?.cacheDisponible;
+    // No graficar un mes futuro ni un periodo sin datos confirmados.
+    const hoy=new Date();
+    const periodoActual=hoy.getFullYear()*100+hoy.getMonth()+1;
+    const periodo=Number(mes.clave.slice(0,4))*100+Number(mes.clave.slice(5,7));
+    if(!disponible || periodo>periodoActual) return null;
+    const total=sumarVentasPrevision(mes.clave);
+    return Number.isFinite(total)?total:null;
+  });''',
+      "Chart: unavailable months and December future as gaps, not zero")
+    app=replace_exact(app,
+      '''label: "Ventas Previsión",''',
+      '''label: "Ventas comerciales (Excel)",''',
+      "Chart Sales label")
+    app=replace_exact(app,
+      '''label: "Meta Previsión",''',
+      '''label: "Meta comercial (Excel)",''',
+      "Chart manual target label")
+    app=replace_exact(app,
+      '''  const valoresVentasUi = meses.map((mes) =>
+    sumarVentasUiPeriodo(mes.clave)
+  );
+
+  const valoresMetaUi = meses.map((mes) =>
+    sumarMetaUiMensual(mes.clave)
+  );
+
+''', '''''',
+      "Do not create unverified UI monetary datasets")
+    app=replace_exact(app,
+      '''        },
+        {
+          label: "Ventas UI",
+          data: valoresVentasUi,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        },
+        {
+          label: "Meta UI",
+          data: valoresMetaUi,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          borderDash: [6, 6],
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }
+''',
+      '''        }
+''',
+      "Chart: only commercial monthly amounts and target")
     (TARGET/"app.js").write_text(app,encoding="utf-8")
 
     index=(TARGET/"index.php").read_text(encoding="utf-8")
