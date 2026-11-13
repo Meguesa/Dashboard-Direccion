@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the isolated, admin-only Sales Excel dashboard QA.
 
-Only emits four suffixed files into a temporary build folder. No deployment.
+Emits five suffixed QA files; the FTP job deploys only four JS assets, not PHP.
 Uses live dashboard CSS and shared non-sales modules without overwriting them.
 """
 from pathlib import Path
@@ -181,6 +181,46 @@ document.addEventListener("DOMContentLoaded",()=>{
       '"SharePoint no devolvió datos para el dashboard."',
       '"Falló una fuente del Dashboard: revisar el aviso QA y la consola."',
       "Do not attribute every failure to SharePoint")
+    # El PHP de QA version 3 ya fue publicado y verificado; el servidor FTPS
+    # rechaza reemplazarlo. Actualizar sus etiquetas desde JS QA aislado
+    # sin editar ni desplegar PHP, y sin tocar JS productivo.
+    app+=r"""
+// QA-only presentation labels for immutable, verified admin-only PHP shell.
+(function(){
+  const apply=()=>{
+    const contrato=document.getElementById("pageVentasContratos");
+    const label=contrato?.closest(".detail-kpi-card")?.querySelector(".detail-kpi-label");
+    if(label)label.textContent="Expedientes contractuales únicos";
+    const asesor=document.getElementById("tablaVentasAsesorBody")?.closest("table");
+    if(asesor){
+      const cols=asesor.querySelectorAll("thead th");
+      if(cols[1])cols[1].textContent="Renglones mensuales";
+      if(cols[2])cols[2].textContent="Unidades verificadas";
+    }
+    const contratos=document.getElementById("tablaVentasContratosBody")?.closest(".detail-section-card");
+    if(contratos){
+      const title=contratos.querySelector("h3");
+      const description=contratos.querySelector(".detail-section-header p");
+      const price=contratos.querySelectorAll("thead th")[3];
+      if(title)title.textContent="Expedientes de contratos originales";
+      if(description)description.textContent="Conteo informativo de expedientes únicos: no acredita vigencia ni se suma a ventas.";
+      if(price)price.textContent="Importe nominal";
+    }
+    const ui=document.getElementById("tablaVentasUiResponsableBody")?.closest(".detail-section-card");
+    if(ui){
+      const title=ui.querySelector("h3");
+      const description=ui.querySelector(".detail-section-header p");
+      if(title)title.textContent="Servicios Uso Inmediato por responsable";
+      if(description)description.textContent="Conteo operativo de BI_Servicios. Importes no conciliados con Ventas Comercial.";
+    }
+    const tipos=document.getElementById("tablaVentasTipoServicioBody")?.closest(".detail-section-card");
+    const description=tipos?.querySelector(".detail-section-header p");
+    if(description)description.textContent="Desglose por producto pendiente de validar en el Excel Comercial.";
+  };
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",apply,{once:true});
+  else apply();
+})();
+"""
     files["app.js"]=app
 
     for source,target in FILES.items():
@@ -191,6 +231,9 @@ document.addEventListener("DOMContentLoaded",()=>{
     assert 'ventasDashboardQARevalidar' in page
     assert 'VENTAS_QA_CSRF' in page
     assert 'ventas-excel.php?modo=revalidar' in client
+    assert 'QA-only presentation labels' in app
+    assert 'Expedientes contractuales únicos' in app
+    assert 'Renglones mensuales' in app
     assert "dashboardVentasExcelQADatos" in app
     assert 'ventas-dashboard-qa-app.js?v='+VERSION in page
     assert "portal_user_can_tool('dashboard')" in page
