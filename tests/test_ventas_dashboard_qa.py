@@ -50,6 +50,24 @@ class TestVentasDashboardQA(unittest.TestCase):
         yoy=self.read("ventas-dashboard-qa-yoy.js")
         self.assertIn("Comparativo diario no disponible",yoy)
 
+    def test_no_fabricated_service_type_revenue(self):
+        client=self.read("ventas-dashboard-qa-excel.js")
+        self.assertIn("tipoBody.replaceChildren(row)",client)
+        self.assertIn("Desglose por tipo no verificable",client)
+        self.assertIn("20261113-ventas-qa-visual-5",client)
+
+    def test_cron_sales_only_and_off_by_default(self):
+        cron=(ROOT/"cpanel-preview-20261105/private-code/ventas_excel_cron_qa.php").read_text(encoding="utf-8")
+        self.assertIn("JJP_VENTAS_CRON_QA",cron)
+        self.assertIn("if (PHP_SAPI !== 'cli')",cron)
+        self.assertIn("veRun(false)",cron)
+        self.assertNotIn("hsRun()",cron)
+        self.assertNotIn("egRun()",cron)
+        self.assertIn("exit(75)",cron)
+        self.assertEqual(subprocess.run(["php","-l",
+            str(ROOT/"cpanel-preview-20261105/private-code/ventas_excel_cron_qa.php")],
+            capture_output=True).returncode,0)
+
     def test_php_and_node_syntax(self):
         for name in ("ventas-dashboard-qa.php",):
             r=subprocess.run(["php","-l",str(OUTPUT/name)],
