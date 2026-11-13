@@ -12,7 +12,7 @@ if(PHP_SAPI!=='cli'&&
  * Dependencias privadas existentes: ingresos_engine.php (Graph/XLSX).
  */
 require_once __DIR__ . '/ingresos_engine.php';
-const VE_BUILD = '20261113-metas-manuales-1';
+const VE_BUILD = '20261113-metas-manuales-2';
 const VE_DRIVE_COMERCIAL = 'b!tzGM-V4TiUKbUyHUBBu214AiW7yUyvxPnueBG9lB85Wh0Tv-5FAnQqSNjE7rlEJv';
 const VE_ITEM_COMERCIAL = '01ZBUZ3OT6NWPAZOQW5BDZ77XXJW7IQXPD';
 const VE_DRIVE_COBRANZA = 'b!EAWNGReAT02APufy0uQPFnDnY1ILcuZGv2EfFdV9rplPAV4rL4C_QoZl8LbKac5c';
@@ -66,7 +66,9 @@ function veClaveAsesor($name):string {
 function veClaveMetaAsesor($name):string {
     $s=veNorm($name);
     $s=preg_replace('/\s*\(\s*NUEV[AO]\s*\)\s*$/u','',$s)??$s;
-    return veClaveAsesor($s);
+    $key=veClaveAsesor($s);
+    // Variación comprobada en el libro: hoja de ventas GRISCELDA, metas GRISELDA.
+    return $key==='GRISCELDA'?'GRISELDA':$key;
 }
 function veHeaders(array $row):array {
     $cols=[];$dupes=[];
