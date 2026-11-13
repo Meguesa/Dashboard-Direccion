@@ -108,7 +108,8 @@ def build():
       '''  const metaVentas = metaPrevision;''',
       "Commercial goal only, never add unrelated UI target")
     app=replace_exact(app,
-      '''  setText("pageVentasCumplimientoUi",
+      '''  setText(
+    "pageVentasCumplimientoUi",
     metaUi > 0 ? formatoPorcentaje(porcentajeCumplimientoUi) : "—"
   );''',
       '''  setText("pageVentasCumplimientoUi", "No conciliado");''',
