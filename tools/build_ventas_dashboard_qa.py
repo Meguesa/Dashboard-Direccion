@@ -47,7 +47,7 @@ def build():
              "}\n",
              "QA revalidation CSRF shared with the restricted endpoint")
     page=one(page,
-             "declare(strict_types=1);
+             "declare(strict_types=1);",
              "declare(strict_types=1);\nheader('Cache-Control: private, no-store');\nheader('X-Robots-Tag: noindex, nofollow');",
              "Anti-cache and noindex headers")
     page=one(page,"Dashboard de Dirección | Portal Interno JdJP",
