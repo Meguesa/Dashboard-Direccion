@@ -36,6 +36,28 @@ qaAssert(count($duplicates['incidencias'])>=1,'Duplicate advisor blocked');
 $missing=veAuditVentas($base.'/ventas-meta-no-disponible.xlsx');
 qaAssert($missing['meses']['2026-11']['metaDisponible']===false,'Absent goal is absent, not zero');
 qaAssert($missing['meses']['2026-11']['asesoresSinMeta']===1,'Missing advisor target indicated');
+$manual=veAuditVentas($base.'/ventas-metas-manuales-2026.xlsx');
+qaAssert($manual['metas']['totalesCentavos']['2026-11']===40000000,
+    'New manual November goals read exclusively from METAS C');
+qaAssert($manual['metas']['registrosPorMes']['2026-11']===2,
+    'Blank individual target and subtotal do not count');
+qaAssert($manual['meses']['2026-11']['asesoresSinMeta']===1,
+    'Unknown Ivette goal remains missing and distinct from zero');
+qaAssert(!isset($manual['metas']['totalesCentavos']['2026-01']),
+    'Ambiguous old January block never silently assumed to be 2026');
+qaAssert(count(array_filter($manual['metas']['incidencias'],
+    fn($i)=>($i['codigo']??'')==='ENERO_2026_SIN_ANCLA_CONFIRMADA'))===1,
+    'January missing year anchor is flagged');
+qaAssert($manual['metas']['totalesCentavos']['2026-02']===40000000,
+    'Old historic February goals never override current series');
+$manualRows=veLeerRegistrosComercial($base.'/ventas-metas-manuales-2026.xlsx');
+$manualMap=[];foreach($manualRows as $r)$manualMap[veClaveAsesor($r['asesor'])]=$r;
+qaAssert($manualMap['ALEXIS NUEVO']['metaMensual']===200000.0,
+    'ALEXIS(NUEVO) corresponds to unique ALEXIS manual goal');
+qaAssert($manualMap['MA ELENA NUEVA']['metaMensual']===200000.0,
+    'MA ELENA(NUEVA) corresponds to unique MA ELENA manual goal');
+qaAssert($manualMap['IVETTE']['metaMensual']===null,
+    'Missing goal is never inferred from helpers');
 $contracts=veAuditContratos($base.'/contratos-ok.xlsx');
 qaAssert($contracts['origen']==='HOJAS_ORIGINALES_CONTRATOS','Contract source is original sheets');
 qaAssert($contracts['registrosCandidatos']===3,'Reads original contract rows only');
