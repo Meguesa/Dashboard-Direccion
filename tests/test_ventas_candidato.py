@@ -29,6 +29,10 @@ class VentasCutoverCandidate(unittest.TestCase):
         self.assertIn("return metasVentasExcelPeriodo(mes);",app)
         self.assertIn("return sumarMetaPrevisionMensual(mes);",app)
         self.assertIn("return NaN;",app)
+        self.assertIn("const totalVentas = ventasPrevision;",app)
+        self.assertIn('setText("pageVentasUiTotal", "No conciliado")',app)
+        self.assertIn('setText("pageVentasMetaUi", "No conciliado")',app)
+        self.assertIn("const metaVentas = metaPrevision;",app)
     def test_role_read_only_endpoint(self):
         php=self.text("ventas-excel.php")
         self.assertIn("if(!portal_user_can_tool('dashboard'))",php)
@@ -46,7 +50,7 @@ class VentasCutoverCandidate(unittest.TestCase):
             self.assertEqual(r.returncode,0,r.stderr)
     def test_source_switch_only_via_intended_release(self):
         html=self.text("index.php")
-        self.assertIn("ventas-excel.js?v=20261113-ventas-directo-candidato-1",html)
+        self.assertIn("ventas-excel.js?v=20261113-ventas-directo-candidato-2",html)
         self.assertIn("Ventas comerciales del periodo",html)
         self.assertIn("portal_user_can_tool('dashboard')",html)
 
