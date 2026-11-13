@@ -12,7 +12,7 @@ if(PHP_SAPI!=='cli'&&
  * Dependencias privadas existentes: ingresos_engine.php (Graph/XLSX).
  */
 require_once __DIR__ . '/ingresos_engine.php';
-const VE_BUILD = '20261113-metas-manuales-2';
+const VE_BUILD = '20261113-metas-manuales-3';
 const VE_DRIVE_COMERCIAL = 'b!tzGM-V4TiUKbUyHUBBu214AiW7yUyvxPnueBG9lB85Wh0Tv-5FAnQqSNjE7rlEJv';
 const VE_ITEM_COMERCIAL = '01ZBUZ3OT6NWPAZOQW5BDZ77XXJW7IQXPD';
 const VE_DRIVE_COBRANZA = 'b!EAWNGReAT02APufy0uQPFnDnY1ILcuZGv2EfFdV9rplPAV4rL4C_QoZl8LbKac5c';
@@ -678,6 +678,34 @@ function veRun(bool $force=false):array {
         }
         if(isset($run['errores']))throw new RuntimeException('Metadatos actuales no disponibles.');
         $fresh=veInspeccion(true);
+        // Un cambio concurrente del eTag obliga a descartar la lectura
+        // completa. Se permite UN nuevo intento desde cero, con nuevos
+        // metadatos Graph; nunca se acepta una mezcla de versiones.
+        $retryDueToEtag=false;
+        foreach(['comercial','contratos'] as $label){
+            if(($fresh['archivos'][$label]['codigoError']??null)==='ETAG_CAMBIADO_DURANTE_LECTURA')
+                $retryDueToEtag=true;
+        }
+        if($retryDueToEtag){
+            usleep(350000);
+            $retryObserved=[];
+            foreach(veFuentes() as $label=>$src){
+                $meta=hsRemoteJson($src['drive'],'/items/'.rawurlencode($src['id']).
+                    '?%24select=id,name,eTag,size,lastModifiedDateTime',$token);
+                if(($meta['id']??null)!==$src['id']||
+                   ($meta['name']??null)!==$src['name']||
+                   empty($meta['eTag']))
+                    throw new RuntimeException('Reintento Graph sin identidad acreditada.');
+                $retryObserved[$label]=[
+                    'etag'=>(string)$meta['eTag'],
+                    'modificadoUTC'=>$meta['lastModifiedDateTime']??null
+                ];
+            }
+            // Un segundo cambio se conserva como incidencia: jamás relajar
+            // la verificación o conservar un snapshot de versión mezclada.
+            $fresh=veInspeccion(true);
+            $observed=$retryObserved;
+        }
         if(count($fresh['archivos']??[])!==2)throw new RuntimeException('Auditoria incompleta.');
         $valid=true;
         foreach($observed as $name=>$metadata){
