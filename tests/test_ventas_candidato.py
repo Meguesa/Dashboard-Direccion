@@ -33,6 +33,10 @@ class VentasCutoverCandidate(unittest.TestCase):
         self.assertIn('setText("pageVentasUiTotal", "No conciliado")',app)
         self.assertIn('setText("pageVentasMetaUi", "No conciliado")',app)
         self.assertIn("const metaVentas = metaPrevision;",app)
+        self.assertIn("const esperado = auditoria?.contratosUnicosNoRepetidos;",app)
+        self.assertIn('setText("pageVentasTicketServicios", "No calculable")',app)
+        self.assertIn('label: "Ventas comerciales (Excel)"',app)
+        self.assertNotIn('label: "Ventas UI"',app)
     def test_role_read_only_endpoint(self):
         php=self.text("ventas-excel.php")
         self.assertIn("if(!portal_user_can_tool('dashboard'))",php)
@@ -50,7 +54,7 @@ class VentasCutoverCandidate(unittest.TestCase):
             self.assertEqual(r.returncode,0,r.stderr)
     def test_source_switch_only_via_intended_release(self):
         html=self.text("index.php")
-        self.assertIn("ventas-excel.js?v=20261113-ventas-directo-candidato-2",html)
+        self.assertIn("ventas-excel.js?v=20261113-ventas-directo-candidato-3",html)
         self.assertIn("Ventas comerciales del periodo",html)
         self.assertIn("portal_user_can_tool('dashboard')",html)
 
