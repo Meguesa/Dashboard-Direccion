@@ -138,7 +138,14 @@ if($mode==='manifest'){
 }
 $stats=$summaries[$month]??null;
 if(!$stats||!$stats['cacheDisponible']){
-    http_response_code(409);echo '{"error":"MES_VENTAS_NO_CONCILIADO"}';exit;
+    http_response_code(409);
+    echo json_encode([
+        'error'=>'MES_VENTAS_NO_CONCILIADO',
+        'mes'=>$month,
+        'diferenciaSemanalCentavos'=>$stats['auditoria']['diferenciaCentavos']??null,
+        'accion'=>'REVISAR_ORIGEN_COMERCIAL'
+    ],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+    exit;
 }
 $sales=array_values(array_filter($data['ventas']??[],static fn($r):bool=>
     is_array($r)&&($r['mes']??null)===$month));
@@ -162,8 +169,12 @@ $contractKeys=[];
 foreach($contracts as $r){
     $key=(string)($r['id']??'');
     if($key===''||isset($contractKeys[$key])||
-      ($r['aportaTotalComercial']??true)!==false||
-      ($r['montoVenta']??1)!==null){
+      !array_key_exists('aportaTotalComercial',$r)||
+      $r['aportaTotalComercial']!==false||
+      !array_key_exists('montoVenta',$r)||
+      $r['montoVenta']!==null||
+      !array_key_exists('total',$r)||
+      $r['total']!==null){
         http_response_code(409);echo '{"error":"CONTRATO_NO_VALIDADO"}';exit;
     }
     $contractKeys[$key]=true;
