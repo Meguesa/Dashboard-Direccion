@@ -321,7 +321,7 @@ jobs:
 
 
   publicar_dashboard_qa_ventas:
-    name: Publicar Dashboard completo QA Ventas (4 archivos aislados)
+    name: Publicar Dashboard completo QA Ventas (5 archivos aislados)
     if: >-
       github.event_name == 'pull_request' &&
       github.event.action == 'edited' &&
@@ -350,7 +350,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Construir y verificar 4 archivos QA sin Power Automate
+      - name: Construir y verificar 5 archivos QA sin Power Automate
         shell: bash
         run: |
           set -euo pipefail
@@ -371,27 +371,40 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
-          for file in ventas-dashboard-qa.php ventas-dashboard-qa-app.js ventas-dashboard-qa-graph.js ventas-dashboard-qa-excel.js ventas-dashboard-qa-yoy.js; do
+          # Cargar scripts primero y la página QA al final. Un fallo FTPS
+          # parcial nunca implica publicación correcta del conjunto.
+          for file in ventas-dashboard-qa-graph.js ventas-dashboard-qa-excel.js ventas-dashboard-qa-yoy.js ventas-dashboard-qa-app.js ventas-dashboard-qa.php; do
             src="deploy-ventas-dashboard-qa/$file"
             dest="$RUNNER_TEMP/$file"
             test -s "$src"
-            timeout --kill-after=5s 115s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
-              set cmd:fail-exit yes;
-              set ftp:passive-mode true;
-              set ftp:ssl-force true;
-              set ftp:ssl-protect-data true;
-              set ftp:ssl-auth TLS;
-              set ssl:verify-certificate yes;
-              set ssl:check-hostname yes;
-              set net:timeout 18;
-              set net:max-retries 2;
-              put $src -o .$file.qa-upload;
-              mv .$file.qa-upload $file;
-              get $file -o $dest;
-              bye;
-            "
-            cmp -s "$src" "$dest"
-            sha256sum "$src" | cut -d' ' -f1
+            completo=false
+            for intento in 1 2 3; do
+              rm -f "$dest"
+              if timeout --kill-after=5s 70s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+                set cmd:fail-exit yes;
+                set ftp:passive-mode true;
+                set ftp:ssl-force true;
+                set ftp:ssl-protect-data true;
+                set ftp:ssl-auth TLS;
+                set ssl:verify-certificate yes;
+                set ssl:check-hostname yes;
+                set net:timeout 13;
+                set net:max-retries 1;
+                put $src -o .$file.qa-upload;
+                mv .$file.qa-upload $file;
+                get $file -o $dest;
+                bye;
+              " && cmp -s "$src" "$dest"; then
+                completo=true
+                break
+              fi
+              echo "::warning::FTPS QA $file intento $intento fallido"
+            done
+            if [ "$completo" != true ]; then
+              echo "::error::FTPS QA $file no verificado tras 3 intentos"
+              exit 1
+            fi
+            echo "QA verificado: $file $(sha256sum "$src" | cut -d' ' -f1)"
           done
       - name: Bloquear acceso anónimo a Dashboard QA
         shell: bash
