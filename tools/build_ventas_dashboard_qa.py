@@ -11,12 +11,13 @@ import subprocess
 ROOT=Path(__file__).resolve().parents[1]
 BASE=ROOT/"deploy-ventas-excel-candidato"
 OUTPUT=ROOT/"deploy-ventas-dashboard-qa"
-VERSION="20261113-ventas-dashboard-qa-2"
+VERSION="20261113-ventas-dashboard-qa-3"
 FILES={
     "index.php":"ventas-dashboard-qa.php",
     "app.js":"ventas-dashboard-qa-app.js",
     "graph.js":"ventas-dashboard-qa-graph.js",
     "ventas-excel.js":"ventas-dashboard-qa-excel.js",
+    "dashboard-yoy-comparison.js":"ventas-dashboard-qa-yoy.js",
 }
 
 def one(text,old,new,desc):
@@ -31,7 +32,9 @@ def build():
     for item in OUTPUT.iterdir():
         if item.is_file():
             item.unlink()
-    files={key:(BASE/key).read_text(encoding="utf-8") for key in FILES}
+    files={key:((BASE/key) if (BASE/key).is_file()
+                else (ROOT/"cpanel-preview-20261105"/"dashboard-egresos-preview"/key))
+           .read_text(encoding="utf-8") for key in FILES}
 
     page=files["index.php"]
     page=one(page,
@@ -115,6 +118,26 @@ JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT)?>;
       "Isolate Excel errors without falling back to BI_Ventas")
     files["graph.js"]=graph
 
+    yoy=files["dashboard-yoy-comparison.js"]
+    yoy=one(yoy,
+      '''  function pintarVentas(periodo) {
+    const actual = calcularVentas(periodo.anio, periodo.mes, periodo.diaFinActual);''',
+      '''  function pintarVentas(periodo) {
+    // Excel Comercial solo acredita venta mensual, NO fecha exacta.
+    // Prohibido comparar periodos parciales con importes de BI_Servicios.
+    texto("yoyVentasSubtitle",
+      "Comparativo diario no disponible: Ventas Excel solo tiene totales mensuales verificados.");
+    for(const id of ["yoyVentasActual","yoyVentasAnterior","yoyVentasVariacion"]){
+      texto(id,"No comparable");
+    }
+    for(const id of ["yoyVentasActualDetail","yoyVentasAnteriorDetail","yoyVentasVariacionDetail"]){
+      texto(id,"No existe fecha individual acreditada en la fuente Comercial.");
+    }
+    return;
+    const actual = calcularVentas(periodo.anio, periodo.mes, periodo.diaFinActual);''',
+      "Disable date-based YoY sales claim until daily records are audited")
+    files["dashboard-yoy-comparison.js"]=yoy
+
     client=files["ventas-excel.js"]
     client+=r"""
 // Revalidacion explicita QA, protegida por sesion administrativa y CSRF PHP.
@@ -165,7 +188,8 @@ document.addEventListener("DOMContentLoaded",()=>{
     assert 'ventas-dashboard-qa-app.js?v='+VERSION in page
     assert "portal_user_can_tool('dashboard')" in page
     assert "gabriel.guerra@juanpablo.com.mx" in page
-    assert len(list(OUTPUT.iterdir()))==4
+    assert 'Comparativo diario no disponible' in yoy
+    assert len(list(OUTPUT.iterdir()))==5
     print("PASS: isolated, admin-only QA dashboard built without deploying")
 
 if __name__=="__main__":
