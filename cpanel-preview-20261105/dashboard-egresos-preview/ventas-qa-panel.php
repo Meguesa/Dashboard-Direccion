@@ -9,6 +9,8 @@ if(strtolower(trim((string)($user['email']??'')))!=='gabriel.guerra@juanpablo.co
 header('Cache-Control: private, no-store, max-age=0');
 header('X-Content-Type-Options: nosniff');
 header('X-Robots-Tag: noindex, nofollow');
+if(empty($_SESSION['ventas_excel_qa_csrf']))$_SESSION['ventas_excel_qa_csrf']=bin2hex(random_bytes(24));
+$csrf=htmlspecialchars((string)$_SESSION['ventas_excel_qa_csrf'],ENT_QUOTES,'UTF-8');
 ?><!doctype html>
 <html lang="es"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>QA Ventas Excel — Jardines de Juan Pablo</title>
@@ -40,6 +42,7 @@ Las ventas se toman de Comercial, columna G. El importe nominal de contratos es 
 <label for="mes">Periodo</label>
 <select id="mes"></select>
 <button id="reload" type="button">Revisar versión validada</button>
+<button id="revalidate" type="button">Revalidar Excel / Graph</button>
 <span id="status" role="status" aria-live="polite">Comprobando origen…</span>
 </div>
 <div class="cards">
@@ -58,7 +61,8 @@ Las ventas se toman de Comercial, columna G. El importe nominal de contratos es 
 <th class="amount">Importe nominal</th></tr></thead><tbody id="rows"></tbody>
 </table></div></section>
 <p id="warning"></p>
-<script src="ventas-excel.js?v=20261113-qa-1"></script>
+<script>window.VENTAS_QA_CSRF="<?= $csrf ?>";</script>
+<script src="ventas-excel.js?v=20261113-qa-2"></script>
 <script>
 "use strict";
 const peso=n=>Number(n).toLocaleString("es-MX",{style:"currency",currency:"MXN"});
@@ -112,5 +116,24 @@ async function load(){
  el("status").className="bad";["total","meta","pct","contracts","missing"].forEach(k=>el(k).textContent="No disponible");
  el("advisors").replaceChildren();el("rows").replaceChildren();}
 }
-el("mes").onchange=draw;el("reload").onclick=load;load();
+async function revalidar(){
+ const btn=el("revalidate");
+ btn.disabled=true;el("status").textContent="Revalidando metadatos y snapshot Graph…";
+ try{
+  const body=new URLSearchParams({csrf:window.VENTAS_QA_CSRF});
+  const res=await fetch("ventas-excel.php?modo=revalidar",{
+   method:"POST",credentials:"same-origin",cache:"no-store",
+   headers:{"Content-Type":"application/x-www-form-urlencoded",Accept:"application/json"},
+   body:body.toString()
+  });
+  const answer=await res.json();
+  if(!res.ok||!["auditado","sin_cambios"].includes(answer.estado))
+   throw new Error(answer.error||answer.estado||"HTTP "+res.status);
+  await load();
+ }catch(error){
+  el("status").textContent="Revalidación no completada: "+(error?.message||error);
+  el("status").className="bad";
+ }finally{btn.disabled=false;}
+}
+el("mes").onchange=draw;el("reload").onclick=load;el("revalidate").onclick=revalidar;load();
 </script></body></html>
