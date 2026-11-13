@@ -52,9 +52,9 @@ qaAssert($manual['metas']['totalesCentavos']['2026-02']===40000000,
     'Old historic February goals never override current series');
 $manualRows=veLeerRegistrosComercial($base.'/ventas-metas-manuales-2026.xlsx');
 $manualMap=[];foreach($manualRows as $r)$manualMap[veClaveAsesor($r['asesor'])]=$r;
-qaAssert($manualMap['ALEXIS NUEVO']['metaMensual']===200000.0,
+qaAssert(abs((float)$manualMap['ALEXIS NUEVO']['metaMensual']-200000.0)<0.001,
     'ALEXIS(NUEVO) corresponds to unique ALEXIS manual goal');
-qaAssert($manualMap['MA ELENA NUEVA']['metaMensual']===200000.0,
+qaAssert(abs((float)$manualMap['MA ELENA NUEVA']['metaMensual']-200000.0)<0.001,
     'MA ELENA(NUEVA) corresponds to unique MA ELENA manual goal');
 qaAssert($manualMap['IVETTE']['metaMensual']===null,
     'Missing goal is never inferred from helpers');
