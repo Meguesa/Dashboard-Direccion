@@ -19,11 +19,14 @@ function validacionVentasExcelDetalle(detalle,manifest,mes) {
         fila.montoVenta<0)throw new Error("Registro comercial inválido "+mes);
     claves.add(fila.id);cents+=Math.round(fila.montoVenta*100);
   }
-  if(!Number.isSafeInteger(cents)||cents!==detalle.auditoria.ventasCentavos||
-      cents!==detalle.auditoria.semanasCentavos||
-      detalle.auditoria.diferenciaCentavos!==0||
+  const diff=detalle.auditoria.diferenciaCentavos;
+  if(!Number.isSafeInteger(cents)||
+      !Number.isSafeInteger(detalle.auditoria.semanasCentavos)||
+      !Number.isSafeInteger(diff)||
+      cents!==detalle.auditoria.ventasCentavos||
+      diff!==cents-detalle.auditoria.semanasCentavos||
       claves.size!==detalle.auditoria.registros)
-    throw new Error("Total de Ventas no conciliado "+mes);
+    throw new Error("Total mensual de Ventas no conciliado con columna G "+mes);
   const expedientes=new Set();
   for(const contrato of detalle.contratos){
     if(contrato.mes!==mes||contrato.fuenteOrigen!=="excel_original_contratos"||
@@ -70,9 +73,8 @@ async function cargarVentasExcelOriginal(mesesSolicitados=null){
     await Promise.all(Array.from({length:2},async()=>{
       while(cursor<entries.length){
         const [mes,state]=entries[cursor++];
-        if(!state.cacheDisponible||!state.auditoria?.validado||
-           state.auditoria.diferenciaCentavos!==0)
-          throw new Error("El mes "+mes+" no está conciliado en Excel");
+        if(!state.cacheDisponible||!state.auditoria?.validado)
+          throw new Error("La columna G del mes "+mes+" no está verificada en Excel");
         let detalle=ventasExcelMemoria.get(mes);
         if(!detalle||detalle.version!==manifest.version){
           const r=await fetch("ventas-excel.php?modo=detalle&mes="+encodeURIComponent(mes),{
@@ -127,6 +129,9 @@ function renderEstadoVentasExcel(){
   const meses=typeof obtenerMesesRangoSeleccionado==="function"
     ?obtenerMesesRangoSeleccionado():[];
   const invalidos=meses.filter(m=>!state.meses?.[m]?.cacheDisponible);
+  const diferenciasSemanas=meses.filter(m=>
+    state.meses?.[m]?.auditoria?.diferenciaCentavos!==0 &&
+    Number.isSafeInteger(state.meses?.[m]?.auditoria?.diferenciaCentavos));
   const faltantes=meses.reduce((total,m)=>total+Number(state.meses?.[m]?.asesoresSinMeta||0),0);
   el.replaceChildren();
   const status=document.createElement("strong");
@@ -139,6 +144,8 @@ function renderEstadoVentasExcel(){
     ?new Date(state.verificadoUTC).toLocaleString("es-MX",{timeZone:"America/Monterrey"})
     :"pendiente";
   detail.textContent="Verificado: "+cuando+" · Asesores sin meta: "+faltantes+
-    " · Contratos informativos, sin sumar al total de ventas.";
+    " · Contratos informativos, sin sumar al total de ventas."+
+    (diferenciasSemanas.length?" Atención: semanas con diferencias históricas: "+
+      diferenciasSemanas.join(", ")+". Se conserva columna G como fuente oficial.":"");
   el.appendChild(detail);
 }
