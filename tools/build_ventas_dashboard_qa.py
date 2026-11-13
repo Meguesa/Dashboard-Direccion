@@ -11,7 +11,7 @@ import subprocess
 ROOT=Path(__file__).resolve().parents[1]
 BASE=ROOT/"deploy-ventas-excel-candidato"
 OUTPUT=ROOT/"deploy-ventas-dashboard-qa"
-VERSION="20261113-ventas-dashboard-qa-3"
+VERSION="20261113-ventas-dashboard-qa-4"
 FILES={
     "index.php":"ventas-dashboard-qa.php",
     "app.js":"ventas-dashboard-qa-app.js",
