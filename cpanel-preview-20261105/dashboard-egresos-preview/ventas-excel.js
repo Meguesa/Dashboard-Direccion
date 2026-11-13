@@ -44,7 +44,13 @@ async function cargarVentasExcelOriginal(){
     const res=await fetch("ventas-excel.php?modo=manifest",{
       credentials:"same-origin",cache:"no-store",headers:{Accept:"application/json"}
     });
-    if(!res.ok)throw new Error("Manifiesto Ventas HTTP "+res.status);
+    if(!res.ok){
+      let issue={};
+      try{issue=await res.json();}catch(_e){}
+      const reason=issue.motivo||issue.error||"SIN_DIAGNOSTICO";
+      throw new Error("Manifiesto Ventas HTTP "+res.status+": "+reason+
+        (issue.accion==="REVALIDAR_GRAPH" ? ". Presiona Revalidar Excel / Graph." : ""));
+    }
     const manifest=await res.json();
     if(manifest.validado!==true||manifest.fuente!=="EXCEL_ORIGINAL_VENTAS"||
        manifest.biVentas!==false||manifest.fuenteMetas!=="METAS"||
