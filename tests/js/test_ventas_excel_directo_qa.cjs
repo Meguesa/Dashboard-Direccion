@@ -49,12 +49,12 @@ vm.runInContext(script,ctx,{timeout:1200});
  await assert.rejects(ctx.cargarVentasExcelOriginal(),/enero|2026-01|conciliado/i);
  manifest.meses["2026-01"].cacheDisponible=true;
  const historical=detail("2026-03");
- historical.auditoria.semanasCentavos=419800;
+ historical.auditoria.semanasCentavos=2000;
  historical.auditoria.diferenciaCentavos=2200;
  assert.equal(ctx.validacionVentasExcelDetalle(historical,manifest,"2026-03").length,2,
    "Preserve column-G totals when historic weekly variance is fully disclosed");
  const dishonest=detail("2026-03");
- dishonest.auditoria.semanasCentavos=419800;
+ dishonest.auditoria.semanasCentavos=2000;
  dishonest.auditoria.diferenciaCentavos=0;
  assert.throws(()=>ctx.validacionVentasExcelDetalle(dishonest,manifest,"2026-03"),
    /columna G/,"Reject mismatched arithmetic not disclosed");
