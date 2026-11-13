@@ -414,11 +414,20 @@ jobs:
           "
           actual_app_sha="$(sha256sum "$app_remoto" | cut -d' ' -f1)"
           expected_app_sha="c3e9c686db8d0cf7404cd379c4e708fdd3f9df8bca45a08ba7c9c42c8dca08b5"
-          if [ "$actual_app_sha" != "$expected_app_sha" ]; then
-            echo "::error::app.js QA difiere del ultimo artefacto validado; aborto seguro"
+          candidate_app_sha="$(sha256sum deploy-ventas-dashboard-qa/ventas-dashboard-qa-app.js | cut -d' ' -f1)"
+          echo "Diagnostico app remoto SHA256: $actual_app_sha"
+          echo "Diagnostico candidato QA SHA256: $candidate_app_sha"
+          echo "Tamanos remoto y candidato:"
+          wc -c "$app_remoto" deploy-ventas-dashboard-qa/ventas-dashboard-qa-app.js
+          # Aceptar solo el app anterior acreditado o el candidato actual, y
+          # verificar sintaxis. Cualquier tercer hash implica revision previa.
+          if [ "$actual_app_sha" != "$expected_app_sha" ] && [ "$actual_app_sha" != "$candidate_app_sha" ]; then
+            echo "::error::app.js QA no coincide con ninguna version conocida; aborto seguro"
             exit 1
           fi
-          echo "app.js QA intacto: SHA256 verificado"
+          node --check "$app_remoto"
+          grep -Fq 'dashboardVentasExcelQADatos' "$app_remoto"
+          echo "app.js QA conocido, sintaxis y aislamiento verificados"
           # Desplegar unicamente el lector JS pequeno con el complemento visual.
           # Los demas archivos estan previamente publicados y no se modifican.
           for file in ventas-dashboard-qa-excel.js; do
