@@ -12,7 +12,7 @@ if(PHP_SAPI!=='cli'&&
  * Dependencias privadas existentes: ingresos_engine.php (Graph/XLSX).
  */
 require_once __DIR__ . '/ingresos_engine.php';
-const VE_BUILD = '20261112-unicode-nbsp-4';
+const VE_BUILD = '20261113-metas-manuales-1';
 const VE_DRIVE_COMERCIAL = 'b!tzGM-V4TiUKbUyHUBBu214AiW7yUyvxPnueBG9lB85Wh0Tv-5FAnQqSNjE7rlEJv';
 const VE_ITEM_COMERCIAL = '01ZBUZ3OT6NWPAZOQW5BDZ77XXJW7IQXPD';
 const VE_DRIVE_COBRANZA = 'b!EAWNGReAT02APufy0uQPFnDnY1ILcuZGv2EfFdV9rplPAV4rL4C_QoZl8LbKac5c';
@@ -60,6 +60,14 @@ function veClaveAsesor($name):string {
     $s=strtr($s,['Á'=>'A','É'=>'E','Í'=>'I','Ó'=>'O','Ú'=>'U','Ü'=>'U','Ñ'=>'N']);
     return trim((string)preg_replace('/[^\p{L}\p{N}]+/u',' ',$s));
 }
+/** Solo retira anotaciones parentéticas inequívocas de alta reciente para metas.
+ * No modifica el nombre original ni crea equivalencias libres entre personas.
+ */
+function veClaveMetaAsesor($name):string {
+    $s=veNorm($name);
+    $s=preg_replace('/\s*\(\s*NUEV[AO]\s*\)\s*$/u','',$s)??$s;
+    return veClaveAsesor($s);
+}
 function veHeaders(array $row):array {
     $cols=[];$dupes=[];
     foreach($row as $column=>$raw) {
@@ -75,44 +83,90 @@ function vePick(array $row,array $header,string $name) {
     return isset($header[$name])?$row[$header[$name]]??null:null;
 }
 /**
- * Tabla independiente de metas por asesor, detectada por encabezado y no por
- * nombre de hoja. Se publica solo el agregado por mes, nunca nombres/PII.
- */
-/**
- * META OFICIAL: hoja METAS de Comercial (columna C). Los bloques anteriores
- * a la primera fecha con año 2026 explícito no se atribuyen a 2026.
- * Jamás consulta hojas auxiliares creadas por flujos automáticos.
+ * METAS es la única fuente oficial por asesor (columna C); jamás consultar
+ * METAS_BI o DASHBOARD. Las filas antiguas no deben sobrescribir las nuevas.
+ *
+ * El libro actual contiene dos series manuales: ENERO-MAYO (sin año) y
+ * FEBRERO-DICIEMBRE (también sin año tras editarse el 13/nov/2026).
+ * Sin fechas explícitas, solo se toma la única serie cronológica larga
+ * FEBRERO-DICIEMBRE, anclada al libro 2026. ENERO queda sin atribución
+ * histórica: no se inventa su año ni se mezclan metas de series distintas.
+ *
+ * Si vuelven a existir marcas de fecha explícitas (01/mm/2026), tienen
+ * preferencia sobre la inferencia estructural y se respeta el año mostrado.
  */
 function veMetasOriginales(ZipArchive $zip,array $ss):array {
-    $month=null;$year=null;$totals=[];$advisorGoals=[];$counts=[];$issues=[];
-    $months=VE_MESES;
+    $blocks=[];$current=null;
     $groups=['MASTER','ELITE','SENIOR','JUNIOR','PRINCIPIANTE','ASESOR','TOTAL'];
     foreach(hsRows($zip,'METAS',$ss) as [$rn,$row,$formula]){
         $a=veNorm($row[0]??'');
         $date=hsDate($row[0]??null);
-        if($date!==null && substr($date,8,2)==='01'){
-            $year=(int)substr($date,0,4);
-            $month=substr($date,0,7);
+        $explicit=$date!==null&&substr($date,8,2)==='01';
+        if($explicit||isset(VE_MESES[$a])){
+            $monthNumber=$explicit?(int)substr($date,5,2):VE_MESES[$a];
+            $blocks[]=['month'=>$monthNumber,'year'=>$explicit?(int)substr($date,0,4):null,
+                'fila'=>$rn,'rows'=>[]];
+            $current=count($blocks)-1;
             continue;
         }
-        if(isset($months[$a])){
-            if($year===null){$month=null;continue;}
-            $month=sprintf('%04d-%02d',$year,$months[$a]);continue;
+        if($current===null||$a===''||in_array($a,$groups,true))continue;
+        $value=$row[2]??null;
+        if($value===null||trim((string)$value)==='')continue;
+        $blocks[$current]['rows'][]=['asesor'=>$a,'valor'=>$value,'fila'=>$rn];
+    }
+
+    $chosen=[];$issues=[];$hasExplicit=false;$activeYear=null;
+    foreach($blocks as $i=>$block){
+        if($block['year']!==null){$hasExplicit=true;$activeYear=$block['year'];}
+        if($activeYear===VE_YEAR)$chosen[]=$i;
+    }
+    if(!$hasExplicit){
+        // Separa las series cuando el mes retrocede o se repite. Nunca
+        // concatena metas de secuencias antiguas aunque tengan los mismos
+        // encabezados. Solo la única serie larga que termina en diciembre
+        // puede identificarse como la serie del libro 2026.
+        $runs=[];$run=[];$previous=0;
+        foreach($blocks as $i=>$block){
+            if($run&&$block['month']<=$previous){$runs[]=$run;$run=[];}
+            $run[]=$i;$previous=$block['month'];
         }
-        if($year!==VE_YEAR||$month===null||$a===''||in_array($a,$groups,true))
-            continue;
-        $val=$row[2]??null;
-        if($val===null||trim((string)$val)==='')continue;
-        try{$cents=hsCents($val);}
-        catch(Throwable $e){$issues[]=['codigo'=>'META_INVALIDA','fila'=>$rn];continue;}
-        $advisor=veClaveAsesor($a);
-        if($cents<0||$advisor===''){$issues[]=['codigo'=>'META_INVALIDA','fila'=>$rn];continue;}
-        if(isset($advisorGoals[$month][$advisor])){
-            $issues[]=['codigo'=>'ASESOR_META_DUPLICADA','mes'=>$month,'fila'=>$rn];continue;
+        if($run)$runs[]=$run;
+        $candidates=array_values(array_filter($runs,static function(array $run)use($blocks):bool{
+            $first=$blocks[$run[0]]['month'];
+            $last=$blocks[$run[count($run)-1]]['month'];
+            return count($run)>=8&&$first<=4&&$last===12;
+        }));
+        if(count($candidates)===1)$chosen=$candidates[0];
+        else $issues[]=['codigo'=>'SERIE_METAS_2026_SIN_ANCLA_UNICA',
+            'seriesCandidatas'=>count($candidates)];
+    }
+    $totals=[];$advisorGoals=[];$counts=[];
+    if($chosen){
+        $minMonth=min(array_map(static fn($i)=>$blocks[$i]['month'],$chosen));
+        if($minMonth>1)$issues[]=['codigo'=>'ENERO_2026_SIN_ANCLA_CONFIRMADA'];
+    }
+    foreach($chosen as $i){
+        $block=$blocks[$i];
+        $month=sprintf('%04d-%02d',VE_YEAR,$block['month']);
+        foreach($block['rows'] as $entry){
+            try{$cents=hsCents($entry['valor']);}
+            catch(Throwable $e){
+                $issues[]=['codigo'=>'META_INVALIDA','mes'=>$month,'fila'=>$entry['fila']];
+                continue;
+            }
+            $advisor=veClaveMetaAsesor($entry['asesor']);
+            if($cents<0||$advisor===''){
+                $issues[]=['codigo'=>'META_INVALIDA','mes'=>$month,'fila'=>$entry['fila']];
+                continue;
+            }
+            if(isset($advisorGoals[$month][$advisor])){
+                $issues[]=['codigo'=>'ASESOR_META_DUPLICADA','mes'=>$month,'fila'=>$entry['fila']];
+                continue;
+            }
+            $advisorGoals[$month][$advisor]=$cents;
+            $totals[$month]=($totals[$month]??0)+$cents;
+            $counts[$month]=($counts[$month]??0)+1;
         }
-        $advisorGoals[$month][$advisor]=$cents;
-        $totals[$month]=($totals[$month]??0)+$cents;
-        $counts[$month]=($counts[$month]??0)+1;
     }
     ksort($totals);
     return ['fuente'=>'METAS','totalesCentavos'=>$totals,
@@ -144,7 +198,7 @@ function veParseComercialOriginal(string $filename):array {
             if(!in_array($sheet,$sheets,true))continue;
             $month=sprintf('%04d-%02d',VE_YEAR,$number);
             $header=false;$summary=false;$total=0;$weekly=0;$count=0;$duplicates=[];
-            $diffAdvisors=0;
+            $diffAdvisors=0;$missingGoals=0;
             foreach(hsRows($zip,$sheet,$ss) as [$rn,$v,$formula]){
                 if($rn===2){
                     if(veNorm($v[0]??'')!=='ASESOR'||
@@ -180,7 +234,8 @@ function veParseComercialOriginal(string $filename):array {
                 }
                 if($g!==$week)$diffAdvisors++;
                 $weekly+=$week;$total+=$g;$count++;
-                $meta=$metas['_asesores'][$month][$advisor]??null;
+                $meta=$metas['_asesores'][$month][veClaveMetaAsesor($label)]??null;
+                if($meta===null)$missingGoals++;
                 $rows[]=[
                     'id'=>'VENTAS_XLSX|'.hash('sha256',$month.'|'.$advisor),
                     'mes'=>$month,'fecha'=>$month.'-01','fechaExactaDisponible'=>false,
@@ -202,8 +257,7 @@ function veParseComercialOriginal(string $filename):array {
                 'asesoresConDiferenciaSemanal'=>$diffAdvisors,
                 'metaDisponible'=>isset($metas['totalesCentavos'][$month]),
                 'metaCentavos'=>$metas['totalesCentavos'][$month]??null,
-                'asesoresSinMeta'=>count(array_filter(array_keys($duplicates),
-                    static fn($a)=>!isset($metas['_asesores'][$month][$a])))
+                'asesoresSinMeta'=>$missingGoals
             ];
         }
         if(!$rows)throw new RuntimeException('Sin registros originales de ventas.');
