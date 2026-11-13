@@ -56,13 +56,43 @@ def contracts_file(path,duplicate=False,poison=False,conflict=False,cancel=False
     ws.append(["Transaccion",999999999 if poison else 0])
     wb.save(path)
 
+def metas_manual_2026(path):
+    """Exercise current workbook structure: old Jan-May and later Feb-Dec 2026."""
+    wb=Workbook()
+    ws=wb.active
+    ws.title="NOVIEMBRE"
+    ws["A2"]="ASESOR"; ws["G2"]="MONTO TOTAL"
+    rows=[("ALEXIS(NUEVO)",0),("MA ELENA(NUEVA)",25000),("IVETTE",1000)]
+    for idx,(name,amount) in enumerate(rows,start=4):
+        ws.cell(idx,1,name);ws.cell(idx,7,amount)
+        if amount:ws.cell(idx,2,amount)
+    ws["A7"]="TOTAL";ws["G7"]=26000
+    ms=wb.create_sheet("METAS")
+    row=1
+    # Legacy blocks: must not override the later, coherent series.
+    for month in MONTHS[:5]:
+        ms.cell(row,1,month);row+=1
+        ms.cell(row,1,"ALEXIS");ms.cell(row,3,999999);row+=1
+    for month in MONTHS[1:]:
+        ms.cell(row,1,month);row+=1
+        ms.cell(row,1,"MASTER");row+=1
+        ms.cell(row,1,"ALEXIS");ms.cell(row,3,200000);row+=1
+        ms.cell(row,1,"MA ELENA");ms.cell(row,3,200000);row+=1
+        ms.cell(row,1,"IVETTE");row+=1  # Intentional empty individual target
+        ms.cell(row,1,"");ms.cell(row,3,400000);row+=1 # Manual subtotal ignored
+    # Poisoned helper sheets cannot inject conflicting targets.
+    fake=wb.create_sheet("METAS_BI")
+    fake["A1"]="Mes";fake["E2"]=123456789
+    wb.save(path)
+
 sales_file(root/"ventas-ok.xlsx")
 sales_file(root/"ventas-duplicado.xlsx",dup=True)
 sales_file(root/"ventas-diferencia.xlsx",weekdiff=True)
 sales_file(root/"ventas-meta-no-disponible.xlsx",no_meta=True)
+metas_manual_2026(root/"ventas-metas-manuales-2026.xlsx")
 contracts_file(root/"contratos-ok.xlsx")
 contracts_file(root/"contratos-duplicado.xlsx",duplicate=True)
 contracts_file(root/"contratos-dashboard-contaminado.xlsx",poison=True)
 contracts_file(root/"contratos-conflicto.xlsx",conflict=True)
 contracts_file(root/"contratos-cancelado.xlsx",cancel=True)
-print("Created nine synthetic XLSX fixtures")
+print("Created ten synthetic XLSX fixtures")
