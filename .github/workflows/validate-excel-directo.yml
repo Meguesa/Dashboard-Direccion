@@ -118,6 +118,7 @@ jobs:
           node tests/js/test_ventas_conciliacion_qa.cjs
           node tests/js/test_ventas_excel_directo_qa.cjs
           php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.php
+          php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-qa-panel.php
           python -m py_compile tests/fixtures_generar_ventas.py
           python tests/fixtures_generar_ventas.py "$RUNNER_TEMP/ventas-qa"
           php tests/php/test_ventas_excel.php "$RUNNER_TEMP/ventas-qa"
@@ -230,3 +231,87 @@ jobs:
           echo "Solo staging ventas_engine.php y diagnostico protegido ventas-excel-preview.php." >> "$GITHUB_STEP_SUMMARY"
           echo "El motor privado necesita una instalacion separada por el administrador." >> "$GITHUB_STEP_SUMMARY"
           echo "No se modifico main, index.php, app.js, BI_Ventas, cron, Ingresos, Egresos ni Power Automate." >> "$GITHUB_STEP_SUMMARY"
+
+
+  publicar_panel_qa_ventas:
+    name: QA Ventas - publicar SOLO panel y lector de Excel sin cambiar Dashboard
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'edited' &&
+      github.event.pull_request.number == 30 &&
+      github.head_ref == 'feature/ventas-excel-directo-20261112' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.title == 'Ventas Excel directo [PUBLICAR_QA_PANEL]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: deploy-dashboard-direccion
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, zip, dom, xmlreader
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validar endpoint, panel y contrato de datos
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.php
+          php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-qa-panel.php
+          node --check cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.js
+          node tests/js/test_ventas_excel_directo_qa.cjs
+          grep -Fq "portal_require_authentication();" cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.php
+          grep -Fq "portal_require_authentication();" cpanel-preview-20261105/dashboard-egresos-preview/ventas-qa-panel.php
+      - name: Instalar cliente FTPS TLS
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+      - name: Publicar tres archivos QA con comprobacion SHA
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
+          for file in ventas-excel.php ventas-excel.js ventas-qa-panel.php; do
+            source="cpanel-preview-20261105/dashboard-egresos-preview/$file"
+            dest="$RUNNER_TEMP/$file"
+            timeout --kill-after=5s 115s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 18;
+              set net:max-retries 2;
+              put $source -o .$file.qa-upload;
+              mv .$file.qa-upload $file;
+              get $file -o $dest;
+              bye;
+            "
+            cmp -s "$source" "$dest"
+            echo "QA SHA-256 $file $(sha256sum "$source" | cut -d' ' -f1)"
+          done
+      - name: Verificar acceso restringido sin sesion
+        shell: bash
+        run: |
+          set -euo pipefail
+          for uri in ventas-excel.php?modo=manifest ventas-qa-panel.php; do
+            code="$(curl -sS --max-time 25 -o /dev/null -w '%{http_code}' "https://portal.juanpablo.com.mx/dashboard/$uri")"
+            echo "$uri: HTTP $code"
+            case "$code" in 302|401|403) ;; *) echo "::error::QA $uri no protegido ($code)";exit 1;; esac
+          done
+      - name: Confirmar aislamiento
+        run: |
+          echo "Solo se publicaron ventas-excel.php ventas-excel.js ventas-qa-panel.php." >> "$GITHUB_STEP_SUMMARY"
+          echo "No se modificaron index.php app.js graph.js BI_Ventas cron ni Power Automate." >> "$GITHUB_STEP_SUMMARY"
