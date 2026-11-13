@@ -57,7 +57,7 @@ vm.runInContext(script,ctx,{timeout:1200});
  const missing=detail("2026-11");
  missing.contratos=[];
  assert.throws(()=>ctx.validacionVentasExcelDetalle(missing,manifest,"2026-11"),/Conteo/);
- manifest.meses["2026-11"].metaDisponible=false;
+ ctx.window.ventasExcelEstado.meses["2026-11"].metaDisponible=false;
  assert.ok(Number.isNaN(ctx.metasVentasExcelPeriodo("2026-11")));
  console.log("PASS sales Excel QA: isolated monthly totals, contract safety and metas");
 })().catch(err=>{console.error(err);process.exitCode=1});
