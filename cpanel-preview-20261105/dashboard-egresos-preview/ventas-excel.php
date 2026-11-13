@@ -112,12 +112,18 @@ foreach($monthStats as $key=>$stats){
     $sales=$stats['ventasCentavos']??null;
     $weeks=$stats['semanasCentavos']??null;
     $diff=$stats['diferenciaCentavos']??null;
-    $good=$count>0&&is_int($sales)&&is_int($weeks)&&$diff===0&&
-        ($sales===$weeks)&&$sales>=0;
+    // La columna G del libro Comercial es la fuente autorizada de ventas.
+    // Las diferencias contra B:F se presentan como incidencias historicas,
+    // pero no deben descartar un mes cuyo total mensual fue auditado.
+    $good=$count>0&&is_int($sales)&&is_int($weeks)&&is_int($diff)&&
+        $sales>=0&&$diff===($sales-$weeks);
+    $semanasConciliadas=$good&&$diff===0;
     $summaries[$key]=[
         'cacheDisponible'=>$good,
         'auditoria'=>['validado'=>$good,'registros'=>$count,'ventasCentavos'=>$sales,
             'semanasCentavos'=>$weeks,'diferenciaCentavos'=>$diff,
+            'semanasConciliadas'=>$semanasConciliadas,
+            'estadoSemanas'=>$semanasConciliadas?'CONCILIADAS':'DIFERENCIA_HISTORICA',
             'asesoresConDiferenciaSemanal'=>$stats['asesoresConDiferenciaSemanal']??null],
         'metaDisponible'=>$stats['metaDisponible']??false,
         'metaCentavos'=>$stats['metaCentavos']??null,
