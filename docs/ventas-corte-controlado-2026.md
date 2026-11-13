@@ -31,3 +31,14 @@
 
 ## Estado
 Se ha construido el paquete de candidato y aprobado CI. **No se ha probado el Dashboard completo en el navegador, no se ha activado el cron privado y no se ha apagado Power Automate.** El corte no está autorizado.
+
+## Preparación del cron independiente de Ventas (13 noviembre 2026)
+- Fuente: `cpanel-preview-20261105/private-code/ventas_excel_cron_qa.php` (CLI, sin acceso HTTP). **Solo está versionado en GitHub: NO instalado ni programado en cPanel.**
+- Instalar manualmente en la carpeta privada `/home/juanpab1/bi-ingresos-privado/` junto al `ventas_engine.php` ya verificado; comprobar hash y permisos 0600. No colocar el ejecutable en el directorio web.
+- Opt-in con variable de entorno `JJP_VENTAS_CRON_QA=1` únicamente en la tarea de cPanel. Si no se establece, retorna 78 sin ejecutar.
+- Horario `*/15 * * * *` en hora del servidor, con ruta PHP CLI absoluta validada por el administrador. Ejemplo de comando **para adaptar tras verificar cPanel**: `JJP_VENTAS_CRON_QA=1 /usr/local/bin/php -q /home/juanpab1/bi-ingresos-privado/ventas_excel_cron_qa.php`.
+- La tarea solo ejecuta `veRun(false)`, que compara eTags y SHA, protege contra simultaneidad con `flock` y mantiene `fuenteVentasProductiva=false`. No invoca `hsRun` ni `egRun` y no cambia BI_Ventas.
+- Verificar tres ejecuciones consecutivas con resultados `auditado` / `sin_cambios`, duración real menor que 15 minutos, timestamps `verificadoUTC`, `ventas_ciclos.jsonl`, disponibilidad del manifiesto autenticado e incidencias de Graph. El lector de Ventas invalida el snapshot a los 30 minutos: evitar interpretar `sin_cambios` como éxito si el estado deja de refrescarse; la función actual actualiza `verificadoUTC` de forma distinta según el caso y necesita validación de frescura extremo a extremo.
+- Mantener el cron nuevo **desactivado** hasta instalación y prueba de permisos en cPanel. No activar el cron combinado `dashboard_excel_cron.php` sin revisar la bandera privada y el horario existente, para no duplicar cargas de Ingresos/Egresos.
+- Un error `ocupado` (código 75), `incidencia` (código 1) o ausencia de configuración (78) no debe tratarse como ejecución exitosa.
+- El cambio de producción y apagado de Power Automate aún requieren aprobación del corte, pruebas E2E y rollback.
