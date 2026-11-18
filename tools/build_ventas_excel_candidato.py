@@ -280,6 +280,94 @@ def build():
           <td>${window.ventasExcelEstado?.fuente==="EXCEL_ORIGINAL_VENTAS"
             ? "No conciliado" : formatoMoneda(fila.montoUiParque)}</td>''',
       "Keep operational UI counts separate from unverified monetary totals")
+    # QA reconciliado: la meta directiva no es la suma de metas individuales.
+    app=replace_exact(app,
+      'return metasVentasExcelPeriodo(mes);',
+      'return presupuestoVentasExcelPeriodo(mes,"metaDireccionCentavos");',
+      "Directorate projection differs from personal targets")
+    app=replace_exact(app,
+      'if (window.ventasExcelEstado?.fuente==="EXCEL_ORIGINAL_VENTAS") return NaN;\n  return calcularVentasUiPorResponsable',
+      'if (window.ventasExcelEstado?.fuente==="EXCEL_ORIGINAL_VENTAS") return presupuestoVentasExcelPeriodo(mes,"uiVentasCentavos");\n  return calcularVentasUiPorResponsable',
+      "UI actual from independent original workbook UI sheet")
+    app=replace_exact(app,
+      'if (window.ventasExcelEstado?.fuente==="EXCEL_ORIGINAL_VENTAS") return NaN;\n  const metasVentas = obtenerMetasVentasMes(mes);',
+      'if (window.ventasExcelEstado?.fuente==="EXCEL_ORIGINAL_VENTAS") return presupuestoVentasExcelPeriodo(mes,"metaUiDireccionCentavos");\n  const metasVentas = obtenerMetasVentasMes(mes);',
+      "UI target from original budget, not advisor goals")
+    app=replace_exact(app,
+      'setText("pageVentasUiTotal", "No conciliado");',
+      'setText("pageVentasUiTotal", Number.isFinite(ventasUi) ? formatoMoneda(ventasUi) : "No conciliado");',
+      "UI amount only when original source is available")
+    app=replace_exact(app,
+      'setText("pageVentasMetaUi", "No conciliado");',
+      'setText("pageVentasMetaUi", Number.isFinite(metaUi) ? formatoMoneda(metaUi) : "No conciliado");',
+      "UI official target only when audited")
+    app=replace_exact(app,
+      'setText("pageVentasCumplimientoUi", "No conciliado");',
+      'setText("pageVentasCumplimientoUi", Number.isFinite(ventasUi) && Number.isFinite(metaUi) && metaUi > 0 ? formatoPorcentaje(ventasUi / metaUi) : "No conciliado");',
+      "UI compliance cannot be calculated with invalid figures")
+    # Restore graph's original four distinct series.
+    app=replace_exact(app,
+      '''  const valoresMetaPrevision = meses.map((mes) =>
+    sumarMetaPrevisionMensual(mes.clave)
+  );
+
+  destruirGrafica("ventasMensuales");''',
+      '''  const valoresMetaPrevision = meses.map((mes) =>
+    sumarMetaPrevisionMensual(mes.clave)
+  );
+  const valoresVentasUi=meses.map(m=>{
+    const v=sumarVentasUiPeriodo(m.clave);
+    return Number.isFinite(v)?v:null;
+  });
+  const valoresMetaUi=meses.map(m=>{
+    const v=sumarMetaUiMensual(m.clave);
+    return Number.isFinite(v)?v:null;
+  });
+  destruirGrafica("ventasMensuales");''',
+      "Chart needs verified UI and target per month")
+    app=replace_exact(app,
+      '''          label: "Meta comercial (Excel)",
+          data: valoresMetaPrevision,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          borderDash: [6, 6],
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }
+      ]''',
+      '''          label: "Meta comercial (Excel)",
+          data: valoresMetaPrevision,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          borderDash: [6, 6],
+          pointRadius: 4,
+          pointHoverRadius: 6
+        },
+        {
+          label: "Ventas UI (Excel)",
+          data: valoresVentasUi,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        },
+        {
+          label: "Meta UI Dirección (Excel)",
+          data: valoresMetaUi,
+          tension: 0.3,
+          fill: false,
+          borderWidth: 3,
+          borderDash: [6, 6],
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }
+      ]''',
+      "Restore four graph series with source-verified budget")
+    # Keep the separate per-advisor UI operational chart unverified until
+    # every source transaction is reconciled; don't distribute monthly totals.
     (TARGET/"app.js").write_text(app,encoding="utf-8")
 
     index=(TARGET/"index.php").read_text(encoding="utf-8")
