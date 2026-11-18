@@ -9,7 +9,9 @@ const manifest={
  fuenteMetas:"METAS",soloLectura:true,version:"f".repeat(64),
  verificadoUTC:"2026-11-13T18:00:00Z",
  meses:Object.fromEntries(months.map(m=>[m,{cacheDisponible:true,
-  auditoria:{validado:true,diferenciaCentavos:0},metaDisponible:true,metaCentavos:75000000,asesoresSinMeta:0}]))
+  auditoria:{validado:true,diferenciaCentavos:0},metaDisponible:true,metaCentavos:75000000,asesoresSinMeta:0,
+  metaDireccionCentavos:981273000,metaUiDireccionCentavos:72288000,
+  uiVentasCentavos:59972600,ventas2025Centavos:934545700,uiVentas2025Centavos:54014000}]))
 };
 const detail=m=>({
  validado:true,fuente:"EXCEL_ORIGINAL_VENTAS",noSumarContratos:true,mes:m,
@@ -39,6 +41,13 @@ vm.runInContext(script,ctx,{timeout:1200});
  assert.equal(rows.filter(r=>r.fuente==="CONTRATOS").length,12);
  assert.equal(ctx.metasVentasExcelPeriodo("2026-11"),750000);
  assert.equal(ctx.metasVentasExcelPeriodo(["2026-10","2026-11"]),1500000);
+ assert.equal(ctx.presupuestoVentasExcelPeriodo("2026-11","metaDireccionCentavos"),9812730);
+ assert.equal(ctx.presupuestoVentasExcelPeriodo("2026-11","metaUiDireccionCentavos"),722880);
+ assert.equal(ctx.presupuestoVentasExcelPeriodo("2026-11","uiVentasCentavos"),599726);
+ assert.equal(ctx.presupuestoVentasExcelPeriodo("2026-11","ventas2025Centavos"),9345457);
+ assert.equal(ctx.presupuestoVentasExcelPeriodo("2026-11","uiVentas2025Centavos"),540140);
+ assert.ok(Number.isNaN(ctx.presupuestoVentasExcelPeriodo("2026-11","importeContrato")));
+ assert.equal(ctx.presupuestoVentasExcelPeriodo(["2026-10","2026-11"],"metaUiDireccionCentavos"),1445760);
  assert.equal(ctx.window.ventasExcelEstado.error,null);
  // January can contain a genuine reconciliation gap; November must remain
  // readable independently, without hiding January's exception.
