@@ -35,7 +35,7 @@ class VentasCutoverCandidate(unittest.TestCase):
         self.assertIn('"metaUiDireccionCentavos"',app)
         self.assertIn("const metaVentas = metaPrevision;",app)
         self.assertIn("const esperado = auditoria?.contratosUnicosNoRepetidos;",app)
-        self.assertIn('setText("pageVentasTicketServicios", "No calculable")',app)
+        self.assertIn("ticketsNominalesVentasExcel(mes).servicios",app)
         self.assertIn('label: "Ventas comerciales (Excel)"',app)
         self.assertIn("const resumenMensualExcel=",app)
         self.assertIn("Expedientes contractuales únicos",html)
