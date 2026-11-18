@@ -294,6 +294,95 @@ document.addEventListener("DOMContentLoaded",()=>{
   else install();
 })();
 """
+    # Overlay pequeño para el app.js QA ya publicado: no es necesario
+    # sustituir el JS principal, que el servidor FTPS rechaza por tamaño.
+    client+=r"""
+// QA noviembre 2026: restituir KPIs desde snapshot Excel, SIN listas BI_Ventas.
+(function(){
+  "use strict";
+  const money=v=>new Intl.NumberFormat("es-MX",{style:"currency",currency:"MXN"}).format(v);
+  const pct=v=>(v*100).toFixed(1)+"%";
+  const set=(id,txt)=>{
+    const el=document.getElementById(id);
+    if(el&&el.textContent!==txt)el.textContent=txt;
+  };
+  const budget=(m,c)=>typeof presupuestoVentasExcelPeriodo==="function"
+    ?presupuestoVentasExcelPeriodo(m,c):NaN;
+  function patchValues(){
+    if(!document.getElementById("ventasDashboardQAAcciones")||
+       window.ventasExcelEstado?.fuente!=="EXCEL_ORIGINAL_VENTAS")return;
+    const range=typeof obtenerMesesRangoSeleccionado==="function"
+      ?obtenerMesesRangoSeleccionado():[];
+    if(!range.length)return;
+    const ui=budget(range,"uiVentasCentavos");
+    const goal=budget(range,"metaUiDireccionCentavos");
+    const commercialGoal=budget(range,"metaDireccionCentavos");
+    set("pageVentasUiTotal",Number.isFinite(ui)?money(ui):"No conciliado");
+    set("pageVentasMetaUi",Number.isFinite(goal)?money(goal):"No conciliado");
+    set("pageVentasCumplimientoUi",Number.isFinite(ui)&&Number.isFinite(goal)&&goal>0
+      ?pct(ui/goal):"No conciliado");
+    set("pageVentasMetaPrevision",Number.isFinite(commercialGoal)
+      ?money(commercialGoal):"No conciliado");
+    const sales=typeof sumarVentasPrevision==="function"?sumarVentasPrevision(range):NaN;
+    set("pageVentasCumplimientoPrevision",Number.isFinite(sales)&&Number.isFinite(commercialGoal)&&commercialGoal>0
+      ?pct(sales/commercialGoal):"No conciliado");
+    if(typeof ticketsNominalesVentasExcel==="function"){
+      const tickets=ticketsNominalesVentasExcel(range);
+      set("pageVentasTicketPropiedades",Number.isFinite(tickets.propiedades)
+        ?money(tickets.propiedades):"No calculable");
+      set("pageVentasTicketServicios",Number.isFinite(tickets.servicios)
+        ?money(tickets.servicios):"No calculable");
+    }
+  }
+  function patchChart(){
+    if(typeof dashboardCharts==="undefined")return;
+    const chart=dashboardCharts.ventasMensuales;
+    if(!chart||typeof obtenerMesesDelAnioSeleccionado!=="function")return;
+    const meses=obtenerMesesDelAnioSeleccionado();
+    if(!meses.length)return;
+    const commercial=meses.map(m=>{
+      const value=budget(m.clave,"metaDireccionCentavos");
+      return Number.isFinite(value)?value:null;
+    });
+    const ui=meses.map(m=>{
+      const value=budget(m.clave,"uiVentasCentavos");
+      return Number.isFinite(value)?value:null;
+    });
+    const goals=meses.map(m=>{
+      const value=budget(m.clave,"metaUiDireccionCentavos");
+      return Number.isFinite(value)?value:null;
+    });
+    if(chart.data.datasets[1]){
+      chart.data.datasets[1].label="Meta Previsión (Dirección)";
+      chart.data.datasets[1].data=commercial;
+    }
+    chart.data.datasets=chart.data.datasets.slice(0,2);
+    chart.data.datasets.push(
+      {label:"Ventas UI (Excel)",data:ui,fill:false,tension:0.3,
+        borderWidth:3,pointRadius:4,pointHoverRadius:6},
+      {label:"Meta UI (Dirección)",data:goals,fill:false,tension:0.3,
+        borderWidth:3,borderDash:[6,6],pointRadius:4,pointHoverRadius:6}
+    );
+    chart.update("none");
+  }
+  function install(){
+    if(typeof renderDashboard!=="function")return;
+    // Functions are replaced ONLY in the admin-only QA page; normal app.js
+    // is not edited. The underlying Excel must pass the manifest first.
+    const oldRender=renderDashboard;
+    renderDashboard=function(...args){
+      const result=oldRender.apply(this,args);
+      patchValues();patchChart();
+      return result;
+    };
+    window.renderDashboard=renderDashboard;
+    patchValues();patchChart();
+  }
+  if(document.readyState==="loading")
+    document.addEventListener("DOMContentLoaded",install,{once:true});
+  else install();
+})();
+"""
     files["ventas-excel.js"]=client
     files["app.js"]=app
 
