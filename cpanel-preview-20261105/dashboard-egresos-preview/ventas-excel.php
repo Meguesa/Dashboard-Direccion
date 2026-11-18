@@ -32,7 +32,8 @@ if($httpMethod==='GET'&&$mode==='detalle'&&
    !preg_match('/^2026-(0[1-9]|1[0-2])$/D',$month)){
     http_response_code(400);echo '{"error":"MES_INVALIDO"}';exit;
 }
-$engine='/home/juanpab1/bi-ingresos-privado/ventas_engine.php';
+// QA usa una copia protegida en ruta propia; jamás depende del motor Ventas de producción.
+$engine=__DIR__.'/ventas-qa-private/ventas_engine.php';
 if(!is_file($engine)){
     http_response_code(503);echo '{"error":"MOTOR_VENTAS_NO_INSTALADO"}';exit;
 }
