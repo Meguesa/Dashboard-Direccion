@@ -324,10 +324,7 @@ jobs:
     name: Publicar ajuste visual QA Ventas (un JS pequeno)
     if: >-
       github.event_name == 'pull_request' &&
-      github.event.action == 'edited' &&
       github.event.pull_request.number == 30 &&
-      github.head_ref == 'feature/ventas-excel-directo-20261112' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.title == 'Ventas Excel directo [PUBLICAR_DASHBOARD_QA]'
     runs-on: ubuntu-latest
     timeout-minutes: 20
