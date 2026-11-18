@@ -12,7 +12,7 @@ if(PHP_SAPI!=='cli'&&
  * Dependencias privadas existentes: ingresos_engine.php (Graph/XLSX).
  */
 require_once __DIR__ . '/ingresos_engine.php';
-const VE_BUILD = '20261113-metas-manuales-3';
+const VE_BUILD = '20261118-presupuestos-ui-historico-qa-1';
 const VE_DRIVE_COMERCIAL = 'b!tzGM-V4TiUKbUyHUBBu214AiW7yUyvxPnueBG9lB85Wh0Tv-5FAnQqSNjE7rlEJv';
 const VE_ITEM_COMERCIAL = '01ZBUZ3OT6NWPAZOQW5BDZ77XXJW7IQXPD';
 const VE_DRIVE_COBRANZA = 'b!EAWNGReAT02APufy0uQPFnDnY1ILcuZGv2EfFdV9rplPAV4rL4C_QoZl8LbKac5c';
@@ -188,6 +188,78 @@ function veNumeroUnidades($raw):float {
  * Origen de ventas: ENERO ... DICIEMBRE, columna G por asesor.
  * Semanas B:F son controles de conciliación, nunca movimientos adicionales.
  */
+/**
+ * Fuentes manuales de control de Dirección dentro del Excel ORIGINAL:
+ *   PPTO PREVISIÓN 2026: fila VENTA PROYECTADA y referencia VENTAS 2025.
+ *   PPTO UI 2026: meta aprobada = 90% de PROYECCIÓN VENTA 2026
+ *                  (regla conciliada con los 12 meses del presupuesto 2026).
+ *   UI: venta comercial de Uso Inmediato 2026 y referencia de 2025.
+ *
+ * Son valores de MES COMPLETO / acumulado mensual: no acreditan una fecha diaria.
+ * Nunca se consultan DASHBOARD ni METAS_BI de Power Automate.
+ * Los importes se expresan siempre en centavos enteros.
+ */
+function vePresupuestoDireccionOriginal(ZipArchive $zip,array $ss,array $sheets):array {
+    $required=['PPTO PREVISIÓN 2026','PPTO UI 2026','UI'];
+    $present=array_values(array_intersect($required,$sheets));
+    // Los fixtures antiguos de Ventas solo traen meses y METAS personales.
+    if(!$present)return [];
+    if(count($present)!==count($required))
+        throw new RuntimeException('Presupuesto de Dirección incompleto en el Excel original.');
+
+    $prevision=[];$historico=[];$proyeccionUi=[];$ui=[];
+    foreach(hsRows($zip,'PPTO PREVISIÓN 2026',$ss) as [$rn,$row,$formula]){
+        $label=veNorm($row[0]??null);
+        if($label!=='VENTA PROYECTADA'&&$label!=='VENTAS 2025')continue;
+        foreach(VE_MESES as $nombre=>$indice){
+            $value=veImporteContrato($row[$indice]??null);
+            if($value===null||$value<0)
+                throw new RuntimeException('Presupuesto incompleto: '.$label.' '.$nombre);
+            $mes=sprintf('%04d-%02d',VE_YEAR,$indice);
+            if($label==='VENTA PROYECTADA'){
+                // Los presupuestos oficiales se presentan en pesos enteros.
+                $prevision[$mes]=intdiv($value+50,100)*100;
+            }else{$historico[$mes]=$value;}
+        }
+    }
+    foreach(hsRows($zip,'PPTO UI 2026',$ss) as [$rn,$row,$formula]){
+        $nombre=veNorm($row[1]??null);
+        if(!isset(VE_MESES[$nombre]))continue;
+        $mes=sprintf('%04d-%02d',VE_YEAR,VE_MESES[$nombre]);
+        $value=veImporteContrato($row[6]??null);
+        if($value===null||$value<0)
+            throw new RuntimeException('Proyección UI inválida: '.$mes);
+        // 90% de la proyección, redondeado al peso comercial; no suma de asesores.
+        $proyeccionUi[$mes]=intdiv($value*9+500,1000)*100;
+    }
+    foreach(hsRows($zip,'UI',$ss) as [$rn,$row,$formula]){
+        $nombre=veNorm($row[2]??null);
+        if(!isset(VE_MESES[$nombre]))continue;
+        $mes=sprintf('%04d-%02d',VE_YEAR,VE_MESES[$nombre]);
+        $v2025=veImporteContrato($row[3]??null);
+        $v2026=veImporteContrato($row[6]??null);
+        if($v2025===null||$v2025<0||($v2026!==null&&$v2026<0))
+            throw new RuntimeException('Venta UI de origen inválida: '.$mes);
+        $ui[$mes]=['2025'=>$v2025,'2026'=>$v2026];
+    }
+    if(count($prevision)!==12||count($historico)!==12||
+       count($proyeccionUi)!==12||count($ui)!==12)
+        throw new RuntimeException('Faltan meses en los presupuestos originales.');
+    $result=[];
+    foreach(VE_MESES as $nombre=>$indice){
+        $mes=sprintf('%04d-%02d',VE_YEAR,$indice);
+        $result[$mes]=[
+            'metaDireccionCentavos'=>$prevision[$mes],
+            'metaUiDireccionCentavos'=>$proyeccionUi[$mes],
+            'uiVentasCentavos'=>$ui[$mes]['2026'],
+            'ventas2025Centavos'=>$historico[$mes],
+            'uiVentas2025Centavos'=>$ui[$mes]['2025'],
+            'referencia2025MesCompleto'=>true
+        ];
+    }
+    return $result;
+}
+
 function veParseComercialOriginal(string $filename):array {
     $zip=new ZipArchive();
     if($zip->open($filename,ZipArchive::CHECKCONS)!==true)
@@ -195,7 +267,9 @@ function veParseComercialOriginal(string $filename):array {
     try{
         $sheets=veSheetNames($zip);$ss=readStrings($zip);
         if(!in_array('METAS',$sheets,true))throw new RuntimeException('Hoja METAS ausente.');
-        $metas=veMetasOriginales($zip,$ss);$rows=[];$stats=[];$issues=[];
+        $metas=veMetasOriginales($zip,$ss);
+        $presupuesto=vePresupuestoDireccionOriginal($zip,$ss,$sheets);
+        $rows=[];$stats=[];$issues=[];
         foreach(VE_MESES as $sheet=>$number){
             if(!in_array($sheet,$sheets,true))continue;
             $month=sprintf('%04d-%02d',VE_YEAR,$number);
@@ -259,14 +333,24 @@ function veParseComercialOriginal(string $filename):array {
                 'asesoresConDiferenciaSemanal'=>$diffAdvisors,
                 'metaDisponible'=>isset($metas['totalesCentavos'][$month]),
                 'metaCentavos'=>$metas['totalesCentavos'][$month]??null,
-                'asesoresSinMeta'=>$missingGoals
+                'asesoresSinMeta'=>$missingGoals,
+                'metaDireccionCentavos'=>$presupuesto[$month]['metaDireccionCentavos']??null,
+                'metaUiDireccionCentavos'=>$presupuesto[$month]['metaUiDireccionCentavos']??null,
+                'uiVentasCentavos'=>$presupuesto[$month]['uiVentasCentavos']??null,
+                'ventas2025Centavos'=>$presupuesto[$month]['ventas2025Centavos']??null,
+                'uiVentas2025Centavos'=>$presupuesto[$month]['uiVentas2025Centavos']??null,
+                'referencia2025MesCompleto'=>$presupuesto[$month]['referencia2025MesCompleto']??false
             ];
         }
         if(!$rows)throw new RuntimeException('Sin registros originales de ventas.');
         $publicGoals=$metas;unset($publicGoals['_asesores']);
         return ['registros'=>$rows,'auditoria'=>[
             'fuentes'=>['meses_originales','METAS'],'registros'=>count($rows),
-            'meses'=>$stats,'metas'=>$publicGoals,'incidencias'=>$issues,
+            'meses'=>$stats,'metas'=>$publicGoals,
+            'presupuestoDireccion'=>['fuentes'=>['PPTO PREVISIÓN 2026','PPTO UI 2026','UI'],
+                'reglaMetaUi'=>'90_POR_CIENTO_DE_PROYECCION_REDONDEADA_AL_PESO',
+                'disponible'=>(bool)$presupuesto],
+            'incidencias'=>$issues,
             'listoParaActivar'=>false // Falta conciliación contractual y metas incompletas.
         ]];
     }finally{$zip->close();}
