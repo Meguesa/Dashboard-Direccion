@@ -152,6 +152,34 @@ function presupuestoVentasExcelPeriodo(mes,campo){
   return Number.isSafeInteger(cents)?cents/100:NaN;
 }
 
+/** Promedio NOMINAL contractual de origen, sin inferir vigencia ni sumar al KPI comercial. */
+function ticketsNominalesVentasExcel(mes) {
+  const keys=Array.isArray(mes)?mes:[mes];
+  if(!keys.length||keys.some(k=>!window.ventasExcelEstado?.meses?.[k]?.cacheDisponible))
+    return {propiedades:NaN,servicios:NaN};
+  const groups={LOTES:{monto:0,numero:0},CHURUBUSCO:{monto:0,numero:0}};
+  const unique=new Set();
+  for(const fila of window.state?.datos?.ventas||[]){
+    if(fila.fuenteOrigen!=="excel_original_contratos"||!keys.includes(fila.mes))continue;
+    if(!fila.id||unique.has(fila.id))return {propiedades:NaN,servicios:NaN};
+    unique.add(fila.id);
+    const g=groups[fila.hojaOrigen];
+    if(!g)continue; // AGUA FRIA: informar por separado, no mezclar tickets.
+    const amount=Number(fila.importeContrato);
+    if(fila.importeContrato===null||!Number.isFinite(amount)||amount<0)
+      return {propiedades:NaN,servicios:NaN};
+    g.monto+=Math.round(amount*100);
+    g.numero++;
+  }
+  const expected=keys.reduce((n,k)=>n+window.ventasExcelEstado.meses[k].contratosUnicosNoRepetidos,0);
+  if(!Number.isSafeInteger(expected)||unique.size!==expected)
+    return {propiedades:NaN,servicios:NaN};
+  return {
+    propiedades:groups.LOTES.numero ? groups.LOTES.monto/100/groups.LOTES.numero : NaN,
+    servicios:groups.CHURUBUSCO.numero ? groups.CHURUBUSCO.monto/100/groups.CHURUBUSCO.numero : NaN
+  };
+}
+
 function renderEstadoVentasExcel(){
   const el=document.getElementById("ventasExcelEstado");
   if(!el)return;
