@@ -45,10 +45,10 @@ class TestVentasDashboardQA(unittest.TestCase):
         self.assertIn("dashboardVentasExcelQADatos",app)
         self.assertIn("dashboardVentasExcelQACacheDB",app)
         self.assertIn("const totalVentas = ventasPrevision;",app)
-        self.assertIn('setText("pageVentasUiTotal", "No conciliado")',app)
+        self.assertIn('"uiVentasCentavos"',app)
         self.assertIn("renderEstadoVentasExcel()",app)
         yoy=self.read("ventas-dashboard-qa-yoy.js")
-        self.assertIn("Comparativo diario no disponible",yoy)
+        self.assertIn("Referencia mensual 2025 completa",yoy)
 
     def test_no_fabricated_service_type_revenue(self):
         client=self.read("ventas-dashboard-qa-excel.js")
