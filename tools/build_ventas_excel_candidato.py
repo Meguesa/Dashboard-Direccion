@@ -305,6 +305,19 @@ def build():
       'setText("pageVentasCumplimientoUi", "No conciliado");',
       'setText("pageVentasCumplimientoUi", Number.isFinite(ventasUi) && Number.isFinite(metaUi) && metaUi > 0 ? formatoPorcentaje(ventasUi / metaUi) : "No conciliado");',
       "UI compliance cannot be calculated with invalid figures")
+    # Nominal prices / distinct source contracts, not active-sale attribution.
+    app=replace_exact(app,
+      'setText("pageVentasTicketPropiedades", "No calculable");',
+      '''setText("pageVentasTicketPropiedades",
+    Number.isFinite(ticketsNominalesVentasExcel(mes).propiedades)
+      ? formatoMoneda(ticketsNominalesVentasExcel(mes).propiedades) : "No calculable");''',
+      "Tickets original LOTES nominal amounts")
+    app=replace_exact(app,
+      'setText("pageVentasTicketServicios", "No calculable");',
+      '''setText("pageVentasTicketServicios",
+    Number.isFinite(ticketsNominalesVentasExcel(mes).servicios)
+      ? formatoMoneda(ticketsNominalesVentasExcel(mes).servicios) : "No calculable");''',
+      "Tickets original CHURUBUSCO nominal amounts")
     # Restore graph's original four distinct series.
     app=replace_exact(app,
       '''  const valoresMetaPrevision = meses.map((mes) =>
