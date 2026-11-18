@@ -314,7 +314,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     assert 'ventas-dashboard-qa-app.js?v='+VERSION in page
     assert "portal_user_can_tool('dashboard')" in page
     assert "gabriel.guerra@juanpablo.com.mx" in page
-    assert 'Comparativo diario no disponible' in yoy
+    assert 'Referencia mensual 2025 completa' in yoy
     assert len(list(OUTPUT.iterdir()))==5
     print("PASS: isolated, admin-only QA dashboard built without deploying")
 
