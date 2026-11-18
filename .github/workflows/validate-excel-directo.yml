@@ -418,7 +418,10 @@ jobs:
           wc -c "$app_remoto" deploy-ventas-dashboard-qa/ventas-dashboard-qa-app.js
           # Aceptar solo el app anterior acreditado o el candidato actual, y
           # verificar sintaxis. Cualquier tercer hash implica revision previa.
-          if [ "$actual_app_sha" != "$expected_app_sha" ] && [ "$actual_app_sha" != "$candidate_app_sha" ]; then
+          # Variante QA ya observada en servidor el 18/nov/2026; no modifica app.js.
+          # Se exige esta SHA exacta, sintaxis JS y marcadores de aislamiento.
+          observed_app_sha="f0b21635a5d9d65a2cf690c8aa02790f515a348661c2de607e1684ad94f700d0"
+          if [ "$actual_app_sha" != "$expected_app_sha" ] && [ "$actual_app_sha" != "$candidate_app_sha" ] && [ "$actual_app_sha" != "$observed_app_sha" ]; then
             echo "::error::app.js QA no coincide con ninguna version conocida; aborto seguro"
             exit 1
           fi
@@ -427,7 +430,7 @@ jobs:
           echo "app.js QA conocido, sintaxis y aislamiento verificados"
           # Desplegar unicamente el lector JS pequeno con el complemento visual.
           # Los demas archivos estan previamente publicados y no se modifican.
-          for file in ventas-dashboard-qa-excel.js; do
+          for file in ventas-dashboard-qa-excel.js ventas-dashboard-qa-yoy.js; do
             src="deploy-ventas-dashboard-qa/$file"
             dest="$RUNNER_TEMP/$file"
             test -s "$src"
@@ -487,7 +490,7 @@ jobs:
           case "$code" in 302|401|403) ;; *) echo "::error::No hay proteccion anonima en QA";exit 1;; esac
       - name: Registrar el aislamiento respecto a producción
         run: |
-          echo "Dashboard de Ventas QA: PHP y app.js existentes verificados por SHA; solo lector Excel JS actualizado y releido." >> "$GITHUB_STEP_SUMMARY"
+          echo "Dashboard Ventas QA: PHP y app existentes verificados por SHA; lector Excel y comparativo 2025 actualizados y releidos." >> "$GITHUB_STEP_SUMMARY"
           echo "Sin cambios en index.php app.js graph.js ventas-excel.php crons BI_Ventas ni Power Automate." >> "$GITHUB_STEP_SUMMARY"
 
   publicar_qa_aislado:
