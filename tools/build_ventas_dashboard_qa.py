@@ -130,19 +130,45 @@ JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT)?>;
       '''  function pintarVentas(periodo) {
     const actual = calcularVentas(periodo.anio, periodo.mes, periodo.diaFinActual);''',
       '''  function pintarVentas(periodo) {
-    // Excel Comercial solo acredita venta mensual, NO fecha exacta.
-    // Prohibido comparar periodos parciales con importes de BI_Servicios.
-    texto("yoyVentasSubtitle",
-      "Comparativo diario no disponible: Ventas Excel solo tiene totales mensuales verificados.");
-    for(const id of ["yoyVentasActual","yoyVentasAnterior","yoyVentasVariacion"]){
-      texto(id,"No comparable");
-    }
-    for(const id of ["yoyVentasActualDetail","yoyVentasAnteriorDetail","yoyVentasVariacionDetail"]){
-      texto(id,"No existe fecha individual acreditada en la fuente Comercial.");
-    }
+    // Referencia de 2025 corresponde al MES COMPLETO, no al mismo día.
+    // 2026 usa la columna G mensual y UI del Excel original al último corte.
+    const month=String(periodo.mes).padStart(2,"0");
+    const key="2026-"+month;
+    const verificado=window.ventasExcelEstado?.meses?.[key]?.cacheDisponible===true;
+    const valor=(campo)=>{
+      if(!verificado||typeof presupuestoVentasExcelPeriodo!=="function")return NaN;
+      return presupuestoVentasExcelPeriodo(key,campo);
+    };
+    const previsActual=typeof sumarVentasPrevision==="function"&&verificado
+      ? sumarVentasPrevision(key):NaN;
+    const uiActual=valor("uiVentasCentavos");
+    const previsAnterior=valor("ventas2025Centavos");
+    const uiAnterior=valor("uiVentas2025Centavos");
+    const actualOk=Number.isFinite(previsActual)&&Number.isFinite(uiActual);
+    const anteriorOk=Number.isFinite(previsAnterior)&&Number.isFinite(uiAnterior);
+    const totalActual=actualOk?previsActual+uiActual:NaN;
+    const totalAnterior=anteriorOk?previsAnterior+uiAnterior:NaN;
+    const now=new Date();
+    // No comparar un acumulado abierto contra todo el mes del año anterior.
+    const actualFinalizado=Number(periodo.anio)===2026 &&
+       (2026*12+Number(month))<(now.getFullYear()*12+now.getMonth()+1);
+    texto("yoyVentasSubtitle","Referencia mensual 2025 completa; 2026 según último corte Excel, sin precisión diaria.");
+    texto("yoyVentasActualLabel","2026 · "+month+(actualFinalizado?" (mes cerrado)":" (acumulado)"));
+    texto("yoyVentasAnteriorLabel","2025 · "+month+" (mes completo)");
+    texto("yoyVentasActual",actualOk?moneda(totalActual):"No conciliado");
+    texto("yoyVentasAnterior",anteriorOk?moneda(totalAnterior):"No disponible");
+    texto("yoyVentasActualDetail",actualOk
+      ?"Previsión "+moneda(previsActual)+" + UI "+moneda(uiActual):"Sin total original verificado");
+    texto("yoyVentasAnteriorDetail",anteriorOk
+      ?"Previsión "+moneda(previsAnterior)+" + UI "+moneda(uiAnterior):"Sin histórico completo");
+    const comparable=actualFinalizado&&actualOk&&anteriorOk&&totalAnterior>0;
+    texto("yoyVentasVariacion",comparable
+      ?((totalActual/totalAnterior-1)*100).toFixed(1)+"%":"No comparable");
+    texto("yoyVentasVariacionDetail",comparable
+      ?"Mes completo contra mes completo": "Se requiere cierre del mes y totales verificados para la variación.");
     return;
     const actual = calcularVentas(periodo.anio, periodo.mes, periodo.diaFinActual);''',
-      "Disable date-based YoY sales claim until daily records are audited")
+      "Show verified full-month 2025 reference without false partial-date YoY comparison")
     files["dashboard-yoy-comparison.js"]=yoy
 
     client=files["ventas-excel.js"]
