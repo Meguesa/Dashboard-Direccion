@@ -1,0 +1,132 @@
+name: Publicar Ventas QA aislado (nunca produccion)
+on:
+  pull_request:
+    types: [edited]
+permissions:
+  contents: read
+concurrency:
+  group: deploy-dashboard-direccion
+  cancel-in-progress: false
+jobs:
+  qa_sales_only:
+    if: >-
+      github.event.pull_request.number == 30 &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'feature/ventas-excel-directo-20261112' &&
+      github.event.pull_request.title == 'Ventas Excel directo [PUBLICAR_QA_AISLADO]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: zip,xml,dom,xmlreader,mbstring,curl
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Pruebas y generacion QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check openpyxl==3.1.5
+          php -l cpanel-preview-20261105/private-code/ventas_engine.php
+          php -l cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.php
+          python -m unittest discover -s tests -p test_ventas_candidato.py -v
+          python -m unittest discover -s tests -p test_ventas_dashboard_qa.py -v
+          node tests/js/test_ventas_excel_directo_qa.cjs
+          python tests/fixtures_generar_ventas.py "$RUNNER_TEMP/ventas-qa"
+          php tests/php/test_ventas_excel.php "$RUNNER_TEMP/ventas-qa"
+          test "$(find deploy-ventas-dashboard-qa -maxdepth 1 -type f | wc -l)" -eq 5
+          grep -Fq 'ventas-qa-private/ventas_engine.php' cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.php
+          grep -Fq 'presupuestoVentasExcelPeriodo' deploy-ventas-dashboard-qa/ventas-dashboard-qa-excel.js
+      - name: Instalar cliente FTPS TLS
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+      - name: Proteger directorio de motor antes de publicar PHP
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$FTP_SERVER" && test -n "$FTP_USERNAME" && test -n "$FTP_PASSWORD"
+          printf 'Require all denied\n' > "$RUNNER_TEMP/qa-deny.htaccess"
+          printf 'QA ACCESS PROBE\n' > "$RUNNER_TEMP/qa-access-probe.txt"
+          timeout --kill-after=5s 100s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            set net:timeout 15;
+            set net:max-retries 2;
+            mkdir -p ventas-qa-private;
+            put $RUNNER_TEMP/qa-deny.htaccess -o ventas-qa-private/.htaccess;
+            put $RUNNER_TEMP/qa-access-probe.txt -o ventas-qa-private/qa-access-probe.txt;
+            get ventas-qa-private/.htaccess -o $RUNNER_TEMP/qa-deny-downloaded.txt;
+            bye;"
+          cmp -s "$RUNNER_TEMP/qa-deny.htaccess" "$RUNNER_TEMP/qa-deny-downloaded.txt"
+          code="$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' \
+            "https://portal.juanpablo.com.mx/dashboard/ventas-qa-private/qa-access-probe.txt")"
+          echo "Private QA probe HTTP $code"
+          test "$code" = 403
+      - name: Publicar motor y recursos QA con verificacion remota
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          while IFS='|' read -r src dst; do
+            test -s "$src"
+            localcopy="$RUNNER_TEMP/qa-uploaded-$(basename "$dst")"
+            echo "Desplegando solo QA: $dst"
+            timeout --kill-after=5s 100s lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 18;
+              set net:max-retries 2;
+              put $src -o $dst.qa-upload;
+              mv $dst.qa-upload $dst;
+              get $dst -o $localcopy;
+              bye;"
+            cmp -s "$src" "$localcopy"
+            sha256sum "$src"
+          done <<'FILES'
+          cpanel-preview-20261105/private-code/ventas_engine.php|ventas-qa-private/ventas_engine.php
+          cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.php|ventas-excel.php
+          cpanel-preview-20261105/dashboard-egresos-preview/ventas-excel.js|ventas-excel.js
+          deploy-ventas-dashboard-qa/ventas-dashboard-qa-excel.js|ventas-dashboard-qa-excel.js
+          deploy-ventas-dashboard-qa/ventas-dashboard-qa-yoy.js|ventas-dashboard-qa-yoy.js
+          FILES
+      - name: Verificar bloqueo publico y autenticacion
+        shell: bash
+        run: |
+          set -euo pipefail
+          private="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 \
+            'https://portal.juanpablo.com.mx/dashboard/ventas-qa-private/ventas_engine.php')"
+          api="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 \
+            'https://portal.juanpablo.com.mx/dashboard/ventas-excel.php?modo=manifest')"
+          panel="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 \
+            'https://portal.juanpablo.com.mx/dashboard/ventas-dashboard-qa.php')"
+          echo "Private $private, API $api, QA panel $panel"
+          test "$private" = 403
+          case "$api" in 302|401|403) ;; *) exit 1;; esac
+          case "$panel" in 302|401|403) ;; *) exit 1;; esac
+          echo 'No se modificaron index.php, app.js, graph.js, main ni Power Automate.'
