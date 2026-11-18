@@ -128,6 +128,13 @@ foreach($monthStats as $key=>$stats){
         'metaDisponible'=>$stats['metaDisponible']??false,
         'metaCentavos'=>$stats['metaCentavos']??null,
         'asesoresSinMeta'=>$stats['asesoresSinMeta']??null,
+        // Presupuestos e UI del Excel original; metas de Dirección distintas a METAS por asesor.
+        'metaDireccionCentavos'=>$stats['metaDireccionCentavos']??null,
+        'metaUiDireccionCentavos'=>$stats['metaUiDireccionCentavos']??null,
+        'uiVentasCentavos'=>$stats['uiVentasCentavos']??null,
+        'ventas2025Centavos'=>$stats['ventas2025Centavos']??null,
+        'uiVentas2025Centavos'=>$stats['uiVentas2025Centavos']??null,
+        'referencia2025MesCompleto'=>$stats['referencia2025MesCompleto']??false,
         'contratosCandidatos'=>$contractsStats[$key]['candidatos']??0,
         'contratosUnicosNoRepetidos'=>$contractsStats[$key]['contratosUnicosNoRepetidos']??0,
         'verificadoUTC'=>$state['verificadoUTC']
@@ -136,7 +143,10 @@ foreach($monthStats as $key=>$stats){
 if($mode==='manifest'){
     echo json_encode([
         'validado'=>true,'fuente'=>'EXCEL_ORIGINAL_VENTAS','biVentas'=>false,
-        'fuenteMetas'=>'METAS','fuenteContratos'=>'LOTES_CHURUBUSCO_AGUA_FRIA',
+        'fuenteMetas'=>'METAS','fuenteMetasDireccion'=>'PPTO_PREVISION_2026',
+        'fuenteUi'=>'UI','fuenteMetaUi'=>'PPTO_UI_2026',
+        'fuenteHistorico2025'=>'PPTO_PREVISION_2026_Y_UI',
+        'fuenteContratos'=>'LOTES_CHURUBUSCO_AGUA_FRIA',
         'version'=>$data['version'],'build'=>VE_BUILD,'verificadoUTC'=>$state['verificadoUTC'],
         'meses'=>$summaries,'soloLectura'=>true
     ],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
