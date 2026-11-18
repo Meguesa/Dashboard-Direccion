@@ -132,6 +132,26 @@ function metasVentasExcelPeriodo(mes){
   return cents/100;
 }
 
+/**
+ * KPI acreditado por el Excel original, no por la lista BI ni por suma de asesores.
+ * Valores de mes completo; el año anterior es una referencia histórica mensual.
+ */
+function presupuestoVentasExcelPeriodo(mes,campo){
+  const permitidos=new Set(["metaDireccionCentavos","metaUiDireccionCentavos",
+    "uiVentasCentavos","ventas2025Centavos","uiVentas2025Centavos"]);
+  if(!permitidos.has(campo))return NaN;
+  const meses=Array.isArray(mes)?mes:[mes];
+  if(!meses.length)return NaN;
+  let cents=0;
+  for(const key of meses){
+    const st=window.ventasExcelEstado?.meses?.[key];
+    const value=st?.[campo];
+    if(!st?.cacheDisponible||!Number.isSafeInteger(value)||value<0)return NaN;
+    cents+=value;
+  }
+  return Number.isSafeInteger(cents)?cents/100:NaN;
+}
+
 function renderEstadoVentasExcel(){
   const el=document.getElementById("ventasExcelEstado");
   if(!el)return;
