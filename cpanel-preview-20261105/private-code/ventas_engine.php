@@ -11,7 +11,13 @@ if(PHP_SAPI!=='cli'&&
  * NO reemplaza BI_Ventas, NO publica datos del cliente, NO modifica Excel.
  * Dependencias privadas existentes: ingresos_engine.php (Graph/XLSX).
  */
-require_once __DIR__ . '/ingresos_engine.php';
+// En QA el motor se instala fuera de alcance HTTP, en un subdirectorio
+// restringido por .htaccess. El parser base permanece PRIVADO y sin cambios.
+$hsDependency = __DIR__ . '/ingresos_engine.php';
+if(!is_file($hsDependency))
+    $hsDependency = '/home/juanpab1/bi-ingresos-privado/ingresos_engine.php';
+if(!is_file($hsDependency))throw new RuntimeException('Dependencia privada Graph no instalada.');
+require_once $hsDependency;
 const VE_BUILD = '20261118-presupuestos-ui-historico-qa-1';
 const VE_DRIVE_COMERCIAL = 'b!tzGM-V4TiUKbUyHUBBu214AiW7yUyvxPnueBG9lB85Wh0Tv-5FAnQqSNjE7rlEJv';
 const VE_ITEM_COMERCIAL = '01ZBUZ3OT6NWPAZOQW5BDZ77XXJW7IQXPD';
