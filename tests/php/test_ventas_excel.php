@@ -120,4 +120,22 @@ $cancelRows=veLeerContratosOriginales($base.'/contratos-cancelado.xlsx','2026-11
 qaAssert(count(array_filter($cancelRows,fn($r)=>$r['estadoFuente']==='CANCELACION_EXPLICITA'))===1,
     'Cancelled contract not presented as normal sale');
 
+$uiSource=veParseComercialOriginal($base.'/ventas-ui-detalle.xlsx');
+qaAssert(count($uiSource['uiDetalle'])===2,'Only Uso Inmediato rows, exclude Prevision');
+qaAssert($uiSource['auditoria']['uiDetalle']['disponible']===true,
+    'UI_DETALLE is an explicit original Excel source');
+qaAssert($uiSource['auditoria']['uiDetalle']['meses']['2026-11']['registros']===2,
+    'Two actual services not synthetic aggregated rows');
+qaAssert($uiSource['auditoria']['uiDetalle']['meses']['2026-11']['ventasCentavos']===24000,
+    'Capillas priceVenta 100 plus Parque priceTotalServicio 140');
+qaAssert($uiSource['auditoria']['uiDetalle']['meses']['2026-11']['capillas']===1,
+    'One Capillas service');
+qaAssert($uiSource['auditoria']['uiDetalle']['meses']['2026-11']['parque']===1,
+    'One Parque service');
+qaAssert($good['uiDetalle']??[]===[],
+    'Without original UI detail there is no invented operational UI list');
+try{veParseComercialOriginal($base.'/ventas-ui-duplicado.xlsx');
+    qaAssert(false,'Duplicate UI service must fail');
+}catch(RuntimeException $e){qaAssert(true,'Duplicate UI service blocked');}
+
 echo "SOURCE_ONLY_TESTS_PASSED\n";
