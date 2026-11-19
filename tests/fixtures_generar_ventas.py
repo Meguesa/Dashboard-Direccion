@@ -85,6 +85,30 @@ def metas_manual_2026(path):
     fake["A1"]="Mes";fake["E2"]=123456789
     wb.save(path)
 
+def sales_with_ui_details(path,broken=False):
+    wb=Workbook();ws=wb.active;ws.title="NOVIEMBRE"
+    ws["A2"]="ASESOR";ws["G2"]="MONTO TOTAL"
+    ws["A4"]="TEST";ws["B4"]=200;ws["G4"]=200
+    ws["A6"]="TOTAL";ws["G6"]=200
+    goals=wb.create_sheet("METAS")
+    goals["A1"]=datetime(2026,11,1);goals["A2"]="TEST";goals["C2"]=300
+    ui=wb.create_sheet("UI_DETALLE")
+    cols=["FECHA_SERVICIO","NUMERO_SERVICIO","REFERENCIA_CONTRATO",
+          "ORIGEN","PREVISION_USO_INMEDIATO","ASESOR","PRECIO_VENTA",
+          "PRECIO_TOTAL_SERVICIO","MONTO_UI_CALCULADO"]
+    ui.append(cols)
+    ui.append(["2026-11-02","S-100","VC-001","Capillas","Uso Inmediato",
+               "CONCHIS",100,110,None])
+    ui.append(["2026-11-03","S-101","TS-001","Parque","Uso Inmediato",
+               "ANEMEX",60,140,None])
+    ui.append(["2026-11-04","S-102","VC-002","Capillas","Previsión",
+               "CONCHIS",30,30,None])
+    if broken:ui.append(["2026-11-05","S-101","TS-099","Parque",
+                           "Uso Inmediato","ANEMEX",40,40,None])
+    # Poisoned generated tabs must never be read for individual UI.
+    ui=wb.create_sheet("DASHBOARD");ui["F2"]=999999999
+    wb.save(path)
+
 sales_file(root/"ventas-ok.xlsx")
 sales_file(root/"ventas-duplicado.xlsx",dup=True)
 sales_file(root/"ventas-diferencia.xlsx",weekdiff=True)
@@ -96,3 +120,6 @@ contracts_file(root/"contratos-dashboard-contaminado.xlsx",poison=True)
 contracts_file(root/"contratos-conflicto.xlsx",conflict=True)
 contracts_file(root/"contratos-cancelado.xlsx",cancel=True)
 print("Created ten synthetic XLSX fixtures")
+
+sales_with_ui_details(root/"ventas-ui-detalle.xlsx")
+sales_with_ui_details(root/"ventas-ui-duplicado.xlsx",broken=True)
