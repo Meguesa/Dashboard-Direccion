@@ -99,10 +99,11 @@ def build():
       "Do not reuse obsolete BI targets for immediate use")
     app=replace_exact(app,
       '''  const totalVentas = ventasPrevision + ventasUi;''',
-      '''  // El total de la columna G ya contiene las ventas comerciales.
-  // Uso Inmediato de BI_Servicios no se suma otra vez.
-  const totalVentas = ventasPrevision;''',
-      "No double-count in main Dashboard headline")
+      '''  // Comercial G representa Previsión; UI proviene de la hoja independiente.
+  // Ambos importes se suman una sola vez, sin agregar contratos ni listas BI.
+  const totalVentas = Number.isFinite(ventasPrevision) && Number.isFinite(ventasUi)
+    ? ventasPrevision + ventasUi : NaN;''',
+      "Excel Comercial G and independent Excel UI sum into homepage sales")
     app=replace_exact(app,
       '''  const metaVentas = metaPrevision + metaUi;''',
       '''  const metaVentas = metaPrevision;''',
@@ -166,7 +167,8 @@ def build():
         };
         return NaN;
       }
-      total += esperado;
+      // Conteo legado: Lotes y Churubusco. Agua Fría sigue en el detalle.
+      total += filas.filter(item=>["LOTES","CHURUBUSCO"].includes(item.hojaOrigen)).length;
     }
     return total;
   }
@@ -246,30 +248,8 @@ def build():
       '''        }
 ''',
       "Chart: only commercial monthly amounts and target")
-    # Sales workbook contains one MONTHLY summary row per adviser, not an individual sale.
-    app=replace_exact(app,
-      '''  const filas = agruparVentasPorAsesor(mes);
-
-  if (filas.length === 0) {''',
-      '''  const filas = agruparVentasPorAsesor(mes);
-  const resumenMensualExcel=window.ventasExcelEstado?.fuente==="EXCEL_ORIGINAL_VENTAS";
-
-  if (filas.length === 0) {''',
-      "Mark monthly advisor rows as non-transactional")
-    app=replace_exact(app,
-      '''          <td>${formatoNumero(fila.registros)}</td>
-          <td>${formatoNumero(fila.unidades)}</td>
-          <td>${formatoMoneda(fila.total)}</td>''',
-      '''          <td>${formatoNumero(fila.registros)}</td>
-          <td>${resumenMensualExcel ? "—" : formatoNumero(fila.unidades)}</td>
-          <td>${formatoMoneda(fila.total)}</td>''',
-      "Do not invent units sold for one-row-per-advisor summaries")
-    app=replace_exact(app,
-      '''        <td colspan="5">Sin información para el mes seleccionado.</td>''',
-      '''        <td colspan="5">${window.ventasExcelEstado?.fuente==="EXCEL_ORIGINAL_VENTAS"
-          ? "Sin desglose comercial acreditado por tipo de producto o servicio."
-          : "Sin información para el mes seleccionado."}</td>''',
-      "Explain missing sales-by-service breakdown")
+    # H:I:J:P:V:W contienen unidades originales por categoría.
+    # Conservar la misma tabla y prorrateo proporcional de Producción.
     app=replace_exact(app,
       '''          <td>${formatoMoneda(fila.montoUiCapillas)}</td>
           <td>${formatoNumero(fila.ventasUiParque)}</td>
@@ -410,13 +390,13 @@ def build():
                       <th>Unidades</th>
                       <th>Total venta</th>''',
       '''<th>Asesor</th>
-                      <th>Renglones mensuales</th>
-                      <th>Unidades verificadas</th>
+                      <th>Registros mensuales</th>
+                      <th>Unidades</th>
                       <th>Total venta</th>''',
       "Do not interpret advisor spreadsheet rows as individual sales")
     index=replace_exact(index,
       '''<span class="detail-kpi-label">Contratos</span>''',
-      '''<span class="detail-kpi-label">Expedientes contractuales únicos</span>''',
+      '''<span class="detail-kpi-label">Contratos Lotes/Churubusco</span>''',
       "Source-aware contract KPI label")
     index=replace_exact(index,
       '''<h3>Contratos del periodo</h3>
@@ -440,7 +420,7 @@ def build():
       '''<h3>Ventas por tipo de servicio</h3>
                   <p>Resumen de unidades vendidas por tipo de servicio o producto.</p>''',
       '''<h3>Ventas por tipo de servicio</h3>
-                  <p>El archivo de Comercial solo acredita montos mensuales por asesor; desglose por producto pendiente de validar.</p>''',
+                  <p>Unidades desde Comercial; importes distribuidos proporcionalmente por unidades, conforme a la regla anterior.</p>''',
       "Missing product-level granularity explanation")
     (TARGET/"index.php").write_text(index,encoding="utf-8")
 
