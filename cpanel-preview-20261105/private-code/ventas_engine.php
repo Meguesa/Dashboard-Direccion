@@ -18,7 +18,7 @@ if(!is_file($hsDependency))
     $hsDependency = '/home/juanpab1/bi-ingresos-privado/ingresos_engine.php';
 if(!is_file($hsDependency))throw new RuntimeException('Dependencia privada Graph no instalada.');
 require_once $hsDependency;
-const VE_BUILD = '20261118-presupuestos-ui-historico-qa-1';
+const VE_BUILD = '20261119-ui-servicios-desde-excel-qa-1';
 const VE_DRIVE_COMERCIAL = 'b!tzGM-V4TiUKbUyHUBBu214AiW7yUyvxPnueBG9lB85Wh0Tv-5FAnQqSNjE7rlEJv';
 const VE_ITEM_COMERCIAL = '01ZBUZ3OT6NWPAZOQW5BDZ77XXJW7IQXPD';
 const VE_DRIVE_COBRANZA = 'b!EAWNGReAT02APufy0uQPFnDnY1ILcuZGv2EfFdV9rplPAV4rL4C_QoZl8LbKac5c';
@@ -266,6 +266,110 @@ function vePresupuestoDireccionOriginal(ZipArchive $zip,array $ss,array $sheets)
     return $result;
 }
 
+
+/**
+ * UI_DETALLE, hoja OPCIONAL capturada en Ventas 2026.xlsx.
+ * Mismos campos de la fuente operativa usada en producción:
+ * fecha del servicio, origen, clasificación, asesor, Precio_Venta y
+ * Precio_Total_Servicio. No consulta BI_Servicios ni CONTRATOS.
+ *
+ * La hoja UI de totales mensuales se conserva como REFERENCIA, no como
+ * sustituto de las operaciones individuales. Sin esta hoja no es posible
+ * reproducir la fórmula operativa a partir de los dos libros originales.
+ */
+function veFechaServicioUi($raw):string {
+    if(is_numeric($raw)&&!is_bool($raw)&&!is_string($raw)){
+        $days=(float)$raw;
+        if($days<36526||$days>73050||floor($days)!==$days)
+            throw new RuntimeException('Fecha Excel UI fuera de rango.');
+        return (new DateTimeImmutable('1899-12-30',new DateTimeZone('UTC')))
+            ->modify('+'.(int)$days.' days')->format('Y-m-d');
+    }
+    $value=trim((string)$raw);
+    if(!preg_match('/^(20\d\d)-(0[1-9]|1[0-2])-([0-3]\d)$/D',$value,$m)||
+       !checkdate((int)$m[2],(int)$m[3],(int)$m[1]))
+       throw new RuntimeException('FECHA_SERVICIO debe ser ISO 2026-MM-DD o fecha Excel.');
+    return $value;
+}
+function veUiDetalleOriginal(ZipArchive $zip,array $ss,array $sheets):array {
+    $empty=['disponible'=>false,'registros'=>[],'meses'=>[],
+        'fuente'=>'UI_DETALLE','sinDatos'=>true];
+    if(!in_array('UI_DETALLE',$sheets,true))return $empty;
+    $required=['FECHA_SERVICIO','NUMERO_SERVICIO','REFERENCIA_CONTRATO','ORIGEN',
+        'PREVISION_USO_INMEDIATO','ASESOR','PRECIO_VENTA','PRECIO_TOTAL_SERVICIO'];
+    $cols=null;$rows=[];$stats=[];$keys=[];
+    foreach(hsRows($zip,'UI_DETALLE',$ss) as [$rn,$row,$formulas]){
+        if($cols===null){
+            $head=[];
+            foreach($row as $idx=>$val){
+                $label=veNorm($val);
+                if($label!=='')$head[$label]=(int)$idx;
+            }
+            if(isset($head['FECHA_SERVICIO'],$head['NUMERO_SERVICIO'],
+               $head['REFERENCIA_CONTRATO'],$head['ORIGEN'])){
+                foreach($required as $field)
+                    if(!array_key_exists($field,$head))
+                        throw new RuntimeException('Falta columna UI_DETALLE '.$field);
+                $cols=$head;
+                continue;
+            }
+            if($rn>10)throw new RuntimeException('Cabecera UI_DETALLE ausente.');
+            continue;
+        }
+        $get=static fn(string $key)=>$row[$cols[$key]]??null;
+        $rawFields=array_map($get,$required);
+        if(count(array_filter($rawFields,static fn($v)=>
+            $v!==null&&trim((string)$v)!==''))===0)continue;
+        $fecha=veFechaServicioUi($get('FECHA_SERVICIO'));
+        if(substr($fecha,0,4)!==(string)VE_YEAR)
+            throw new RuntimeException('UI_DETALLE contiene periodo fuera de 2026.');
+        $month=substr($fecha,0,7);
+        $origin=veClaveAsesor($get('ORIGEN'));
+        if(!in_array($origin,['CAPILLAS','PARQUE'],true))
+            throw new RuntimeException('ORIGEN UI distinto a Capillas/Parque.');
+        $class=veClaveAsesor($get('PREVISION_USO_INMEDIATO'));
+        if(!in_array($class,['USO INMEDIATO','PREVISION'],true))
+            throw new RuntimeException('Clasificacion UI de origen no reconocida.');
+        $id=trim((string)$get('NUMERO_SERVICIO'));
+        $reference=trim((string)$get('REFERENCIA_CONTRATO'));
+        if($id===''||$reference==='')
+            throw new RuntimeException('UI_DETALLE requiere servicio y referencia.');
+        $uniq=$month.'|'.$origin.'|'.veNorm($id);
+        if(isset($keys[$uniq]))throw new RuntimeException('UI_DETALLE contiene servicio duplicado.');
+        $keys[$uniq]=true;
+        if($class==='PREVISION')continue;
+        $amountField=$origin==='CAPILLAS'?'PRECIO_VENTA':'PRECIO_TOTAL_SERVICIO';
+        $amount=veImporteContrato($get($amountField));
+        if($amount===null||$amount<0)
+            throw new RuntimeException('Precio UI invalido para '.$origin);
+        $advisor=trim((string)$get('ASESOR'))?:'Sin asesor';
+        $rec=[
+            'id'=>'UI_DETALLE_XLSX|'.hash('sha256',$uniq),
+            'mes'=>$month,'fechaServicio'=>$fecha,
+            'origen'=>$origin==='CAPILLAS'?'Capillas':'Parque',
+            'numeroServicio'=>$id,'referenciaContrato'=>$reference,
+            'asesor'=>$advisor,'previsionUsoInmediato'=>'Uso Inmediato',
+            'precioVenta'=>$origin==='CAPILLAS'?$amount/100:null,
+            'precioTotalServicio'=>$origin==='PARQUE'?$amount/100:null,
+            'montoUiCentavos'=>$amount,
+            'fuenteOrigen'=>'excel_ui_detalle','filaOrigen'=>$rn
+        ];
+        $rows[]=$rec;
+        if(!isset($stats[$month]))
+            $stats[$month]=['registros'=>0,'ventasCentavos'=>0,
+                'capillas'=>0,'parque'=>0];
+        $stats[$month]['registros']++;
+        $stats[$month]['ventasCentavos']+=$amount;
+        $stats[$month][strtolower($origin)]++;
+    }
+    if($cols===null)throw new RuntimeException('UI_DETALLE sin cabeceras.');
+    foreach($stats as $m=>$st)
+        if($st['ventasCentavos']<0||!is_int($st['ventasCentavos']))
+            throw new RuntimeException('UI_DETALLE con total invalido.');
+    return ['disponible'=>true,'registros'=>$rows,'meses'=>$stats,
+        'fuente'=>'UI_DETALLE','sinDatos'=>!$rows];
+}
+
 function veParseComercialOriginal(string $filename):array {
     $zip=new ZipArchive();
     if($zip->open($filename,ZipArchive::CHECKCONS)!==true)
@@ -275,6 +379,7 @@ function veParseComercialOriginal(string $filename):array {
         if(!in_array('METAS',$sheets,true))throw new RuntimeException('Hoja METAS ausente.');
         $metas=veMetasOriginales($zip,$ss);
         $presupuesto=vePresupuestoDireccionOriginal($zip,$ss,$sheets);
+        $uiDetalle=veUiDetalleOriginal($zip,$ss,$sheets);
         $rows=[];$stats=[];$issues=[];
         foreach(VE_MESES as $sheet=>$number){
             if(!in_array($sheet,$sheets,true))continue;
@@ -350,9 +455,11 @@ function veParseComercialOriginal(string $filename):array {
         }
         if(!$rows)throw new RuntimeException('Sin registros originales de ventas.');
         $publicGoals=$metas;unset($publicGoals['_asesores']);
-        return ['registros'=>$rows,'auditoria'=>[
+        return ['registros'=>$rows,'uiDetalle'=>$uiDetalle['registros'],'auditoria'=>[
             'fuentes'=>['meses_originales','METAS'],'registros'=>count($rows),
             'meses'=>$stats,'metas'=>$publicGoals,
+            'uiDetalle'=>['disponible'=>$uiDetalle['disponible'],
+                'sinDatos'=>$uiDetalle['sinDatos'],'meses'=>$uiDetalle['meses']],
             'presupuestoDireccion'=>['fuentes'=>['PPTO PREVISIÓN 2026','PPTO UI 2026','UI'],
                 'reglaMetaUi'=>'90_POR_CIENTO_DE_PROYECCION_REDONDEADA_AL_PESO',
                 'disponible'=>(bool)$presupuesto],
@@ -676,6 +783,8 @@ function veInspeccion(bool $includePrivateRows=false):array {
                         :veProcesarContratosOriginales($download['temporal'],(string)VE_YEAR,true);
                     $audit=$parsed['auditoria'];
                     $result['_privateRows'][$name]=$parsed['registros'];
+                    if($name==='comercial')
+                        $result['_privateRows']['uiDetalle']=$parsed['uiDetalle']??[];
                 }else{
                     $audit=$name==='comercial'
                         ?veAuditVentas($download['temporal'])
@@ -828,8 +937,10 @@ function veRun(bool $force=false):array {
             ],$fresh['archivos']),
             'ventas'=>$private['comercial'],
             'contratos'=>$private['contratos'],
+            'uiDetalle'=>$private['uiDetalle']??[],
             'metas'=>$fresh['archivos']['comercial']['auditoria']['metas']['totalesCentavos']??[],
             'resumenVentas'=>$fresh['archivos']['comercial']['auditoria']['meses']??[],
+            'resumenUiDetalle'=>$fresh['archivos']['comercial']['auditoria']['uiDetalle']['meses']??[],
             'resumenContratos'=>$fresh['archivos']['contratos']['auditoria']['porMes']??[],
             'contratosRepetidosIgnorados'=>
                 $fresh['archivos']['contratos']['auditoria']['filasRepetidasIgnoradas']??0,
