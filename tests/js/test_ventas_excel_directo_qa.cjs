@@ -49,6 +49,11 @@ vm.runInContext(script,ctx,{timeout:1200});
  assert.ok(Number.isNaN(ctx.presupuestoVentasExcelPeriodo("2026-11","importeContrato")));
  assert.equal(ctx.presupuestoVentasExcelPeriodo(["2026-10","2026-11"],"metaUiDireccionCentavos"),1445760);
  assert.equal(ctx.window.ventasExcelEstado.error,null);
+ // Rechazar valores obsoletos cuando el manifiesto no fue validado.
+ ctx.window.ventasExcelEstado.error="VERIFICACION_VENTAS_CADUCADA";
+ assert.ok(Number.isNaN(ctx.presupuestoVentasExcelPeriodo("2026-11","uiVentasCentavos")));
+ assert.ok(Number.isNaN(ctx.presupuestoVentasExcelPeriodo("2026-11","metaDireccionCentavos")));
+ ctx.window.ventasExcelEstado.error=null;
  // January can contain a genuine reconciliation gap; November must remain
  // readable independently, without hiding January's exception.
  manifest.meses["2026-01"].cacheDisponible=false;
