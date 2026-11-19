@@ -132,7 +132,7 @@ qaAssert($uiSource['auditoria']['uiDetalle']['meses']['2026-11']['capillas']===1
     'One Capillas service');
 qaAssert($uiSource['auditoria']['uiDetalle']['meses']['2026-11']['parque']===1,
     'One Parque service');
-qaAssert(($good['uiDetalle']??[])===[],
+qaAssert(veParseComercialOriginal($base.'/ventas-ok.xlsx')['uiDetalle']===[],
     'Without original UI detail there is no invented operational UI list');
 try{veParseComercialOriginal($base.'/ventas-ui-duplicado.xlsx');
     qaAssert(false,'Duplicate UI service must fail');
