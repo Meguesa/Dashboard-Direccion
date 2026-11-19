@@ -137,6 +137,9 @@ function metasVentasExcelPeriodo(mes){
  * Valores de mes completo; el año anterior es una referencia histórica mensual.
  */
 function presupuestoVentasExcelPeriodo(mes,campo){
+  // Cuando Graph no puede acreditar la versión vigente, ningún KPI
+  // económico conserva como válido un importe de memoria anterior.
+  if(window.ventasExcelEstado?.error||window.ventasExcelEstado?.cargando)return NaN;
   const permitidos=new Set(["metaDireccionCentavos","metaUiDireccionCentavos",
     "uiVentasCentavos","ventas2025Centavos","uiVentas2025Centavos"]);
   if(!permitidos.has(campo))return NaN;
