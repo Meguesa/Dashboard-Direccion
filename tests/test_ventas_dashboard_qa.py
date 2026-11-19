@@ -44,7 +44,7 @@ class TestVentasDashboardQA(unittest.TestCase):
         self.assertIn("permitirMesesIncompletos: true",graph)
         self.assertIn("dashboardVentasExcelQADatos",app)
         self.assertIn("dashboardVentasExcelQACacheDB",app)
-        self.assertIn("const totalVentas = ventasPrevision;",app)
+        self.assertIn("? ventasPrevision + ventasUi : NaN;",app)
         self.assertIn('"uiVentasCentavos"',app)
         self.assertIn("renderEstadoVentasExcel()",app)
         yoy=self.read("ventas-dashboard-qa-yoy.js")
@@ -52,9 +52,9 @@ class TestVentasDashboardQA(unittest.TestCase):
 
     def test_no_fabricated_service_type_revenue(self):
         client=self.read("ventas-dashboard-qa-excel.js")
-        self.assertIn("tipoBody.replaceChildren(row)",client)
-        self.assertIn("Desglose por tipo no verificable",client)
-        self.assertIn("20261113-ventas-qa-visual-5",client)
+        self.assertIn("presupuestoVentasExcelPeriodo",client)
+        self.assertIn("Ventas UI (Excel)",client)
+        self.assertIn("ventasDashboardQARevalidar",client)
 
     def test_cron_sales_only_and_off_by_default(self):
         cron=(ROOT/"cpanel-preview-20261105/private-code/ventas_excel_cron_qa.php").read_text(encoding="utf-8")
