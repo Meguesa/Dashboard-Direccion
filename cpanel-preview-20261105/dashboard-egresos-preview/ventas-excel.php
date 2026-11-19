@@ -133,6 +133,12 @@ foreach($monthStats as $key=>$stats){
         'metaDireccionCentavos'=>$stats['metaDireccionCentavos']??null,
         'metaUiDireccionCentavos'=>$stats['metaUiDireccionCentavos']??null,
         'uiVentasCentavos'=>$stats['uiVentasCentavos']??null,
+        // El desglose operativo no se infiere del resumen UI mensual.
+        'uiDetalleDisponible'=>isset($data['resumenUiDetalle'][$key]),
+        'uiDetalleVentasCentavos'=>$data['resumenUiDetalle'][$key]['ventasCentavos']??null,
+        'uiDetalleRegistros'=>$data['resumenUiDetalle'][$key]['registros']??null,
+        'uiDetalleCapillas'=>$data['resumenUiDetalle'][$key]['capillas']??null,
+        'uiDetalleParque'=>$data['resumenUiDetalle'][$key]['parque']??null,
         'ventas2025Centavos'=>$stats['ventas2025Centavos']??null,
         'uiVentas2025Centavos'=>$stats['uiVentas2025Centavos']??null,
         'referencia2025MesCompleto'=>$stats['referencia2025MesCompleto']??false,
@@ -166,6 +172,8 @@ if(!$stats||!$stats['cacheDisponible']){
 }
 $sales=array_values(array_filter($data['ventas']??[],static fn($r):bool=>
     is_array($r)&&($r['mes']??null)===$month));
+$uiDetail=array_values(array_filter($data['uiDetalle']??[],static fn($r):bool=>
+    is_array($r)&&($r['mes']??null)===$month));
 $contracts=array_values(array_filter($data['contratos']??[],static fn($r):bool=>
     is_array($r)&&($r['mes']??null)===$month));
 $amount=0;$keys=[];
@@ -181,6 +189,22 @@ foreach($sales as $r){
 if(count($sales)!==$stats['auditoria']['registros']||
    $amount!==$stats['auditoria']['ventasCentavos']){
     http_response_code(409);echo '{"error":"TOTAL_COMERCIAL_NO_CONCILIADO"}';exit;
+}
+// No anunciar conciliación de UI sin detalle real que respalde el total.
+if(!empty($stats['uiDetalleDisponible'])){
+    $sumUi=0;$uniqueUi=[];
+    foreach($uiDetail as $item){
+        $id=(string)($item['id']??'');$cents=$item['montoUiCentavos']??null;
+        if($id===''||isset($uniqueUi[$id])||!is_int($cents)||$cents<0||
+            ($item['fuenteOrigen']??'')!=='excel_ui_detalle'){
+            http_response_code(409);echo '{"error":"UI_DETALLE_INCONSISTENTE"}';exit;
+        }
+        $uniqueUi[$id]=true;$sumUi+=$cents;
+    }
+    if($sumUi!==$stats['uiDetalleVentasCentavos']||
+       count($uiDetail)!==$stats['uiDetalleRegistros']){
+        http_response_code(409);echo '{"error":"TOTAL_UI_DETALLE_NO_CONCILIADO"}';exit;
+    }
 }
 $contractKeys=[];
 foreach($contracts as $r){
@@ -234,6 +258,9 @@ echo json_encode([
     'metaDisponible'=>$stats['metaDisponible'],
     'asesoresSinMeta'=>$stats['asesoresSinMeta'],
     'ventas'=>$ventasPublicas,'contratos'=>$contratosPublicos,
+    // Nunca se usa el importe contractual Z para rellenar el precio UI.
+    'uiDetalle'=>$uiDetail,
+    'uiDetalleValidado'=>!empty($stats['uiDetalleDisponible']),
     'contratosUnicosNoRepetidos'=>$stats['contratosUnicosNoRepetidos'],
     'contratosCandidatos'=>$stats['contratosCandidatos'],
     'noSumarContratos'=>true
