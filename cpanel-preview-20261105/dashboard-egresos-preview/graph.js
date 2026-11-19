@@ -313,7 +313,13 @@ async function cargarDatosSharePoint(opciones = {}) {
 
     const ingresos = await obtenerIngresosExcel(usarFiltroMeses ? mesesRecargados : []);
     const egresos = await obtenerEgresosExcel(usarFiltroMeses ? mesesRecargados : []);
-    const ventas = await obtenerVentasSharePoint(usarFiltroMeses ? mesesRecargados : []);
+    const usarVentasExcelQA = new URLSearchParams(window.location.search).get("ventas_excel_qa") === "1" &&
+      String(window.PORTAL_USER_EMAIL || "").trim().toLowerCase() ===
+        "gabriel.guerra@juanpablo.com.mx";
+    // QA opt-in: prueba de lectura directa sin sustituir BI_Ventas en producción.
+    const ventas = usarVentasExcelQA
+      ? await cargarVentasExcelOriginal(usarFiltroMeses ? mesesRecargados : [])
+      : await obtenerVentasSharePoint(usarFiltroMeses ? mesesRecargados : []);
     // En aperturas con cache no necesitamos volver a descargar toda la
     // informacion historica de Marketing. La fotografia almacenada se conserva
     // localmente y una carga manual/completa puede reconstruirla cuando se requiera.
@@ -323,7 +329,9 @@ async function cargarDatosSharePoint(opciones = {}) {
     const servicios = await obtenerServiciosSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const mesesMetaRecientes = usarFiltroMeses ? mesesRecargados : obtenerMesesRecargaReciente();
     const metasCobranza = await obtenerMetasCobranzaExcel(mesesMetaRecientes);
-    const metasVentas = await obtenerMetasVentasSharePoint(usarFiltroMeses ? mesesRecargados : []);
+    // No mezclar metas del Excel original con BI_Metas_Ventas de Power Automate.
+    const metasVentas = usarVentasExcelQA ? []
+      : await obtenerMetasVentasSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const alertas = await obtenerAlertasSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const parquePropiedades = modoCarga === "completa"
       ? await obtenerParquePropiedadesSharePoint()
@@ -343,7 +351,8 @@ async function cargarDatosSharePoint(opciones = {}) {
       alertas,
       parquePropiedades,
       mesesRecargados,
-      modoCarga
+      modoCarga,
+      ventasExcelQA: usarVentasExcelQA
     };
 
     console.log("Datos cargados desde SharePoint:", datos);
