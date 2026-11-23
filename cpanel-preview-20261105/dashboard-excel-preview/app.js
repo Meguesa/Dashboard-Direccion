@@ -19,6 +19,39 @@ window.state = {
 };
 
 const state = window.state;
+
+/**
+ * Fuente unificada de agenda. El historial BI sigue siendo la fuente de KPIs;
+ * las novedades de Operaciones prevalecen solo en timeline y tarjetas diarias.
+ */
+window.obtenerServiciosAgendaDia = function () {
+  const historico = Array.isArray(state.datos.servicios) ? state.datos.servicios : [];
+  const operacion = Array.isArray(state.datos.agendaCapillasOperaciones)
+    ? state.datos.agendaCapillasOperaciones : [];
+  const normalizar = (v) => String(v || "").normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const clavesOperacion = new Set();
+  for (const servicio of operacion) {
+    const referencia = normalizar(servicio.referenciaContrato);
+    const numero = normalizar(servicio.numeroServicio);
+    if (referencia) clavesOperacion.add("REF:" + referencia);
+    if (numero) clavesOperacion.add("NUM:" + numero);
+  }
+  const filtrados = historico.filter((servicio) => {
+    if (String(servicio.tipoOrigen || "").toUpperCase() !== "CAPILLAS") return true;
+    const ref = normalizar(servicio.referenciaContrato || servicio.referencia);
+    const numero = normalizar(servicio.numeroServicio || servicio.numeroReferencia);
+    const mismoOrigen = String(servicio.fuente || "").toUpperCase().includes("EVENTOS CAPILLAS");
+    const idOrigen = String(servicio.idOrigen || "");
+    if (mismoOrigen && idOrigen && operacion.some((actual) => String(actual.idOrigen) === idOrigen)) {
+      return false;
+    }
+    return !(ref && clavesOperacion.has("REF:" + ref))
+      && !(numero && clavesOperacion.has("NUM:" + numero));
+  });
+  return filtrados.concat(operacion);
+};
+
 const dashboardCharts = {};
 
 const DASHBOARD_CACHE_KEY_BASE = "dashboardExcelHistoricoDatos";
@@ -772,6 +805,9 @@ async function actualizarDatosDashboard(opciones = {}) {
       datosSharePoint.servicios || [],
       mesesRecargados
     );
+
+    state.datos.agendaCapillasOperaciones = datosSharePoint.agendaCapillasOperaciones || [];
+    state.datos.agendaCapillasError = datosSharePoint.agendaCapillasError || "";
 
     state.datos.metasCobranza = reemplazarRegistrosPorMes(
       state.datos.metasCobranza,
@@ -2775,7 +2811,7 @@ function contarContratos(mes) {
 }
 
 function renderServiciosDelDia() {
-  const servicios = state.datos.servicios || [];
+  const servicios = window.obtenerServiciosAgendaDia();
   const ahora = new Date();
 
   const capillasActivos = [];
