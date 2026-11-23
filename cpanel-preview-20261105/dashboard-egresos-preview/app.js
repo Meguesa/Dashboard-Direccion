@@ -796,6 +796,14 @@ async function actualizarDatosDashboard(opciones = {}) {
       mesesRecargados
     );
 
+    // Agenda diaria: fuente operativa original, independiente de BI_Servicios.
+    // null indica error de lectura y permite fallback; [] significa lectura válida sin eventos.
+    state.datos.serviciosAgenda = Array.isArray(datosSharePoint.serviciosAgenda)
+      ? datosSharePoint.serviciosAgenda
+      : null;
+    state.datos.auditoriaAgenda = datosSharePoint.auditoriaAgenda || null;
+    state.datos.errorAgenda = datosSharePoint.errorAgenda || null;
+
     // Conservar las carátulas históricas ya validadas. Una actualización
     // incremental nunca debe borrar meses anteriores.
     state.datos.metasCobranza = mezclarMetasExcelVerificadas(
@@ -2828,7 +2836,9 @@ function contarContratos(mes) {
 }
 
 function renderServiciosDelDia() {
-  const servicios = state.datos.servicios || [];
+  const servicios = Array.isArray(state.datos.serviciosAgenda)
+    ? state.datos.serviciosAgenda
+    : (state.datos.servicios || []);
   const ahora = new Date();
 
   const capillasActivos = [];
@@ -2944,7 +2954,7 @@ function renderServiciosDelDia() {
 
   setText(
     "serviciosDiaActualizado",
-    `Hora local: ${formatearFechaHoraCorta(ahora)}`
+    `Hora local: ${formatearFechaHoraCorta(ahora)} · ${Array.isArray(state.datos.serviciosAgenda) ? "Fuente: Operaciones" : "Respaldo: BI_Servicios"}${state.datos.errorAgenda ? " · ADVERTENCIA: no se pudo verificar la fuente operativa" : ""}`
   );
 
 }
