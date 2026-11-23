@@ -1,0 +1,5 @@
+PUBLICACION PUNTUAL AUTORIZADA 2026-11-23
+Objetivo: servicios activos Capillas visibles en el portal productivo.
+Ejecutar workflow publicar-agenda-capillas-produccion-20261123.yml.
+Alcance exclusivo: app.js, graph.js, dashboard-daily-calendar.js e index.php.
+Requiere respaldo privado, patch estricto, validacion sintactica y verificacion remota; detener ante diferencias.
