@@ -321,6 +321,7 @@ async function cargarDatosSharePoint(opciones = {}) {
     const marketingMedios = await obtenerMarketingMediosSharePoint();
     const marketingRedes = await obtenerMarketingRedesSharePoint();
     const servicios = await obtenerServiciosSharePoint(usarFiltroMeses ? mesesRecargados : []);
+    const agendaCapillasOperaciones = await obtenerAgendaCapillasOperacionesSeguro();
     const metasCobranza = await obtenerMetasCobranzaSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const metasVentas = await obtenerMetasVentasSharePoint(usarFiltroMeses ? mesesRecargados : []);
     const alertas = await obtenerAlertasSharePoint(usarFiltroMeses ? mesesRecargados : []);
@@ -334,6 +335,8 @@ async function cargarDatosSharePoint(opciones = {}) {
       egresos,
       ventas,
       servicios,
+      agendaCapillasOperaciones: agendaCapillasOperaciones.servicios,
+      agendaCapillasError: agendaCapillasOperaciones.error,
       marketing,
       marketingMedios,
       marketingRedes,
@@ -1602,4 +1605,79 @@ function crearClaveMesMarketing(
   return numeroMes
     ? `${anio}-${numeroMes}`
     : "";
+}
+
+/**
+ * Agenda operativa del dia, independiente de la sincronizacion BI_Servicios.
+ * Solo se utiliza para el timeline y las tarjetas de servicios del dia:
+ * no cambia los indicadores ni la conciliacion historica.
+ */
+async function obtenerAgendaCapillasOperacionesSeguro() {
+  const sitioOperaciones = "meguesajdjp.sharepoint.com,b4461294-66e3-4352-9b75-d3fc01444f93,5263e770-720b-46e6-bf61-1f15d57dae99";
+  const listaEventosCapillas = "a46107c3-96b4-49c4-bba5-d8b26a845c65";
+
+  const hoy = new Date();
+  const inicioDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  const finDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1);
+  const servicios = [];
+
+  try {
+    let endpoint = "/sites/" + sitioOperaciones + "/lists/" + listaEventosCapillas + "/items?$expand=fields&$top=100";
+    let paginas = 0;
+
+    while (endpoint) {
+      paginas += 1;
+      // Ante una paginacion inesperada, no presentar una agenda incompleta
+      // como si estuviera conciliada con el registro de Operaciones.
+      if (paginas > 40) {
+        throw new Error("La consulta de Eventos Capillas excedio el limite de paginas.");
+      }
+
+      const respuesta = await graphGet(endpoint);
+      for (const item of (respuesta.value || [])) {
+        const campos = item.fields || {};
+        if (campos.ModoPrueba === true || String(campos.ModoPrueba).toLowerCase() === "true") {
+          continue;
+        }
+
+        const fechaInicio = new Date(String(campos.field_36 || ""));
+        const fechaFin = new Date(String(campos.field_37 || ""));
+        if (Number.isNaN(fechaInicio.getTime()) || Number.isNaN(fechaFin.getTime())) {
+          continue;
+        }
+        if (fechaFin <= fechaInicio || fechaFin <= inicioDia || fechaInicio >= finDia) {
+          continue;
+        }
+
+        const ubicacion = String(campos.field_39 || "").trim();
+        const lugar = ubicacion.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+        if (!["CHURUBUSCO", "APODACA", "AGUA FRIA"].some((nombre) => lugar.includes(nombre))) {
+          continue;
+        }
+
+        servicios.push({
+          id: "operaciones-capillas-" + item.id,
+          idOrigen: String(item.id),
+          fuente: "Eventos Capillas",
+          origen: "Capillas",
+          tipoOrigen: "Capillas",
+          numeroServicio: String(campos.field_1 || "").trim(),
+          referenciaContrato: String(campos.Referencia || campos.Title || "").trim(),
+          fechaServicio: String(campos.field_36),
+          fechaFin: String(campos.field_37),
+          finado: String(campos.field_2 || "").trim(),
+          ubicacionServicio: ubicacion,
+          sala: String(campos.field_40 || "").trim(),
+          tipoServicio: String(campos.field_32 || "").trim()
+        });
+      }
+      endpoint = respuesta["@odata.nextLink"] || null;
+    }
+
+    console.info("Agenda Capillas desde Operaciones:", servicios.length, "servicio(s) con actividad hoy.");
+    return { servicios, error: "" };
+  } catch (error) {
+    console.warn("No se pudo validar la agenda directa de Operaciones:", error);
+    return { servicios: [], error: "No se pudo consultar Eventos Capillas." };
+  }
 }
