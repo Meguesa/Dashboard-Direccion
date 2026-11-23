@@ -1,0 +1,34 @@
+name: Validar agenda diaria de Capillas sin desplegar
+on:
+  pull_request:
+    paths:
+      - 'cpanel-preview-20261105/dashboard-egresos-preview/app.js'
+      - 'cpanel-preview-20261105/dashboard-egresos-preview/graph.js'
+      - 'cpanel-preview-20261105/dashboard-egresos-preview/dashboard-daily-calendar.js'
+      - 'cpanel-preview-20261105/dashboard-excel-preview/app.js'
+      - 'cpanel-preview-20261105/dashboard-excel-preview/graph.js'
+      - 'cpanel-preview-20261105/dashboard-excel-preview/dashboard-daily-calendar.js'
+      - 'tests/test_agenda_capillas.js'
+      - '.github/workflows/validar-agenda-capillas.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validar sintaxis JavaScript de ambos candidatos
+        shell: bash
+        run: |
+          set -euo pipefail
+          for base in dashboard-egresos-preview dashboard-excel-preview; do
+            for file in app.js graph.js dashboard-daily-calendar.js; do
+              node --check "cpanel-preview-20261105/$base/$file"
+            done
+          done
+      - name: Ejecutar regresion de los dos servicios reales
+        run: node tests/test_agenda_capillas.js
