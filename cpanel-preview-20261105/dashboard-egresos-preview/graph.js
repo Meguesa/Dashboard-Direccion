@@ -293,6 +293,112 @@ function obtenerUrlCampoSharePoint(valor) {
   return "";
 }
 
+/**
+ * Agenda diaria: fuente operativa ORIGINAL de Operaciones.
+ * Consulta Eventos Capillas y Eventos Parque. Solo lectura.
+ */
+const OPERACIONES_AGENDA = {
+  hostname: "meguesajdjp.sharepoint.com",
+  sitePath: "/sites/Operaciones",
+  lists: {
+    capillas: "a46107c3-96b4-49c4-bba5-d8b26a845c65",
+    parque: "cd8cd331-1cef-4b42-b49a-10eaa3795351"
+  }
+};
+
+async function obtenerItemsListaOperaciones(siteId, listId) {
+  let endpoint = "/sites/" + siteId + "/lists/" + listId + "/items?$expand=fields&$top=200";
+  const rows = [];
+  while (endpoint) {
+    const page = await graphGet(endpoint);
+    rows.push(...(page.value || []));
+    endpoint = page["@odata.nextLink"] || null;
+  }
+  return rows;
+}
+
+function mapearEventoCapillaAgenda(item) {
+  const f = item?.fields || {};
+  if (f.ModoPrueba === true || String(f.ModoPrueba).toLowerCase() === "true") return null;
+  const start = limpiarTexto(f.field_36 || f.FechaHoraInicio_Mostrar);
+  const end = limpiarTexto(f.field_37 || f.FechaHoraTermino_Mostrar);
+  const deceased = limpiarTexto(f.field_2 || f.Finado);
+  const location = limpiarTexto(f.field_39 || f.Ubicacion_Servicio);
+  const room = limpiarTexto(f.field_40 || f.Sala);
+  if (!start || !end || !deceased || !location) return null;
+  return {
+    id: "OPERACIONES_CAPILLAS_" + item.id,
+    numeroServicio: limpiarTexto(f.field_1),
+    referenciaContrato: limpiarTexto(f.Referencia || f.Title),
+    finado: deceased,
+    fechaServicio: start,
+    fechaFin: end,
+    tipoOrigen: "Capillas",
+    origen: "Capillas",
+    sucursal: location,
+    ubicacionServicio: location,
+    sala: room,
+    tipoServicio: limpiarTexto(f.field_32 || f.TipodeServicio),
+    previsionUsoInmediato: limpiarTexto(f.field_9 || f.PrevisionUsoInmediato),
+    fuenteAgenda: "Eventos Capillas",
+    idOrigen: String(item.id),
+    modifiedOrigen: limpiarTexto(f.Modified || item.lastModifiedDateTime)
+  };
+}
+
+function mapearEventoParqueAgenda(item) {
+  const f = item?.fields || {};
+  if (f.ModoPrueba === true || String(f.ModoPrueba).toLowerCase() === "true") return null;
+  const start = limpiarTexto(f.FechaHoraInicio);
+  const end = limpiarTexto(f.FechaHoraFin);
+  const title = limpiarTexto(f.Title);
+  const location = limpiarTexto(f["Ubicaci_x00f3_n"] || f.Ubicacion);
+  if (!start || !end || !title) return null;
+  const parts = title.split(" - ");
+  return {
+    id: "OPERACIONES_PARQUE_" + item.id,
+    finado: parts[0] || title,
+    fechaServicio: start,
+    fechaFin: end,
+    tipoOrigen: "Parque",
+    origen: "Parque",
+    ubicacionServicio: location,
+    loteNicho: location,
+    serviciosParque: limpiarTexto(f.Servicio),
+    tipoServicio: limpiarTexto(f.TipodeServicio),
+    previsionUsoInmediato: limpiarTexto(f.PrevisionUsoInmediato),
+    fuenteAgenda: "Eventos Parque",
+    idOrigen: String(item.id),
+    modifiedOrigen: limpiarTexto(f.Modified || item.lastModifiedDateTime)
+  };
+}
+
+async function obtenerServiciosAgendaOperaciones() {
+  const site = await graphGet("/sites/" + OPERACIONES_AGENDA.hostname + ":" + OPERACIONES_AGENDA.sitePath);
+  if (!site?.id) throw new Error("No se pudo identificar el sitio Operaciones.");
+  const [capillas, parque] = await Promise.all([
+    obtenerItemsListaOperaciones(site.id, OPERACIONES_AGENDA.lists.capillas),
+    obtenerItemsListaOperaciones(site.id, OPERACIONES_AGENDA.lists.parque)
+  ]);
+  const rows = [
+    ...capillas.map(mapearEventoCapillaAgenda),
+    ...parque.map(mapearEventoParqueAgenda)
+  ].filter(Boolean);
+  const unique = new Map();
+  rows.forEach(row => unique.set(row.id, row));
+  return {
+    registros: Array.from(unique.values()),
+    auditoria: {
+      fuente: "OPERACIONES_ORIGINALES",
+      eventosCapillasLeidos: capillas.length,
+      eventosParqueLeidos: parque.length,
+      serviciosAgendaValidos: unique.size,
+      duplicadosPorIdOmitidos: rows.length - unique.size,
+      leidoUTC: new Date().toISOString()
+    }
+  };
+}
+
 async function cargarDatosSharePoint(opciones = {}) {
   try {
     setAuthStatus("Actualizando datos desde SharePoint...");
@@ -321,6 +427,18 @@ async function cargarDatosSharePoint(opciones = {}) {
     const marketingMedios = await obtenerMarketingMediosSharePoint();
     const marketingRedes = await obtenerMarketingRedesSharePoint();
     const servicios = await obtenerServiciosSharePoint(usarFiltroMeses ? mesesRecargados : []);
+    // La agenda no depende de BI_Servicios: lee las listas operativas originales.
+    let serviciosAgenda = null;
+    let auditoriaAgenda = null;
+    let errorAgenda = null;
+    try {
+      const agenda = await obtenerServiciosAgendaOperaciones();
+      serviciosAgenda = agenda.registros;
+      auditoriaAgenda = agenda.auditoria;
+    } catch (agendaError) {
+      errorAgenda = String(agendaError?.message || agendaError);
+      console.error("No se pudo leer la agenda operativa original:", agendaError);
+    }
     const mesesMetaRecientes = usarFiltroMeses ? mesesRecargados : obtenerMesesRecargaReciente();
     const metasCobranza = await obtenerMetasCobranzaExcel(mesesMetaRecientes);
     const metasVentas = await obtenerMetasVentasSharePoint(usarFiltroMeses ? mesesRecargados : []);
@@ -335,6 +453,9 @@ async function cargarDatosSharePoint(opciones = {}) {
       egresos,
       ventas,
       servicios,
+      serviciosAgenda,
+      auditoriaAgenda,
+      errorAgenda,
       marketing,
       marketingMedios,
       marketingRedes,
@@ -350,7 +471,7 @@ async function cargarDatosSharePoint(opciones = {}) {
 
     setText(
       "sharePointStatus",
-      `Datos actualizados. Ingresos: ${ingresos.length}, Egresos: ${egresos.length}, Ventas: ${ventas.length}, Marketing: ${marketing.length}, Servicios: ${servicios.length}, Metas cobranza: ${metasCobranza.length}, Metas ventas: ${metasVentas.length}, Alertas: ${alertas.length}, Propiedades parque: ${parquePropiedades.length}.`
+      `Datos actualizados. Ingresos: ${ingresos.length}, Egresos: ${egresos.length}, Ventas: ${ventas.length}, Marketing: ${marketing.length}, Servicios BI: ${servicios.length}, Agenda original: ${serviciosAgenda?.length ?? "no disponible"}, Metas cobranza: ${metasCobranza.length}, Metas ventas: ${metasVentas.length}, Alertas: ${alertas.length}, Propiedades parque: ${parquePropiedades.length}.`
     );
 
     setAuthStatus("Datos actualizados correctamente.");
