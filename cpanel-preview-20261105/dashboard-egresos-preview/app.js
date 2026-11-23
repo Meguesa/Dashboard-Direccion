@@ -3119,7 +3119,9 @@ let ultimoMinutoServiciosDelDia = -1;
 function renderServiciosDelDiaSeguro() {
   if (typeof renderServiciosDelDia !== "function") return;
 
-  const fuenteActual = state.datos.servicios || [];
+  const fuenteActual = Array.isArray(state.datos.serviciosAgenda)
+    ? state.datos.serviciosAgenda
+    : (state.datos.servicios || []);
   const minutoActual = Math.floor(Date.now() / 60000);
   if (ultimaFuenteServiciosDelDia === fuenteActual &&
       ultimoMinutoServiciosDelDia === minutoActual) return;
