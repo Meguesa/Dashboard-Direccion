@@ -3,3 +3,5 @@ Objetivo: servicios activos Capillas visibles en el portal productivo.
 Ejecutar workflow publicar-agenda-capillas-produccion-20261123.yml.
 Alcance exclusivo: app.js, graph.js, dashboard-daily-calendar.js e index.php.
 Requiere respaldo privado, patch estricto, validacion sintactica y verificacion remota; detener ante diferencias.
+
+Reintento controlado: simulacion ahora usa archivos sin parche. Run anterior cancelo antes de FTPS.
