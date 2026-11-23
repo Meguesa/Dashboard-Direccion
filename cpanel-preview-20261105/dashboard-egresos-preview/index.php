@@ -1769,16 +1769,16 @@ document.addEventListener('DOMContentLoaded',()=>{
   <script src="config.js?v=20261105-egresos-1"></script>
   <script src="auth.js?v=20260804-3"></script>
   <script src="egresos-excel.js?v=20261105-egresos-1"></script>
-<script src="ingresos-historico.js?v=20261105-5"></script>\n<script src="graph.js?v=20261105-egresos-1"></script>
+<script src="ingresos-historico.js?v=20261105-5"></script>\n<script src="graph.js?v=20261123-operaciones-agenda-1"></script>
 
   <script
     id="dashboardAppScript"
-    src="app.js?v=20261105-egresos-signos-1"
+    src="app.js?v=20261123-operaciones-agenda-1"
   ></script>
   <script src="dashboard-role-access.js?v=20261105-egresos-1"></script>
   <script src="dashboard-table-tools.js?v=20260824-1"></script>
   <script src="dashboard-history-refresh.js?v=20260824-1"></script>
-  <script src="dashboard-daily-calendar.js?v=20260908-2"></script>
+  <script src="dashboard-daily-calendar.js?v=20261123-operaciones-agenda-1"></script>
   <script src="dashboard-current-time.js?v=20260908-1"></script>
   <script src="dashboard-annual-history.js?v=20261105-historico-4"></script>
   

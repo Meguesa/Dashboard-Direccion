@@ -252,7 +252,9 @@
   }
 
   function obtenerServiciosDia(inicioDia, finDia, ahora) {
-    const lista = window.state?.datos?.servicios || [];
+    const lista = Array.isArray(window.state?.datos?.serviciosAgenda)
+      ? window.state.datos.serviciosAgenda
+      : (window.state?.datos?.servicios || []);
     const resultado = [];
 
     lista.forEach((item) => {
