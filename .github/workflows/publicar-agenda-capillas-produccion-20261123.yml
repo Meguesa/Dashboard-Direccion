@@ -37,8 +37,10 @@ jobs:
         run: |
           set -euo pipefail
           node tests/test_agenda_capillas.js
-          mkdir -p /tmp/agenda-simulacion
-          python3 tools/patch_live_agenda_capillas.py cpanel-preview-20261105/dashboard-egresos-preview /tmp/agenda-simulacion
+          mkdir -p /tmp/agenda-antes /tmp/agenda-simulacion
+          cp app.js graph.js dashboard-daily-calendar.js /tmp/agenda-antes/
+          cp cpanel-preview-20261105/dashboard-egresos-preview/index.php /tmp/agenda-antes/index.php
+          python3 tools/patch_live_agenda_capillas.py /tmp/agenda-antes /tmp/agenda-simulacion
           for f in graph.js app.js dashboard-daily-calendar.js; do node --check "/tmp/agenda-simulacion/$f"; done
           php -l /tmp/agenda-simulacion/index.php
       - name: Instalar cliente FTPS
