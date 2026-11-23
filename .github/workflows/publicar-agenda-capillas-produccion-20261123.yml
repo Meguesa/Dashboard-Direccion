@@ -1,0 +1,186 @@
+name: Publicar agenda de Capillas al Dashboard productivo (una vez)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/publicar-agenda-capillas-20261123.txt'
+permissions:
+  contents: read
+concurrency:
+  group: deploy-dashboard-direccion
+  cancel-in-progress: false
+jobs:
+  publicar:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Descargar repositorio vigente
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Preparar Python, Node y PHP
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - name: Validar regresion sin acceder al servidor
+        shell: bash
+        env:
+          TZ: America/Monterrey
+        run: |
+          set -euo pipefail
+          node tests/test_agenda_capillas.js
+          mkdir -p /tmp/agenda-simulacion
+          python3 tools/patch_live_agenda_capillas.py cpanel-preview-20261105/dashboard-egresos-preview /tmp/agenda-simulacion
+          for f in graph.js app.js dashboard-daily-calendar.js; do node --check "/tmp/agenda-simulacion/$f"; done
+          php -l /tmp/agenda-simulacion/index.php
+      - name: Instalar cliente FTPS
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+      - name: Descargar los cuatro archivos reales de produccion
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "${FTP_SERVER:-}" && test -n "${FTP_USERNAME:-}" && test -n "${FTP_PASSWORD:-}"
+          mkdir -p antes
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            set net:timeout 25;
+            set net:max-retries 2;
+            get graph.js -o antes/graph.js;
+            get app.js -o antes/app.js;
+            get dashboard-daily-calendar.js -o antes/dashboard-daily-calendar.js;
+            get index.php -o antes/index.php;
+            bye;
+          "
+          for f in graph.js app.js dashboard-daily-calendar.js index.php; do test -s "antes/$f"; done
+          grep -q '20261110-cobranza-caratula-huella-1' antes/index.php || { echo "::error::Version del index remoto inesperada; cancelar"; exit 1; }
+          sha256sum antes/{graph.js,app.js,dashboard-daily-calendar.js,index.php} > antes.sha256
+      - name: Producir parche sobre archivos productivos y validar
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/patch_live_agenda_capillas.py antes despues
+          for f in graph.js app.js dashboard-daily-calendar.js; do node --check "despues/$f"; done
+          php -l despues/index.php
+          python3 - <<'PY'
+          from pathlib import Path
+          import difflib
+          for f in ('graph.js','app.js','dashboard-daily-calendar.js','index.php'):
+              old=Path('antes',f).read_text(encoding='utf-8').splitlines(keepends=True)
+              new=Path('despues',f).read_text(encoding='utf-8').splitlines(keepends=True)
+              dif=list(difflib.unified_diff(old,new,fromfile='antes/'+f,tofile='despues/'+f))
+              if len(dif)>145:
+                  raise SystemExit(f'Cambio inesperado en {f}: {len(dif)} lineas; cancelar')
+              print(f, len(dif), 'lineas de diff')
+          PY
+          sha256sum despues/{graph.js,app.js,dashboard-daily-calendar.js,index.php} > despues.sha256
+      - name: Conservar copia de recuperacion por 30 dias antes de publicar
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-dashboard-agenda-${{ github.run_id }}
+          path: |
+            antes/
+            antes.sha256
+            despues.sha256
+          retention-days: 30
+          if-no-files-found: error
+      - name: Publicar solo cuatro archivos, con verificacion y rollback
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          files=(graph.js app.js dashboard-daily-calendar.js index.php)
+          mkdir -p antes-publicar verificados
+          fetch_file() {
+            local f="$1" dest="$2"
+            lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 25;
+              set net:max-retries 2;
+              get $f -o $dest;
+              bye;
+            "
+          }
+          put_atomic() {
+            local src="$1" dst="$2"
+            lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 25;
+              set net:max-retries 2;
+              put $src -o $dst.agenda-${{ github.run_id }}.tmp;
+              mv $dst.agenda-${{ github.run_id }}.tmp $dst;
+              bye;
+            "
+          }
+          # Comprobar el estado de los cuatro archivos ANTES de alterar ninguno.
+          for f in "${files[@]}"; do
+            fetch_file "$f" "antes-publicar/$f"
+            cmp -s "antes/$f" "antes-publicar/$f" || { echo "::error::$f cambio en el servidor: cancelar"; exit 1; }
+          done
+          publicado=0
+          rollback() {
+            local exitcode=$?
+            trap - EXIT
+            if [ "$publicado" -ne 1 ]; then
+              echo "::warning::Publicacion incompleta: restaurando cuatro archivos desde respaldo"
+              for f in "${files[@]}"; do
+                put_atomic "antes/$f" "$f" || echo "::error::No se pudo restaurar $f; intervencion urgente"
+              done
+            fi
+            exit "$exitcode"
+          }
+          trap rollback EXIT
+          for f in "${files[@]}"; do
+            put_atomic "despues/$f" "$f"
+            fetch_file "$f" "verificados/$f"
+            cmp -s "despues/$f" "verificados/$f" || { echo "::error::Hash remoto diferente en $f"; exit 1; }
+            echo "$f publicado y comprobado por lectura remota."
+          done
+          publicado=1
+          trap - EXIT
+          echo "Publicacion puntual completa. Archivos respaldados y verificados."
+      - name: Comprobar que el portal sigue protegido por autenticacion
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl -sS -L --max-redirs 3 --max-time 20 -o /dev/null -w '%{http_code}' 'https://portal.juanpablo.com.mx/dashboard/')"
+          echo "Dashboard sin sesion HTTP $status"
+          case "$status" in 000|404|500|502|503) exit 1;; esac
+      - name: Resumen
+        run: |
+          echo '### Agenda de Capillas publicada en Dashboard productivo' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Se sustituyeron solo app.js, graph.js, dashboard-daily-calendar.js e index.php tras un respaldo completo.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No se modificaron fuentes de Ingresos, Egresos, Ventas ni BI_Servicios.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'La visualizacion autenticada debe validarse en el portal.' >> "$GITHUB_STEP_SUMMARY"
