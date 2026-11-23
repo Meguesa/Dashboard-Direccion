@@ -2980,7 +2980,7 @@ function renderServiciosDelDia() {
 
   setText(
     "serviciosDiaActualizado",
-    `Hora local: ${formatearFechaHoraCorta(ahora)}`
+    `Hora local: ${formatearFechaHoraCorta(ahora)}${state.datos.agendaCapillasError ? " · Advertencia: agenda de Operaciones sin verificar" : ""}`
   );
 
 }
