@@ -43,6 +43,18 @@ def modify(backup: Path, target: Path):
         if name == "app.js" and "obtenerServiciosAgendaDia" not in live:
             raise RuntimeError("Live app missing previous Agenda version")
 
+        special_function = ""
+        if name == "app.js":
+            start = source.index("function renderServiciosEspecialesDia(")
+            end = source.index("function crearServicioAgendaDia(", start)
+            special_function = source[start:end]
+            source = source[:start] + source[end:]
+            insertion = "  renderServiciosEspecialesDia(cremacionesDirectas, velacionesDomicilio, ahora);\\n\\n"
+            insertion = insertion.replace("\\\\n", "\\n")
+            if source.count(insertion) != 1:
+                raise RuntimeError("Unexpected special agenda insertion in source app")
+            source = source.replace(insertion, "", 1)
+
         patch = "".join(difflib.unified_diff(
             before.splitlines(keepends=True), source.splitlines(keepends=True),
             fromfile=name, tofile=name, n=3
@@ -60,6 +72,23 @@ def modify(backup: Path, target: Path):
             raise RuntimeError("Cannot safely apply patch to live " + name)
         patchfile.unlink()
         updated = (target / name).read_text(encoding="utf-8")
+        if name == "app.js":
+            # Ancla semantica en produccion: la seccion de actualizacion del
+            # reloj puede diferir del archivo historico de QA.
+            call = "  renderServiciosEspecialesDia(cremacionesDirectas, velacionesDomicilio, ahora);\\n\\n"
+            call = call.replace("\\\\n", "\\n")
+            match = re.findall(r'(?m)^  setText\\(\\s*\\n\\s*"serviciosDiaActualizado",', updated)
+            if len(match) != 1:
+                raise RuntimeError("Live app: no unique agenda status anchor")
+            updated = re.sub(
+                r'(?m)^  setText\\(\\s*\\n\\s*"serviciosDiaActualizado",',
+                lambda m: call + m.group(0), updated, count=1
+            )
+            anchor = "function crearServicioAgendaDia("
+            if updated.count(anchor) != 1:
+                raise RuntimeError("Live app: no unique details anchor")
+            updated = updated.replace(anchor, special_function + anchor, 1)
+            (target / name).write_text(updated, encoding="utf-8")
         if updated == live:
             raise RuntimeError("No live change occurred: " + name)
         if name == "graph.js" and "agendaSinVelacion: true" not in updated:
