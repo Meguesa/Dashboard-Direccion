@@ -1,0 +1,176 @@
+name: Publicar agenda especial atomica sin reemplazar recursos productivos
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/publicar-agenda-especiales-atomico-20261126.txt'
+permissions:
+  contents: read
+concurrency:
+  group: deploy-dashboard-direccion
+  cancel-in-progress: false
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout completo para comparar cambios
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - name: Validar registros y codigo
+        env:
+          TZ: America/Monterrey
+        run: |
+          set -euo pipefail
+          node tests/test_agenda_capillas.js
+          node tests/test_agenda_especiales.js
+          python3 -m py_compile tools/build_release_agenda_especiales.py tools/patch_live_agenda_especiales.py
+      - name: Instalar cliente FTPS
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+      - name: Descargar solo los cinco archivos actuales
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${FTP_SERVER:-}" && test -n "${FTP_USERNAME:-}" && test -n "${FTP_PASSWORD:-}"
+          mkdir -p original
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            set net:timeout 30;
+            set net:max-retries 4;
+            get graph.js -o original/graph.js;
+            get app.js -o original/app.js;
+            get dashboard-daily-calendar.js -o original/dashboard-daily-calendar.js;
+            get dashboard-daily-calendar.css -o original/dashboard-daily-calendar.css;
+            get index.php -o original/index.php;
+            bye;
+          "
+          for f in graph.js app.js dashboard-daily-calendar.js dashboard-daily-calendar.css index.php; do test -s "original/$f"; done
+          sha256sum original/* > originales.sha256
+      - name: Generar assets versionados con index conmutador
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/patch_live_agenda_especiales.py original corregidos
+          python3 tools/build_release_agenda_especiales.py corregidos release
+          cd release
+          sha256sum -c manifest.sha256
+          node --check graph-agenda-especiales-20261126-v2.js
+          node --check app-agenda-especiales-20261126-v2.js
+          node --check dashboard-daily-calendar-agenda-especiales-20261126-v2.js
+          php -l index.php
+          grep -q 'graph-agenda-especiales-20261126-v2.js' index.php
+          grep -q 'dashboard-daily-calendar-agenda-especiales-20261126-v2.css' index.php
+      - name: Guardar respaldo antes de escribir cualquier recurso
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-agenda-especiales-atomico-${{ github.run_id }}
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            original/
+            originales.sha256
+            release/manifest.sha256
+      - name: Subir recursos versionados SIN cambiar index
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p verificaciones
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            set net:timeout 30;
+            set net:max-retries 4;
+            put release/graph-agenda-especiales-20261126-v2.js -o graph-agenda-especiales-20261126-v2.js;
+            put release/app-agenda-especiales-20261126-v2.js -o app-agenda-especiales-20261126-v2.js;
+            put release/dashboard-daily-calendar-agenda-especiales-20261126-v2.js -o dashboard-daily-calendar-agenda-especiales-20261126-v2.js;
+            put release/dashboard-daily-calendar-agenda-especiales-20261126-v2.css -o dashboard-daily-calendar-agenda-especiales-20261126-v2.css;
+            get graph-agenda-especiales-20261126-v2.js -o verificaciones/graph-agenda-especiales-20261126-v2.js;
+            get app-agenda-especiales-20261126-v2.js -o verificaciones/app-agenda-especiales-20261126-v2.js;
+            get dashboard-daily-calendar-agenda-especiales-20261126-v2.js -o verificaciones/dashboard-daily-calendar-agenda-especiales-20261126-v2.js;
+            get dashboard-daily-calendar-agenda-especiales-20261126-v2.css -o verificaciones/dashboard-daily-calendar-agenda-especiales-20261126-v2.css;
+            bye;
+          "
+          for f in graph-agenda-especiales-20261126-v2.js app-agenda-especiales-20261126-v2.js dashboard-daily-calendar-agenda-especiales-20261126-v2.js dashboard-daily-calendar-agenda-especiales-20261126-v2.css; do
+            cmp -s "release/$f" "verificaciones/$f" || { echo "::error::Asset remoto no coincide: $f. No se modifico index."; exit 1; }
+            echo "Asset verificado: $f"
+          done
+      - name: Conmutar index al final (archivos antiguos conservados)
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p verificacion-index
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            set net:timeout 30;
+            set net:max-retries 4;
+            get index.php -o verificacion-index/pre-index.php;
+            bye;
+          "
+          cmp -s original/index.php verificacion-index/pre-index.php || { echo "::error::index productivo cambio durante despliegue, cancelar conmutacion"; exit 1; }
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            set net:timeout 30;
+            set net:max-retries 4;
+            put release/index.php -o index-agenda-especiales-${{ github.run_id }}.tmp;
+            mv index-agenda-especiales-${{ github.run_id }}.tmp index.php;
+            get index.php -o verificacion-index/publicado.php;
+            bye;
+          "
+          cmp -s release/index.php verificacion-index/publicado.php || { echo "::error::No se confirmo la conmutacion; revisar servidor ANTES de reintentar"; exit 1; }
+          echo "Index productivo conmutado y verificado. Recursos originales intactos."
+      - name: Verificar respuesta del portal
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl -sS -L --max-redirs 3 --max-time 20 -o /dev/null -w '%{http_code}' https://portal.juanpablo.com.mx/dashboard/)"
+          echo "Portal HTTP $code"
+          case "$code" in 000|404|500|502|503) exit 1;; esac
+          echo '### Actualizacion de servicios especiales completada' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Nuevos assets verificados y index cambiado al final, originales preservados para revertir.' >> "$GITHUB_STEP_SUMMARY"
