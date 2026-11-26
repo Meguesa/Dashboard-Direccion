@@ -17,7 +17,9 @@
     { key: "agua-fria-sala-1", label: "Capilla Agua Fría Sala 1", grupo: "agua-fria", sala: 1 },
     { key: "agua-fria-sala-2", label: "Capilla Agua Fría Sala 2", grupo: "agua-fria", sala: 2 },
     { key: "agua-fria-sala-3", label: "Capilla Agua Fría Sala 3", grupo: "agua-fria", sala: 3 },
-    { key: "parque", label: "Panteón JdJP", grupo: "parque", sala: null }
+    { key: "parque", label: "Panteón JdJP", grupo: "parque", sala: null },
+    { key: "domicilio", label: "Velación en domicilio", grupo: "domicilio", sala: null },
+    { key: "cremacion-directa", label: "Cremación directa (sin velación)", grupo: "cremacion-directa", sala: null }
   ];
 
   let observer = null;
@@ -51,6 +53,8 @@
             <span class="servicios-calendario-legend-item is-churubusco"><i></i>Churubusco</span>
             <span class="servicios-calendario-legend-item is-agua-fria"><i></i>Agua Fría</span>
             <span class="servicios-calendario-legend-item is-parque"><i></i>Panteón</span>
+            <span class="servicios-calendario-legend-item is-domicilio"><i></i>Domicilio</span>
+            <span class="servicios-calendario-legend-item is-cremacion-directa"><i></i>Cremación directa</span>
           </div>
         </div>
 
@@ -215,10 +219,30 @@
     );
     track.style.setProperty("--calendar-lanes", String(carriles));
 
-    fila.eventos.forEach((evento) => {
-      const bar = crearBarraServicio(evento);
-      track.appendChild(bar);
-    });
+    if (fila.grupo === "cremacion-directa") {
+      // Sin velacion no hay intervalo de ocupacion que dibujar.
+      track.classList.add("servicios-calendario-track-special");
+      fila.eventos.forEach((evento) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "servicios-calendario-special-chip";
+        chip.dataset.servicioCalendario = "1";
+        chip._servicioCalendarioDetalle = evento;
+        chip.textContent = evento.titulo + " · " + evento.estado;
+        chip.setAttribute("aria-label", evento.titulo + ". " + evento.estado + ". " + evento.horarioTexto);
+        chip.addEventListener("mouseenter", mostrarTooltip);
+        chip.addEventListener("mousemove", moverTooltip);
+        chip.addEventListener("mouseleave", ocultarTooltip);
+        chip.addEventListener("focus", mostrarTooltipFoco);
+        chip.addEventListener("blur", ocultarTooltip);
+        track.appendChild(chip);
+      });
+    } else {
+      fila.eventos.forEach((evento) => {
+        const bar = crearBarraServicio(evento);
+        track.appendChild(bar);
+      });
+    }
 
     row.append(label, track);
     return row;
@@ -269,6 +293,39 @@
     const origen = normalizarTexto(campo(item, ["tipoOrigen", "Tipo_Origen", "TipoOrigen"]));
     if (origen !== "CAPILLAS" && origen !== "PARQUE") return null;
 
+    const tipo = normalizarTexto(campo(item, ["tipoServicio", "Tipo_Servicio", "TipoServicio"]));
+    const ubicacionEspecial = normalizarTexto(campo(item, ["ubicacionServicio", "Ubicacion_Servicio", "sucursal", "Sucursal"]));
+    const esDirectaSinVelacion = origen === "CAPILLAS" &&
+      tipo.includes("CREMACION DIRECTA") &&
+      (tipo.includes("SIN VELACION") ||
+        (!tipo.includes("CON VELACION") && !campo(item, ["fechaFin", "Fecha_Fin", "FechaFin"])));
+    if (esDirectaSinVelacion) {
+      const programacion = parseFecha(campo(item, ["fechaCrematorio", "FechayHoraInicioCrematorio"]));
+      const registro = parseFecha(campo(item, ["fechaRegistro", "Created"]));
+      const fecha = programacion || parseFecha(campo(item, ["fechaServicio", "Fecha_Servicio"]));
+      const hoyInicio = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+      const hoyFin = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + 1);
+      // El registro hoy tambien debe mostrarse aunque la cremacion sea posterior.
+      if ((!fecha || fecha < hoyInicio || fecha >= hoyFin) &&
+          (!registro || registro < hoyInicio || registro >= hoyFin)) return null;
+      const finado = campo(item, ["finado", "Finado", "nombreFallecido", "Nombre_Fallecido"]);
+      const referencia = campo(item, ["referenciaContrato", "Referencia_Contrato", "numeroServicio", "Numero_Servicio"]);
+      const programadaHoy = programacion && programacion >= hoyInicio && programacion < hoyFin;
+      const estado = programadaHoy
+        ? (programacion > ahora ? "Programada hoy" : "Hora programada transcurrida")
+        : "Registrada hoy · sin hora de cremación confirmada";
+      return {
+        filaKey: "cremacion-directa", filaLabel: "Cremación directa (sin velación)",
+        grupo: "cremacion-directa", sala: null, item,
+        inicio: fecha || registro, fin: null, finRegistrado: null,
+        minutoInicio: 0, minutoFin: 1, titulo: finado || "Cremación directa",
+        detalle: "Cremación directa (sin velación) · sin ocupación de capilla",
+        ubicacionTexto: "Crematorio · sin sala de velación",
+        referencia: referencia || "", estado,
+        horarioTexto: programacion ? "Crematorio programado: " + formatearHora(programacion) : "Sin hora de crematorio registrada"
+      };
+    }
+
     const inicio = parseFecha(
       campo(item, [
         "fechaServicio",
@@ -310,7 +367,9 @@
       "Sucursal"
     ]);
     const sala = campo(item, ["sala", "Sala"]);
-    const ubicacionFila = resolverFila(origen, ubicacion, sala);
+    const ubicacionFila = origen === "CAPILLAS" && ubicacionEspecial.includes("DOMICILIO")
+      ? { filaKey: "domicilio", filaLabel: "Velación en domicilio", grupo: "domicilio", sala: null }
+      : resolverFila(origen, ubicacion, sala);
     if (!ubicacionFila) return null;
 
     const finado = campo(item, ["finado", "Finado", "nombreFallecido", "Nombre_Fallecido"]);
@@ -470,6 +529,8 @@
     if (grupo === "churubusco") return "Churubusco";
     if (grupo === "agua-fria") return "Agua Fría";
     if (grupo === "parque") return "Panteón";
+    if (grupo === "domicilio") return "Velación en domicilio";
+    if (grupo === "cremacion-directa") return "Cremación directa (sin velación)";
     return "Capillas";
   }
 
