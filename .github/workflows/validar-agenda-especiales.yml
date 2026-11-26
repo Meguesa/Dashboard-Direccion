@@ -1,0 +1,31 @@
+name: Validar servicios especiales del calendario
+on:
+  pull_request:
+    paths:
+      - 'cpanel-preview-20261105/dashboard-egresos-preview/**'
+      - 'cpanel-preview-20261105/dashboard-excel-preview/**'
+      - 'tests/test_agenda_especiales.js'
+      - '.github/workflows/validar-agenda-especiales.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Sintaxis y pruebas de clasificacion, sin publicar
+        env:
+          TZ: America/Monterrey
+        run: |
+          set -euo pipefail
+          for base in dashboard-egresos-preview dashboard-excel-preview; do
+            for file in app.js graph.js dashboard-daily-calendar.js; do
+              node --check "cpanel-preview-20261105/$base/$file"
+            done
+          done
+          node tests/test_agenda_capillas.js
+          node tests/test_agenda_especiales.js
