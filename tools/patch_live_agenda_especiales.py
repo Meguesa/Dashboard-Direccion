@@ -49,8 +49,7 @@ def modify(backup: Path, target: Path):
             end = source.index("function crearServicioAgendaDia(", start)
             special_function = source[start:end]
             source = source[:start] + source[end:]
-            insertion = "  renderServiciosEspecialesDia(cremacionesDirectas, velacionesDomicilio, ahora);\\n\\n"
-            insertion = insertion.replace("\\\\n", "\\n")
+            insertion = "  renderServiciosEspecialesDia(cremacionesDirectas, velacionesDomicilio, ahora);" + chr(10) * 2
             if source.count(insertion) != 1:
                 raise RuntimeError("Unexpected special agenda insertion in source app")
             source = source.replace(insertion, "", 1)
@@ -75,8 +74,7 @@ def modify(backup: Path, target: Path):
         if name == "app.js":
             # Ancla semantica en produccion: la seccion de actualizacion del
             # reloj puede diferir del archivo historico de QA.
-            call = "  renderServiciosEspecialesDia(cremacionesDirectas, velacionesDomicilio, ahora);\\n\\n"
-            call = call.replace("\\\\n", "\\n")
+            call = "  renderServiciosEspecialesDia(cremacionesDirectas, velacionesDomicilio, ahora);" + chr(10) * 2
             match = re.findall(r'(?m)^  setText\\(\\s*\\n\\s*"serviciosDiaActualizado",', updated)
             if len(match) != 1:
                 raise RuntimeError("Live app: no unique agenda status anchor")
