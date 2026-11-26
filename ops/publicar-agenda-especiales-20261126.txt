@@ -1,0 +1,4 @@
+PUBLICAR: agenda de Cremación directa (sin velación) y Velación en domicilio.
+Fecha 2026-11-26.
+Cambio aprobado por el usuario en la conversación. Alcance limitado a los cinco archivos de calendario, tarjetas e index de Dashboard.
+Respaldar antes de publicar, verificar hashes, cancelar ante diferencias y mantener indicadores históricos, ingresos, egresos y ventas intactos.
