@@ -75,11 +75,11 @@ def modify(backup: Path, target: Path):
             # Ancla semantica en produccion: la seccion de actualizacion del
             # reloj puede diferir del archivo historico de QA.
             call = "  renderServiciosEspecialesDia(cremacionesDirectas, velacionesDomicilio, ahora);" + chr(10) * 2
-            match = re.findall(r'(?m)^  setText\\(\\s*\\n\\s*"serviciosDiaActualizado",', updated)
+            match = re.findall(r'(?m)^  setText\(\s*\n\s*"serviciosDiaActualizado",', updated)
             if len(match) != 1:
                 raise RuntimeError("Live app: no unique agenda status anchor")
             updated = re.sub(
-                r'(?m)^  setText\\(\\s*\\n\\s*"serviciosDiaActualizado",',
+                r'(?m)^  setText\(\s*\n\s*"serviciosDiaActualizado",',
                 lambda m: call + m.group(0), updated, count=1
             )
             anchor = "function crearServicioAgendaDia("
