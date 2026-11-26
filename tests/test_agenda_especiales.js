@@ -65,7 +65,7 @@ async function run(base){
   const begin=new MockDate("2026-11-26T13:00:00Z");
   const end=new MockDate("2026-11-27T04:00:00Z");
   const eventos=result.servicios.map(s=>normalize(s,begin,end,HOY));
-  assert.deepEqual(eventos.map(e=>e?.filaKey),["cremacion-directa","churubusco-sala-1","domicilio","agua-fria-sala-1"]);
+  assert.equal(JSON.stringify(eventos.map(e=>e?.filaKey)), JSON.stringify(["cremacion-directa","churubusco-sala-1","domicilio","agua-fria-sala-1"]));
   assert.equal(eventos[0].sala,null);
   assert.equal(eventos[0].fin,null);
   assert.equal(eventos[0].estado,"Programada hoy");
