@@ -1,0 +1,184 @@
+name: Publicar agenda especial de cremacion y domicilio al portal
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/publicar-agenda-especiales-20261126.txt'
+permissions:
+  contents: read
+concurrency:
+  group: deploy-dashboard-direccion
+  cancel-in-progress: false
+jobs:
+  publicar:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - name: Descargar repo con historial
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - name: Validar clasificacion y sintaxis
+        env:
+          TZ: America/Monterrey
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/test_agenda_capillas.js
+          node tests/test_agenda_especiales.js
+          for f in app.js graph.js dashboard-daily-calendar.js; do
+            node --check "cpanel-preview-20261105/dashboard-egresos-preview/$f"
+          done
+          git cat-file -e 39e248ef863adf3d79c1e5bd7e8bb2ec3e6f3e6c^{commit}
+      - name: Instalar FTPS
+        run: sudo apt-get update -qq && sudo apt-get install -y lftp
+      - name: Descargar y respaldar los cinco archivos actuales
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "${FTP_SERVER:-}" && test -n "${FTP_USERNAME:-}" && test -n "${FTP_PASSWORD:-}"
+          mkdir -p antes
+          lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+            set cmd:fail-exit yes;
+            set ftp:passive-mode true;
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ftp:ssl-auth TLS;
+            set ssl:verify-certificate yes;
+            set ssl:check-hostname yes;
+            set net:timeout 25;
+            set net:max-retries 2;
+            get graph.js -o antes/graph.js;
+            get app.js -o antes/app.js;
+            get dashboard-daily-calendar.js -o antes/dashboard-daily-calendar.js;
+            get dashboard-daily-calendar.css -o antes/dashboard-daily-calendar.css;
+            get index.php -o antes/index.php;
+            bye;
+          "
+          for f in graph.js app.js dashboard-daily-calendar.js dashboard-daily-calendar.css index.php; do test -s "antes/$f"; done
+          grep -q '20261123-agenda-capillas-directa-1' antes/index.php
+          sha256sum antes/* > antes.sha256
+      - name: Parchar archivos productivos sin reemplazar el resto
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/patch_live_agenda_especiales.py antes despues
+          for f in graph.js app.js dashboard-daily-calendar.js; do node --check "despues/$f"; done
+          php -l despues/index.php
+          grep -q 'Cremación directa (sin velación)' despues/dashboard-daily-calendar.js
+          grep -q 'Velación en domicilio' despues/dashboard-daily-calendar.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import difflib
+          limite={'graph.js':230,'app.js':190,'dashboard-daily-calendar.js':230,'dashboard-daily-calendar.css':85,'index.php':75}
+          for nombre, maximo in limite.items():
+              a=Path('antes',nombre).read_text(encoding='utf-8').splitlines(keepends=True)
+              b=Path('despues',nombre).read_text(encoding='utf-8').splitlines(keepends=True)
+              diff=list(difflib.unified_diff(a,b))
+              print(nombre, 'lineas diff:',len(diff))
+              if not diff or len(diff)>maximo:
+                  raise RuntimeError(f'Cambios inesperados {nombre}: {len(diff)}')
+          PY
+          sha256sum despues/{graph.js,app.js,dashboard-daily-calendar.js,dashboard-daily-calendar.css,index.php} > despues.sha256
+      - name: Guardar respaldos privados por treinta dias
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-servicios-especiales-${{ github.run_id }}
+          path: |
+            antes/
+            antes.sha256
+            despues.sha256
+          retention-days: 30
+          if-no-files-found: error
+      - name: Instalar solo archivos modificados y verificar remotos
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          files=(graph.js app.js dashboard-daily-calendar.js dashboard-daily-calendar.css index.php)
+          mkdir -p comprobar verificadas
+          bajar() {
+            lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 25;
+              set net:max-retries 2;
+              get $1 -o $2;
+              bye;
+            "
+          }
+          subir() {
+            lftp -u "$FTP_USERNAME","$FTP_PASSWORD" "ftp://$FTP_SERVER:21" -e "
+              set cmd:fail-exit yes;
+              set ftp:passive-mode true;
+              set ftp:ssl-force true;
+              set ftp:ssl-protect-data true;
+              set ftp:ssl-auth TLS;
+              set ssl:verify-certificate yes;
+              set ssl:check-hostname yes;
+              set net:timeout 25;
+              set net:max-retries 2;
+              put $1 -o $2.servicios-${{ github.run_id }}.tmp;
+              mv $2.servicios-${{ github.run_id }}.tmp $2;
+              bye;
+            "
+          }
+          for f in "${files[@]}"; do
+            bajar "$f" "comprobar/$f"
+            cmp -s "antes/$f" "comprobar/$f" || { echo "::error::$f cambio durante la publicacion; cancelar"; exit 1; }
+          done
+          completado=0
+          restaurar() {
+            rc=$?
+            trap - EXIT
+            if [ "$completado" -ne 1 ]; then
+              echo "::warning::Error durante publicacion, restaurando originales"
+              for f in "${files[@]}"; do
+                subir "antes/$f" "$f" || echo "::error::No se pudo restaurar $f"
+              done
+            fi
+            exit "$rc"
+          }
+          trap restaurar EXIT
+          for f in "${files[@]}"; do
+            subir "despues/$f" "$f"
+            bajar "$f" "verificadas/$f"
+            cmp -s "despues/$f" "verificadas/$f" || { echo "::error::Verificacion incorrecta $f"; exit 1; }
+            echo "Correcto: $f"
+          done
+          completado=1
+          trap - EXIT
+      - name: Validar sitio productivo y reportar
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl -sS -L --max-redirs 3 --max-time 20 -o /dev/null -w '%{http_code}' https://portal.juanpablo.com.mx/dashboard/)"
+          echo "Dashboard HTTP $code"
+          case "$code" in 000|404|500|502|503) exit 1;; esac
+          echo '### Servicios especiales publicados en producción' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Actualizados 5 archivos, con respaldo y verificaciones remotas.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'La comprobacion visual requiere sesion autenticada.' >> "$GITHUB_STEP_SUMMARY"

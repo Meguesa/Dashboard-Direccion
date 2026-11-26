@@ -2871,6 +2871,8 @@ function renderServiciosDelDia() {
   const capillasProgramados = [];
   const parqueActivos = [];
   const parqueProgramados = [];
+  const cremacionesDirectas = [];
+  const velacionesDomicilio = [];
 
   servicios.forEach((item) => {
     const tipoOrigen = normalizarValorServicioDia(
@@ -2899,6 +2901,16 @@ function renderServiciosDelDia() {
 
     const esCapillas = tipoOrigen === "CAPILLAS";
     const esParque = tipoOrigen === "PARQUE";
+    const tipoEspecial = normalizarValorServicioDia(obtenerCampoServicio(item, ["tipoServicio", "Tipo_Servicio", "TipoServicio"]));
+    const ubicacionEspecial = normalizarValorServicioDia(obtenerCampoServicio(item, ["ubicacionServicio", "Ubicacion_Servicio", "sucursal", "Sucursal"]));
+    if (esCapillas && item.agendaSinVelacion) {
+      cremacionesDirectas.push(item);
+      return;
+    }
+    if (esCapillas && (item.agendaDomicilio || ubicacionEspecial.includes("DOMICILIO"))) {
+      velacionesDomicilio.push(item);
+      return;
+    }
 
     const activo = estaServicioActivo(fechaInicio, fechaFin, ahora);
     const programado = estaServicioProgramadoHoy(fechaInicio, ahora);
@@ -2978,11 +2990,75 @@ function renderServiciosDelDia() {
     "Sin servicios programados de Parque para hoy."
   );
 
+  renderServiciosEspecialesDia(cremacionesDirectas, velacionesDomicilio, ahora);
+
   setText(
     "serviciosDiaActualizado",
     `Hora local: ${formatearFechaHoraCorta(ahora)}${state.datos.agendaCapillasError ? " · Advertencia: agenda de Operaciones sin verificar" : ""}`
   );
 
+}
+
+
+function renderServiciosEspecialesDia(directas, domicilios, ahora) {
+  const card = document.querySelector(".servicios-dia-detail-section .servicios-dia-card");
+  if (!card) return;
+  let seccion = document.getElementById("serviciosEspecialesDia");
+  if (!seccion) {
+    seccion = document.createElement("section");
+    seccion.id = "serviciosEspecialesDia";
+    seccion.className = "servicios-detalle-bloque";
+    card.appendChild(seccion);
+  }
+  const texto = (v) => escaparHtml(String(v || ""));
+  const tarjetaDirecta = (item) => {
+    const programacion = convertirFechaServicio(item.fechaCrematorio);
+    const registro = convertirFechaServicio(item.fechaRegistro);
+    const hoy = (fecha) => fecha && fecha.getFullYear() === ahora.getFullYear() &&
+      fecha.getMonth() === ahora.getMonth() && fecha.getDate() === ahora.getDate();
+    if (!hoy(programacion) && !hoy(registro)) return "";
+    const estado = hoy(programacion)
+      ? (programacion > ahora ? "Programada hoy" : "Hora programada transcurrida")
+      : "Registrada hoy";
+    const info = programacion ? "Crematorio: " + formatearHoraCorta(programacion) : "Sin hora de crematorio registrada";
+    return '<article class="servicio-agenda-card">' +
+      '<div class="servicio-agenda-top"><span class="servicio-agenda-badge is-programado">' + texto(estado) + '</span></div>' +
+      '<div class="servicio-agenda-body"><h4>' + texto(item.finado || "Sin finado") + '</h4>' +
+      '<div class="servicio-agenda-meta">Cremación directa (sin velación) · sin sala asignada</div>' +
+      '<div class="servicio-agenda-detail">' + texto(info) + '</div></div></article>';
+  };
+  const directasHoy = directas.map(tarjetaDirecta).filter(Boolean);
+  const domiciliosActivos = [];
+  const domiciliosProgramados = [];
+  for (const item of domicilios) {
+    const inicio = convertirFechaServicio(obtenerFechaEfectivaServicio(item));
+    const fin = convertirFechaServicio(obtenerCampoServicio(item, ["fechaFin", "Fecha_Fin", "FechaFin"]));
+    if (!inicio || !fin || fin <= inicio) continue;
+    if (estaServicioActivo(inicio, fin, ahora)) domiciliosActivos.push(item);
+    else if (estaServicioProgramadoHoy(inicio, ahora)) domiciliosProgramados.push(item);
+  }
+  const tarjetas = (lista, estado) => lista.map((item) => {
+    const detalle = crearServicioAgendaDia({...item, ubicacionServicio:"Domicilio", sala:""}, estado, "Capillas");
+    detalle.subtitulo = "Velación en domicilio · sin sala asignada";
+    return renderTarjetaServicioAgenda(detalle);
+  }).join("");
+  seccion.innerHTML =
+    '<div class="servicios-detalle-titulo"><h3>Cremación directa (sin velación)</h3></div>' +
+    '<p>Registros y horarios de crematorio del día. No representan ocupación de capilla ni confirman una cremación en curso.</p>' +
+    '<div class="servicios-agenda-list">' +
+    (directasHoy.join("") || '<div class="servicios-agenda-empty">Sin cremaciones directas registradas o programadas para hoy.</div>') +
+    '</div>' +
+    '<div class="servicios-detalle-titulo"><h3>Velación en domicilio</h3></div>' +
+    '<div class="servicios-agenda-grid">' +
+      '<section class="servicios-agenda-column"><div class="servicios-agenda-column-header"><h3>Activos ahora (' +
+      domiciliosActivos.length + ')</h3></div><div class="servicios-agenda-list">' +
+      (tarjetas(domiciliosActivos,"activo") || '<div class="servicios-agenda-empty">Sin velaciones domiciliarias activas.</div>') +
+      '</div></section>' +
+      '<section class="servicios-agenda-column"><div class="servicios-agenda-column-header"><h3>Programados hoy (' +
+      domiciliosProgramados.length + ')</h3></div><div class="servicios-agenda-list">' +
+      (tarjetas(domiciliosProgramados,"programado") || '<div class="servicios-agenda-empty">Sin velaciones domiciliarias programadas.</div>') +
+      '</div></section>' +
+    '</div>';
 }
 
 function crearServicioAgendaDia(item, estado, origen) {
