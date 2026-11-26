@@ -43,6 +43,21 @@ def modify(backup: Path, target: Path):
         if name == "app.js" and "obtenerServiciosAgendaDia" not in live:
             raise RuntimeError("Live app missing previous Agenda version")
 
+        already_applied = {
+            "graph.js": ("agendaSinVelacion: true", "agendaDomicilio: domicilio"),
+            "app.js": ("function renderServiciosEspecialesDia(", "cremacionesDirectas.push(item)", "velacionesDomicilio.push(item)"),
+            "dashboard-daily-calendar.js": ('filaKey: "cremacion-directa"', 'filaKey: "domicilio"'),
+            "dashboard-daily-calendar.css": (".servicios-calendario-track-special", ".servicios-calendario-special-chip"),
+        }
+        markers = already_applied[name]
+        found = [marker in live for marker in markers]
+        if any(found):
+            if not all(found):
+                raise RuntimeError("Partially applied special agenda in live " + name + "; abort")
+            (target / name).write_text(live, encoding="utf-8")
+            print(name + ": already contains verified special agenda; preserving live version")
+            continue
+
         special_function = ""
         if name == "app.js":
             start = source.index("function renderServiciosEspecialesDia(")
@@ -95,7 +110,7 @@ def modify(backup: Path, target: Path):
             raise RuntimeError("Missing special service cards")
 
     index = (backup / "index.php").read_text(encoding="utf-8")
-    if OLD_VERSION not in index:
+    if OLD_VERSION not in index and "20261126-servicios-especiales-1" not in index:
         raise RuntimeError("Unexpected live index version; no publication")
     for name in ("graph.js", "app.js", "dashboard-daily-calendar.js", "dashboard-daily-calendar.css"):
         pattern = re.compile(
