@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -29,3 +31,21 @@ jobs:
           done
           node tests/test_agenda_capillas.js
           node tests/test_agenda_especiales.js
+      - name: Simular parche estricto sobre instantanea anterior
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/especiales-antes /tmp/especiales-despues
+          for f in graph.js app.js dashboard-daily-calendar.js dashboard-daily-calendar.css index.php; do
+            git show 39e248ef863adf3d79c1e5bd7e8bb2ec3e6f3e6c:cpanel-preview-20261105/dashboard-egresos-preview/$f > /tmp/especiales-antes/$f
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          f=Path('/tmp/especiales-antes/index.php')
+          s=f.read_text(encoding='utf-8')
+          s=re.sub(r'(\?v=)[^"\x27]+',r'\g<1>20261123-agenda-capillas-directa-1',s)
+          f.write_text(s,encoding='utf-8')
+          PY
+          python3 tools/patch_live_agenda_especiales.py /tmp/especiales-antes /tmp/especiales-despues
+          for f in app.js graph.js dashboard-daily-calendar.js; do node --check /tmp/especiales-despues/$f; done
