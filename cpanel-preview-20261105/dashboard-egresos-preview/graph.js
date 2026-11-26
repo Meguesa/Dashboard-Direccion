@@ -1520,11 +1520,19 @@ function crearClaveMesMarketing(
 async function obtenerAgendaCapillasOperacionesSeguro() {
   const sitioOperaciones = "meguesajdjp.sharepoint.com,b4461294-66e3-4352-9b75-d3fc01444f93,5263e770-720b-46e6-bf61-1f15d57dae99";
   const listaEventosCapillas = "a46107c3-96b4-49c4-bba5-d8b26a845c65";
-
   const hoy = new Date();
   const inicioDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
   const finDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1);
   const servicios = [];
+
+  const fechaValida = (valor) => {
+    if (!valor) return null;
+    const fecha = new Date(String(valor));
+    return Number.isNaN(fecha.getTime()) || fecha.getFullYear() < 2020 ? null : fecha;
+  };
+  const tocaHoy = (fecha) => Boolean(fecha && fecha >= inicioDia && fecha < finDia);
+  const normalizar = (valor) => String(valor || "").normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
 
   try {
     let endpoint = "/sites/" + sitioOperaciones + "/lists/" + listaEventosCapillas + "/items?$expand=fields&$top=100";
@@ -1532,35 +1540,28 @@ async function obtenerAgendaCapillasOperacionesSeguro() {
 
     while (endpoint) {
       paginas += 1;
-      // Ante una paginacion inesperada, no presentar una agenda incompleta
-      // como si estuviera conciliada con el registro de Operaciones.
-      if (paginas > 40) {
-        throw new Error("La consulta de Eventos Capillas excedio el limite de paginas.");
-      }
-
+      if (paginas > 40) throw new Error("Consulta de Eventos Capillas excedio el limite de paginas.");
       const respuesta = await graphGet(endpoint);
+
       for (const item of (respuesta.value || [])) {
         const campos = item.fields || {};
-        if (campos.ModoPrueba === true || String(campos.ModoPrueba).toLowerCase() === "true") {
-          continue;
-        }
+        if (campos.ModoPrueba === true || String(campos.ModoPrueba).toLowerCase() === "true") continue;
 
-        const fechaInicio = new Date(String(campos.field_36 || ""));
-        const fechaFin = new Date(String(campos.field_37 || ""));
-        if (Number.isNaN(fechaInicio.getTime()) || Number.isNaN(fechaFin.getTime())) {
-          continue;
-        }
-        if (fechaFin <= fechaInicio || fechaFin <= inicioDia || fechaInicio >= finDia) {
-          continue;
-        }
-
+        const tipo = String(campos.field_32 || "").trim();
+        const tipoNormalizado = normalizar(tipo);
         const ubicacion = String(campos.field_39 || "").trim();
-        const lugar = ubicacion.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-        if (!["CHURUBUSCO", "APODACA", "AGUA FRIA"].some((nombre) => lugar.includes(nombre))) {
-          continue;
-        }
+        const lugar = normalizar(ubicacion);
+        const inicioVelacion = fechaValida(campos.field_36);
+        const finVelacion = fechaValida(campos.field_37);
 
-        servicios.push({
+        const sinVelacion = tipoNormalizado.includes("CREMACION DIRECTA") &&
+          (tipoNormalizado.includes("SIN VELACION") ||
+            (!tipoNormalizado.includes("CON VELACION") && !inicioVelacion && !finVelacion));
+        const domicilio = lugar.includes("DOMICILIO");
+        const enCapilla = ["CHURUBUSCO", "APODACA", "AGUA FRIA"]
+          .some((nombre) => lugar.includes(nombre));
+
+        const comun = {
           id: "operaciones-capillas-" + item.id,
           idOrigen: String(item.id),
           fuente: "Eventos Capillas",
@@ -1568,21 +1569,51 @@ async function obtenerAgendaCapillasOperacionesSeguro() {
           tipoOrigen: "Capillas",
           numeroServicio: String(campos.field_1 || "").trim(),
           referenciaContrato: String(campos.Referencia || campos.Title || "").trim(),
-          fechaServicio: String(campos.field_36),
-          fechaFin: String(campos.field_37),
           finado: String(campos.field_2 || "").trim(),
-          ubicacionServicio: ubicacion,
-          sala: String(campos.field_40 || "").trim(),
-          tipoServicio: String(campos.field_32 || "").trim()
+          tipoServicio: tipo
+        };
+
+        if (sinVelacion) {
+          // No existe un inicio/fin de velacion: solo hora programada de crematorio.
+          // Created permite mostrar hoy una solicitud nueva aun sin programacion.
+          const crematorio = fechaValida(campos.FechayHoraInicioCrematorio);
+          const registro = fechaValida(campos.Created);
+          if (!tocaHoy(crematorio) && !tocaHoy(registro)) continue;
+
+          servicios.push({
+            ...comun,
+            fechaServicio: (crematorio || registro).toISOString(),
+            fechaFin: "",
+            fechaCrematorio: crematorio ? crematorio.toISOString() : "",
+            fechaRegistro: registro ? registro.toISOString() : "",
+            ubicacionServicio: "Crematorio",
+            sala: "",
+            agendaSinVelacion: true
+          });
+          continue;
+        }
+
+        if (!enCapilla && !domicilio) continue;
+        if (!inicioVelacion || !finVelacion || finVelacion <= inicioVelacion ||
+            finVelacion <= inicioDia || inicioVelacion >= finDia) continue;
+
+        servicios.push({
+          ...comun,
+          fechaServicio: inicioVelacion.toISOString(),
+          fechaFin: finVelacion.toISOString(),
+          ubicacionServicio: domicilio ? "Domicilio" : ubicacion,
+          sala: domicilio ? "" : String(campos.field_40 || "").trim(),
+          agendaDomicilio: domicilio
         });
       }
+
       endpoint = respuesta["@odata.nextLink"] || null;
     }
 
-    console.info("Agenda Capillas desde Operaciones:", servicios.length, "servicio(s) con actividad hoy.");
+    console.info("Agenda Capillas desde Operaciones:", servicios.length, "servicio(s) vigentes o registrados hoy.");
     return { servicios, error: "" };
   } catch (error) {
-    console.warn("No se pudo validar la agenda directa de Operaciones:", error);
+    console.warn("No se pudo validar la agenda de Operaciones:", error);
     return { servicios: [], error: "No se pudo consultar Eventos Capillas." };
   }
 }
