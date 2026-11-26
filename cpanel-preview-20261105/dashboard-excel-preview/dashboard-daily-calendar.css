@@ -435,3 +435,20 @@
     justify-content: flex-start;
   }
 }
+
+
+/* Servicios sin ocupacion de sala y velaciones fuera de capillas. */
+.servicios-calendario-legend-item.is-domicilio { color:#6d28d9; background:#ede9fe; border-color:#ddd6fe; }
+.servicios-calendario-legend-item.is-domicilio i,
+.servicios-calendario-row-label.is-domicilio .servicios-calendario-location-dot { background:#8b5cf6; }
+.servicios-calendario-row-label.is-domicilio > span:last-child {color:#6d28d9;background:#f5f3ff;border-color:#ddd6fe;}
+.servicios-calendario-bar.is-domicilio {background:#8b5cf6;border-color:#7c3aed;}
+.servicios-calendario-tooltip-origin.is-domicilio {color:#6d28d9;background:#ede9fe;}
+.servicios-calendario-legend-item.is-cremacion-directa {color:#0f766e;background:#ccfbf1;border-color:#99f6e4;}
+.servicios-calendario-legend-item.is-cremacion-directa i,
+.servicios-calendario-row-label.is-cremacion-directa .servicios-calendario-location-dot {background:#0d9488;}
+.servicios-calendario-row-label.is-cremacion-directa > span:last-child {color:#0f766e;background:#f0fdfa;border-color:#99f6e4;}
+.servicios-calendario-tooltip-origin.is-cremacion-directa {color:#0f766e;background:#ccfbf1;}
+.servicios-calendario-track-special {min-height:58px;padding:9px 12px;display:flex;align-items:center;align-content:center;gap:8px;flex-wrap:wrap;background:#f0fdfa;background-image:none;}
+.servicios-calendario-special-chip {appearance:none;border:1px solid #5eead4;border-radius:999px;background:#ccfbf1;color:#115e59;font:inherit;font-weight:700;font-size:0.75rem;padding:0.42rem 0.7rem;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.servicios-calendario-special-chip:hover,.servicios-calendario-special-chip:focus-visible {background:#99f6e4;outline:2px solid #0d9488;outline-offset:1px;}
